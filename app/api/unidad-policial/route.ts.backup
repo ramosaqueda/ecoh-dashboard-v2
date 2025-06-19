@@ -1,0 +1,102 @@
+// app/api/UnidadPolicial/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  try {
+    if (id) {
+      // Obtener una Unidad Policial específica
+      const unidadPolicial = await prisma.unidadPolicial.findUnique({
+        where: { id: number(id) }
+      });
+      if (unidadPolicial) {
+        return NextResponse.json(unidadPolicial);
+      } else {
+        return NextResponse.json(
+          { message: 'Unidad Policial no encontrada' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Obtener todas las Unidades Policiales
+      const unidadesPoliciales = await prisma.unidadPolicial.findMany();
+      return NextResponse.json(unidadesPoliciales);
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al obtener Unidad(es) Policial(es)', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { nombre } = await request.json();
+    const unidadPolicial = await prisma.unidadPolicial.create({
+      data: { nombre }
+    });
+    return NextResponse.json(unidadPolicial, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al crear Unidad Policial', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para actualizar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { nombre } = await request.json();
+    const unidadPolicial = await prisma.unidadPolicial.update({
+      where: { id: number(id) },
+      data: { nombre }
+    });
+    return NextResponse.json(unidadPolicial);
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al actualizar Unidad Policial', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para eliminar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await prisma.unidadPolicial.delete({
+      where: { id: number(id) }
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al eliminar Unidad Policial', error },
+      { status: 500 }
+    );
+  }
+}

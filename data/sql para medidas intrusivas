@@ -1,0 +1,93 @@
+-- Create enum type for EstadoActividad if it doesn't exist
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'estadoactividad') THEN
+        CREATE TYPE EstadoActividad AS ENUM ('inicio', 'en_proceso', 'terminado');
+    END IF;
+END $$;
+
+-- Create UnidadPolicial table
+CREATE TABLE IF NOT EXISTS "UnidadPolicial" (
+    "id" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Create TipoMedida table
+CREATE TABLE IF NOT EXISTS "TipoMedida" (
+    "id" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(100) UNIQUE NOT NULL,
+    "activo" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create MIHallazgos table
+CREATE TABLE IF NOT EXISTS "MIHallazgos" (
+    "id" SERIAL PRIMARY KEY,
+    "nombre" VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- Create MedidaIntrusiva table
+CREATE TABLE IF NOT EXISTS "MedidaIntrusiva" (
+    "id" SERIAL PRIMARY KEY,
+    "causa_id" INTEGER NOT NULL,
+    "tipo_medida_id" INTEGER NOT NULL,
+    "fiscal_id" INTEGER NOT NULL,
+    "tribunal_id" INTEGER NOT NULL,
+    "cantidad_domicilios" INTEGER,
+    "domicilios_aprobados" INTEGER,
+    "detenidos" INTEGER,
+    "unidad_policial_id" INTEGER NOT NULL,
+    "fechaSolicitud" TIMESTAMP NOT NULL,
+    "nombreJuez" VARCHAR(255),
+    "estado" EstadoActividad NOT NULL DEFAULT 'inicio',
+    "observacion" TEXT,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("causa_id") REFERENCES "Causa"("id") ON DELETE RESTRICT,
+    FOREIGN KEY ("tipo_medida_id") REFERENCES "TipoMedida"("id") ON DELETE RESTRICT,
+    FOREIGN KEY ("fiscal_id") REFERENCES "Fiscal"("id") ON DELETE RESTRICT,
+    FOREIGN KEY ("tribunal_id") REFERENCES "Tribunal"("id") ON DELETE RESTRICT,
+    FOREIGN KEY ("unidad_policial_id") REFERENCES "UnidadPolicial"("id") ON DELETE RESTRICT
+);
+
+-- Create indices for MedidaIntrusiva
+CREATE INDEX IF NOT EXISTS "medida_intrusiva_causa_id_idx" ON "MedidaIntrusiva"("causa_id");
+CREATE INDEX IF NOT EXISTS "medida_intrusiva_tipo_medida_id_idx" ON "MedidaIntrusiva"("tipo_medida_id");
+CREATE INDEX IF NOT EXISTS "medida_intrusiva_fiscal_id_idx" ON "MedidaIntrusiva"("fiscal_id");
+
+-- Create Medida_Hallazgo table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS "Medida_Hallazgo" (
+    "medida_id" INTEGER NOT NULL,
+    "hallazgo_id" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY ("medida_id", "hallazgo_id"),
+    FOREIGN KEY ("medida_id") REFERENCES "MedidaIntrusiva"("id") ON DELETE CASCADE,
+    FOREIGN KEY ("hallazgo_id") REFERENCES "MIHallazgos"("id") ON DELETE CASCADE
+);
+
+-- Create trigger function to update updatedAt timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updatedAt" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers for updating updatedAt
+CREATE TRIGGER update_medidaintrusiva_updated_at
+    BEFORE UPDATE ON "MedidaIntrusiva"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tipomedida_updated_at
+    BEFORE UPDATE ON "TipoMedida"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_medida_hallazgo_updated_at
+    BEFORE UPDATE ON "Medida_Hallazgo"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();

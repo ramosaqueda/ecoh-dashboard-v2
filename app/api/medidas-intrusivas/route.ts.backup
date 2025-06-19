@@ -1,0 +1,240 @@
+// app/api/medidas-intrusivas/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  try {
+    if (id) {
+      // Obtener una medida intrusiva específica
+      const medida = await prisma.medidaIntrusiva.findUnique({
+        where: { id: number(id) },
+        include: {
+          causa: true,
+          fiscal: true,
+          tribunal: true,
+          unidad_policial: true,
+          medidas_hallazgos: {
+            include: {
+              hallazgo: true
+            }
+          }
+        }
+      });
+
+      if (!medida) {
+        return NextResponse.json(
+          { message: 'Medida intrusiva no encontrada' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(medida);
+    } else {
+      // Obtener todas las medidas intrusivas
+      const medidas = await prisma.medidaIntrusiva.findMany({
+        include: {
+          causa: true,
+          fiscal: true,
+          tribunal: true,
+          unidad_policial: true,
+          medidas_hallazgos: {
+            include: {
+              hallazgo: true
+            }
+          }
+        }
+      });
+      return NextResponse.json(medidas);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { message: 'Error al obtener medida(s) intrusiva(s)', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json();
+    
+    const {
+      causaId,
+      fiscalSolicitante,
+      fechaSolicitud,
+      tribunal,
+      nombreJuez,
+      unidadPolicial,
+      resolucion,
+      numDomiciliosSolicitud,
+      numDomiciliosAprobados,
+      numDetenidos,
+      hallazgos,
+      observaciones
+    } = data;
+
+    // Crear la medida intrusiva
+    const medida = await prisma.medidaIntrusiva.create({
+      data: {
+        causa_id: parseInt(causaId),
+        fiscal_id: parseInt(fiscalSolicitante),
+        tribunal_id: parseInt(tribunal),
+        unidad_policial_id: parseInt(unidadPolicial),
+        fecha_solicitud: new Date(fechaSolicitud),
+        nombre_juez: nombreJuez,
+        id_resolucion: parseInt(resolucion),
+        cantidad_domicilios: numDomiciliosSolicitud ? parseInt(numDomiciliosSolicitud) : null,
+        domicilios_aprobados: numDomiciliosAprobados ? parseInt(numDomiciliosAprobados) : null,
+        detenidos: numDetenidos ? parseInt(numDetenidos) : null,
+        observacion: observaciones,
+        // Crear las relaciones con los hallazgos
+        medidas_hallazgos: {
+          create: hallazgos?.map((hallazgoId: string) => ({
+            hallazgo_id: parseInt(hallazgoId),
+          })) || []
+        }
+      },
+      include: {
+        causa: true,
+        fiscal: true,
+        tribunal: true,
+        unidad_policial: true,
+        medidas_hallazgos: {
+          include: {
+            hallazgo: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(medida, { status: 201 });
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { message: 'Error al crear medida intrusiva', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para actualizar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const data = await request.json();
+    
+    const {
+      causaId,
+      fiscalSolicitante,
+      fechaSolicitud,
+      tribunal,
+      nombreJuez,
+      unidadPolicial,
+      resolucion,
+      numDomiciliosSolicitud,
+      numDomiciliosAprobados,
+      numDetenidos,
+      hallazgos,
+      observaciones
+    } = data;
+
+    // Primero eliminar las relaciones existentes con hallazgos
+    await prisma.medidaHallazgo.deleteMany({
+      where: {
+        medida_id: parseInt(id)
+      }
+    });
+
+    // Actualizar la medida intrusiva
+    const medida = await prisma.medidaIntrusiva.update({
+      where: { id: parseInt(id) },
+      data: {
+        causa_id: parseInt(causaId),
+        fiscal_id: parseInt(fiscalSolicitante),
+        tribunal_id: parseInt(tribunal),
+        unidad_policial_id: parseInt(unidadPolicial),
+        fecha_solicitud: new Date(fechaSolicitud),
+        nombre_juez: nombreJuez,
+        id_resolucion: parseInt(resolucion),
+        cantidad_domicilios: numDomiciliosSolicitud ? parseInt(numDomiciliosSolicitud) : null,
+        domicilios_aprobados: numDomiciliosAprobados ? parseInt(numDomiciliosAprobados) : null,
+        detenidos: numDetenidos ? parseInt(numDetenidos) : null,
+        observacion: observaciones,
+        // Crear las nuevas relaciones con hallazgos
+        medidas_hallazgos: {
+          create: hallazgos?.map((hallazgoId: string) => ({
+            hallazgo_id: parseInt(hallazgoId),
+          })) || []
+        }
+      },
+      include: {
+        causa: true,
+        fiscal: true,
+        tribunal: true,
+        unidad_policial: true,
+        medidas_hallazgos: {
+          include: {
+            hallazgo: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(medida);
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { message: 'Error al actualizar medida intrusiva', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para eliminar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    // Primero eliminar las relaciones con hallazgos
+    await prisma.medidaHallazgo.deleteMany({
+      where: {
+        medida_id: parseInt(id)
+      }
+    });
+
+    // Luego eliminar la medida intrusiva
+    await prisma.medidaIntrusiva.delete({
+      where: { id: parseInt(id) }
+    });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { message: 'Error al eliminar medida intrusiva', error },
+      { status: 500 }
+    );
+  }
+}
