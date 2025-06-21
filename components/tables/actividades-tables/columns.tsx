@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Edit2, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Edit2, Trash2, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -22,7 +22,18 @@ export type Actividad = {
   observacion: string;
   estado: 'inicio' | 'en_proceso' | 'terminado';
   usuario: {
+    id: number;
+    nombre: string;
     email: string;
+  };
+  usuarioAsignado?: {
+    id: number;
+    nombre: string;
+    email: string;
+    rol: {
+      id: number;
+      nombre: string;
+    };
   };
 };
 
@@ -30,6 +41,7 @@ export type Actividad = {
 interface ActividadTableMeta {
   onEdit?: (actividad: Actividad) => void;
   onDelete?: (id: number) => void;
+  onViewTodos?: (id: number) => void;
 }
 
 const estadoBadgeColors = {
@@ -88,25 +100,57 @@ export const columns: ColumnDef<Actividad>[] = [
     }
   },
   {
-    accessorKey: 'usuario.email',
-    header: 'Asignado'
+    id: 'asignado_por',
+    header: 'Asignado por',
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return actividad.usuario?.nombre || 'No asignado';
+    }
+  },
+  {
+    id: 'asignado',
+    header: 'Asignado',
+    cell: ({ row }) => {
+      const actividad = row.original;
+      return actividad.usuarioAsignado?.nombre || 'No asignado';
+    }
   },
   {
     accessorKey: 'observacion',
-    header: 'Observaciones'
+    header: 'Observaciones',
+    cell: ({ row }) => {
+      const observacion = row.getValue('observacion') as string;
+      return observacion ? (
+        <div className="max-w-[200px] truncate" title={observacion}>
+          {observacion}
+        </div>
+      ) : (
+        <span className="text-muted-foreground">Sin observaciones</span>
+      );
+    }
   },
   {
     id: 'actions',
+    header: 'Acciones',
     cell: ({ row, table }) => {
       const actividad = row.original;
-      const { onEdit, onDelete } = (table.options.meta as ActividadTableMeta) || {};
+      const { onEdit, onDelete, onViewTodos } = (table.options.meta as ActividadTableMeta) || {};
 
       return (
         <div className="flex justify-end gap-2">
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => onViewTodos?.(actividad.id)}
+            title="Ver tareas"
+          >
+            <CheckSquare className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onEdit?.(actividad)}
+            title="Editar actividad"
           >
             <Edit2 className="h-4 w-4" />
           </Button>
@@ -114,6 +158,7 @@ export const columns: ColumnDef<Actividad>[] = [
             variant="ghost"
             size="icon"
             onClick={() => onDelete?.(actividad.id)}
+            title="Eliminar actividad"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

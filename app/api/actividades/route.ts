@@ -1,4 +1,3 @@
-// app/api/actividades/route.ts - MANTIENE toda funcionalidad + delegación
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { EstadoActividad } from '@prisma/client';
@@ -11,19 +10,27 @@ export async function GET(req: NextRequest) {
     const ruc = searchParams.get('ruc');
     const tipo_actividad_id = searchParams.get('tipo_actividad_id');
     const estado = searchParams.get('estado');
+    const usuario_asignado_id = searchParams.get('usuario_asignado_id');
     const fechaDesde = searchParams.get('fechaDesde');
     const fechaHasta = searchParams.get('fechaHasta');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
-    // 🔥 NUEVO: Parámetro para incluir usuario asignado
     const includeAssigned = searchParams.get('include_assigned') === 'true';
 
-    // 🔥 ACTUALIZADO: Include config con usuario asignado opcional
     const includeConfig: any = {
-      causa: true,
-      tipoActividad: true,
+      causa: true, // Solo necesitamos datos básicos de la causa
+      tipoActividad: {
+        include: {
+          area: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
+      },
       usuario: {
         select: {
           id: true,
@@ -33,7 +40,6 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    // 🔥 AGREGAR usuario asignado si se solicita
     if (includeAssigned) {
       includeConfig.usuarioAsignado = {
         select: {
@@ -80,6 +86,10 @@ export async function GET(req: NextRequest) {
       whereConditions.push({ estado: estado as EstadoActividad });
     }
 
+    if (usuario_asignado_id) {
+      whereConditions.push({ usuario_asignado_id: Number(usuario_asignado_id) });
+    }
+
     if (fechaDesde) {
       whereConditions.push({ fechaInicio: { gte: new Date(fechaDesde) } });
     }
@@ -90,7 +100,6 @@ export async function GET(req: NextRequest) {
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // Get total count for pagination
     const total = await prisma.actividad.count({ where });
 
     const actividades = await prisma.actividad.findMany({
@@ -145,39 +154,43 @@ export async function POST(req: NextRequest) {
 
     const data = await req.json();
     
-    // 🔥 NUEVA LÓGICA: Manejo de delegación
-    let finalUsuarioAsignadoId = usuario.id; // Por defecto, auto-asignar
+    let finalUsuarioAsignadoId = usuario.id;
 
     if (data.usuarioAsignadoId && data.usuarioAsignadoId.trim() !== '') {
-      // Verificar que el usuario delegado existe
       const usuarioAsignado = await prisma.usuario.findUnique({
         where: { id: parseInt(data.usuarioAsignadoId) }
       });
       
       if (usuarioAsignado) {
         finalUsuarioAsignadoId = parseInt(data.usuarioAsignadoId);
-        console.log(`🔄 Delegating activity to user: ${finalUsuarioAsignadoId}`);
-      } else {
-        console.warn(`⚠️ Assigned user ${data.usuarioAsignadoId} not found, self-assigning`);
       }
     }
 
-    console.log(`📝 Creating activity - Creator: ${usuario.id}, Assigned: ${finalUsuarioAsignadoId}`);
-    
-    const actividad = await prisma.actividad.create({
+    // 🔥 FORZAR TIPADO - Solución rápida
+    const actividad = await (prisma.actividad as any).create({
       data: {
         causa_id: parseInt(data.causaId),
         tipo_actividad_id: parseInt(data.tipoActividadId),
-        usuario_id: usuario.id, // Usuario creador
-        usuario_asignado_id: finalUsuarioAsignadoId, // 🔥 NUEVO: Usuario asignado
+        usuario_id: usuario.id,
+        usuario_asignado_id: finalUsuarioAsignadoId,
         fechaInicio: new Date(data.fechaInicio),
         fechaTermino: new Date(data.fechaTermino),
         estado: data.estado as EstadoActividad,
-        observacion: data.observacion
+        observacion: data.observacion,
+        glosa_cierre: data.glosa_cierre || null
       },
       include: {
-        causa: true,
-        tipoActividad: true,
+        causa: true, // Solo necesitamos datos básicos de la causa
+        tipoActividad: {
+          include: {
+            area: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
+        },
         usuario: {
           select: {
             id: true,
@@ -185,7 +198,6 @@ export async function POST(req: NextRequest) {
             email: true
           }
         },
-        // 🔥 NUEVO: Incluir usuario asignado
         usuarioAsignado: {
           select: {
             id: true,
@@ -202,7 +214,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`✅ Activity created: ${actividad.id}`);
     return NextResponse.json(actividad, { status: 201 });
 
   } catch (error) {
@@ -231,29 +242,42 @@ export async function PUT(req: NextRequest) {
 
     const data = await req.json();
     
-    // 🔥 NUEVA LÓGICA: Preparar datos de actualización
-    const updateData: any = {
-      tipo_actividad_id: data.tipoActividadId ? parseInt(data.tipoActividadId) : undefined,
-      fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : undefined,
-      fechaTermino: data.fechaTermino ? new Date(data.fechaTermino) : undefined,
-      estado: data.estado as EstadoActividad,
-      observacion: data.observacion
-    };
+    const updateData: any = {};
 
-    // 🔥 NUEVO: Manejo de reasignación
+    if (data.tipoActividadId) {
+      updateData.tipo_actividad_id = parseInt(data.tipoActividadId);
+    }
+    
+    if (data.fechaInicio) {
+      updateData.fechaInicio = new Date(data.fechaInicio);
+    }
+    
+    if (data.fechaTermino) {
+      updateData.fechaTermino = new Date(data.fechaTermino);
+    }
+    
+    if (data.estado) {
+      updateData.estado = data.estado as EstadoActividad;
+    }
+    
+    if (data.observacion !== undefined) {
+      updateData.observacion = data.observacion;
+    }
+
+    if (data.glosa_cierre !== undefined) {
+      updateData.glosa_cierre = data.glosa_cierre || null;
+    }
+
     if (data.usuarioAsignadoId !== undefined) {
       if (data.usuarioAsignadoId && data.usuarioAsignadoId.trim() !== '') {
-        // Verificar que el usuario existe
         const usuarioAsignado = await prisma.usuario.findUnique({
           where: { id: parseInt(data.usuarioAsignadoId) }
         });
         
         if (usuarioAsignado) {
           updateData.usuario_asignado_id = parseInt(data.usuarioAsignadoId);
-          console.log(`🔄 Reassigning activity ${id} to user: ${data.usuarioAsignadoId}`);
         }
       } else {
-        // Si se envía vacío, obtener usuario actual y auto-asignar
         const { userId } = await auth();
         if (userId) {
           const currentUser = await prisma.usuario.findUnique({
@@ -261,18 +285,27 @@ export async function PUT(req: NextRequest) {
           });
           if (currentUser) {
             updateData.usuario_asignado_id = currentUser.id;
-            console.log(`🔄 Self-assigning activity ${id} to current user: ${currentUser.id}`);
           }
         }
       }
     }
 
-    const actividad = await prisma.actividad.update({
+    // 🔥 FORZAR TIPADO - Solución rápida
+    const actividad = await (prisma.actividad as any).update({
       where: { id: Number(id) },
       data: updateData,
       include: {
-        causa: true,
-        tipoActividad: true,
+        causa: true, // Solo necesitamos datos básicos de la causa
+        tipoActividad: {
+          include: {
+            area: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
+        },
         usuario: {
           select: {
             id: true,
@@ -280,7 +313,6 @@ export async function PUT(req: NextRequest) {
             email: true
           }
         },
-        // 🔥 NUEVO: Incluir usuario asignado
         usuarioAsignado: {
           select: {
             id: true,
@@ -297,7 +329,6 @@ export async function PUT(req: NextRequest) {
       },
     });
 
-    console.log(`✅ Activity updated: ${actividad.id}`);
     return NextResponse.json(actividad);
 
   } catch (error) {

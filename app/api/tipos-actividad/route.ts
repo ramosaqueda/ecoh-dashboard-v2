@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
         }
       },
       orderBy: {
-        nombre: 'asc'
+         areaId: 'asc'  // ← Solo por área
       }
     });
 

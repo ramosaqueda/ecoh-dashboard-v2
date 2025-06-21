@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma'; // ✅ Mejor usar singleton
+import { prisma } from '@/lib/prisma';
 
-// ✅ Definir interfaces para mejor tipado
+// ✅ Interfaces para mejor tipado
 interface CausaConDelito {
   id: number;
-  esCrimenOrganizado: number | null; // ✅ Cambio: puede ser null
+  esCrimenOrganizado: number | null; // 0 = false, 1 = true, null = no definido
   delito: {
     id: number;
     nombre: string;
@@ -16,38 +16,39 @@ interface ResumenDelito {
   cantidad: number;
 }
 
+// 🔥 HELPER FUNCTION - Reutilizable y más limpia
+function mapBooleanToNumber(value: boolean | null): number | null {
+  if (value === null) return null;
+  return value ? 1 : 0;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Obtenemos los parámetros de la URL
     const searchParams = request.nextUrl.searchParams;
     const year = searchParams.get('year');
     const tipoDelitoId = searchParams.get('tipoDelito');
 
-    // Construimos la consulta base para todas las causas
+    // Construir filtros
     const whereClause = {
-      // Filtro por año si está especificado
       ...(year && year !== 'todos' && {
         fechaDelHecho: {
           gte: new Date(`${year}-01-01`),
           lt: new Date(`${parseInt(year) + 1}-01-01`),
         },
       }),
-      // Filtro por tipo de delito si está especificado
       ...(tipoDelitoId && tipoDelitoId !== 'todos' && {
         delitoId: parseInt(tipoDelitoId),
       }),
     };
 
-    // Contar el total de causas que cumplen con los filtros
+    // Contar total de causas
     const totalCausas = await prisma.causa.count({
       where: whereClause
     });
 
-    // Obtener todas las causas con crimen organizado
-    const causas: CausaConDelito[] = await prisma.causa.findMany({
-      where: {
-        ...whereClause,
-      },
+    // Obtener causas con información de crimen organizado
+    const causasRaw = await prisma.causa.findMany({
+      where: whereClause,
       select: {
         id: true,
         esCrimenOrganizado: true,
@@ -60,40 +61,47 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Filtrar las causas marcadas como crimen organizado
+    // 🔥 MAPEO MEJORADO - Más limpio y reutilizable
+    const causas: CausaConDelito[] = causasRaw.map((causa) => ({
+      id: causa.id,
+      esCrimenOrganizado: mapBooleanToNumber(causa.esCrimenOrganizado),
+      delito: causa.delito
+    }));
+
+    // Filtrar causas de crimen organizado (valor 1)
     const causasCrimenOrganizado = causas.filter(causa => causa.esCrimenOrganizado === 1);
     
     // Calcular porcentaje
     const porcentaje = totalCausas > 0 ? (causasCrimenOrganizado.length / totalCausas) * 100 : 0;
 
-    // ✅ Tipar explícitamente el objeto para evitar el error de indexación
+    // Agrupar por tipo de delito
     const resumenPorDelito: Record<string, number> = {};
     
     causasCrimenOrganizado.forEach(causa => {
       const delitoNombre = causa.delito?.nombre || 'Sin delito';
-      if (!resumenPorDelito[delitoNombre]) {
-        resumenPorDelito[delitoNombre] = 0;
-      }
-      resumenPorDelito[delitoNombre]++;
+      resumenPorDelito[delitoNombre] = (resumenPorDelito[delitoNombre] || 0) + 1;
     });
 
-    // Convertir el objeto a array para la respuesta final
-    const resumenPorDelitoArray: ResumenDelito[] = Object.entries(resumenPorDelito).map(([delito, cantidad]) => ({
-      delito,
-      cantidad
-    }));
+    // Convertir a array para respuesta
+    const resumenPorDelitoArray: ResumenDelito[] = Object.entries(resumenPorDelito)
+      .map(([delito, cantidad]) => ({ delito, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad); // 🔥 MEJORA: Ordenar por cantidad desc
 
-    // Construir la respuesta
+    // Respuesta final
     const response = {
       totalCausas,
       causasCrimenOrganizado: causasCrimenOrganizado.length,
-      porcentaje: Math.round(porcentaje * 100) / 100, // ✅ Redondear a 2 decimales
+      porcentaje: Math.round(porcentaje * 100) / 100,
       resumenPorDelito: resumenPorDelitoArray
     };
 
     return NextResponse.json(response);
+    
   } catch (error) {
     console.error('Error en API de crimen organizado:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error : undefined // 🔥 MEJORA: Solo mostrar detalles en desarrollo
+    }, { status: 500 });
   }
 }

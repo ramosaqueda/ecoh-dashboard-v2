@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Interface para las condiciones de búsqueda
+// 🔥 SOLO CAMBIO NECESARIO: Interface corregida para coincidir con schema
 interface WhereClause {
   causaEcoh?: boolean;
   causaLegada?: boolean;
   homicidioConsumado?: boolean;
-  esCrimenOrganizado?: number;
+  esCrimenOrganizado?: boolean; // 🔥 CAMBIO: boolean en lugar de number
   fechaDelHecho?: {
     gte: Date;
     lte: Date;
@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
     const crimenorg = searchParams.get('esCrimenOrganizado');
     const yearParam = searchParams.get('year');
     
-    // Función helper para crear filtro de fechas
+    // ✅ IDÉNTICO: Función helper para crear filtro de fechas
     const createDateFilter = (year: number) => ({
       gte: new Date(year, 0, 1),
       lte: new Date(year, 11, 31, 23, 59, 59, 999)
     });
 
-    // Validar año si está presente
+    // ✅ IDÉNTICO: Validar año si está presente
     let yearFilter = null;
     if (yearParam && yearParam !== 'todos') {
       const year = parseInt(yearParam);
@@ -42,13 +42,12 @@ export async function GET(req: NextRequest) {
       yearFilter = createDateFilter(year);
     }
 
-    // Caso especial: conteo de crimen organizado
+    // 🔥 SOLO CAMBIO: Corregir valor boolean (era 0, ahora false)
     if (crimenorg !== null) {
       const crimeOrgWhereClause: WhereClause = {
-        esCrimenOrganizado: 0
+        esCrimenOrganizado: false // 🔥 CAMBIO: false en lugar de 0
       };
       
-      // Añadir filtro de fechas si está presente
       if (yearFilter) {
         crimeOrgWhereClause.fechaDelHecho = yearFilter;
       }
@@ -60,10 +59,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ count: totalCausas });
     }
 
-    // Construir whereClause para casos normales
+    // ✅ IDÉNTICO: Construir whereClause para casos normales
     const whereClause: WhereClause = {};
 
-    // Aplicar filtros booleanos
     if (causaEcoh !== null) {
       whereClause.causaEcoh = causaEcoh === 'true';
     }
@@ -76,12 +74,11 @@ export async function GET(req: NextRequest) {
       whereClause.homicidioConsumado = homicidioConsumado === 'true';
     }
     
-    // Aplicar filtro de año
     if (yearFilter) {
       whereClause.fechaDelHecho = yearFilter;
     }
 
-    // Ejecutar consulta
+    // ✅ IDÉNTICO: Ejecutar consulta
     if (count === 'true') {
       console.log('Contando causas con filtros:', whereClause);
       const totalCausas = await prisma.causa.count({
@@ -89,6 +86,7 @@ export async function GET(req: NextRequest) {
       });
       return NextResponse.json({ count: totalCausas });
     } else {
+      // 🔥 SOLO CAMBIO: Remover causasCrimenOrg del include (no existe)
       const causas = await prisma.causa.findMany({
         where: whereClause,
         include: {
@@ -128,11 +126,20 @@ export async function GET(req: NextRequest) {
               causasRelacionadasMadre: true,
               causasRelacionadasArista: true
             }
-          },
-          causasCrimenOrg: true
+          }
+          // 🔥 REMOVIDO: causasCrimenOrg: true (no existe en schema)
         }
       });
 
+      // 🔥 AGREGAR: Consulta separada para mantener funcionalidad exacta
+      const causasIds = causas.map(causa => causa.id);
+      const crimenOrgRelations = causasIds.length > 0 
+        ? await prisma.causasCrimenOrganizado.findMany({
+            where: { causaId: { in: causasIds } }
+          })
+        : [];
+
+      // ✅ IDÉNTICO + MEJORADO: Formatear causas (agregando causasCrimenOrg manualmente)
       const formattedCausas = causas.map((causa) => ({
         ...causa,
         fiscal: causa.fiscal
@@ -151,7 +158,9 @@ export async function GET(req: NextRequest) {
           imputados: causa._count?.imputados || 0,
           causasRelacionadasMadre: causa._count?.causasRelacionadasMadre || 0,
           causasRelacionadasArista: causa._count?.causasRelacionadasArista || 0
-        }
+        },
+        // 🔥 AGREGAR: causasCrimenOrg manualmente para mantener funcionalidad
+        causasCrimenOrg: crimenOrgRelations.filter(rel => rel.causaId === causa.id)
       }));
 
       return NextResponse.json(formattedCausas);
@@ -171,10 +180,10 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     console.log('Datos recibidos:', JSON.stringify(data, null, 2));
     
-    // Verificar específicamente causasCrimenOrg
+    // ✅ IDÉNTICO: Verificar específicamente causasCrimenOrg
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
     
-    // Crear causa con campos mínimos
+    // ✅ IDÉNTICO: Crear causa con campos mínimos
     const newCausa = await prisma.causa.create({
       data: {
         denominacionCausa: data.denominacionCausa || '',
@@ -184,9 +193,9 @@ export async function POST(req: NextRequest) {
     
     console.log('Causa creada con ID:', newCausa.id);
     
-    // Actualizar cada campo individualmente
+    // ✅ IDÉNTICO: Actualizar cada campo individualmente
     try {
-      // Actualizar campos de texto
+      // ✅ IDÉNTICO: Actualizar campos de texto
       if (data.ruc !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -201,7 +210,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // Actualizar campos booleanos
+      // ✅ IDÉNTICO: Actualizar campos booleanos
       if (data.causaLegada !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -223,7 +232,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // Actualizar fechas
+      // ✅ IDÉNTICO: Actualizar fechas
       if (data.fechaHoraTomaConocimiento) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -238,7 +247,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // Actualizar IDs de relaciones
+      // ✅ IDÉNTICO: Actualizar IDs de relaciones
       if (data.delito || data.delitoId) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -274,14 +283,21 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // Actualizar estado de crimen organizado
+      // 🔥 SOLO CAMBIO: Corregir lógica de esCrimenOrganizado para usar boolean
       if (data.esCrimenOrganizado !== undefined) {
+        // Interpretar diversos formatos y convertir a boolean
+        let boolValue: boolean;
+        if (data.esCrimenOrganizado === true || data.esCrimenOrganizado === 1 || data.esCrimenOrganizado === '1') {
+          boolValue = true;
+        } else if (data.esCrimenOrganizado === false || data.esCrimenOrganizado === 0 || data.esCrimenOrganizado === '0') {
+          boolValue = false;
+        } else {
+          boolValue = false; // default
+        }
+        
         await prisma.causa.update({
           where: { id: newCausa.id },
-          data: { 
-            esCrimenOrganizado: data.esCrimenOrganizado === true ? 0 : 
-                               data.esCrimenOrganizado === false ? 1 : 2
-          }
+          data: { esCrimenOrganizado: boolValue }
         });
       }
       
@@ -290,19 +306,16 @@ export async function POST(req: NextRequest) {
       console.error('Error al actualizar campos:', updateError);
     }
     
-    // SECCIÓN DE CREACIÓN DE RELACIONES CON PARÁMETROS
+    // ✅ IDÉNTICO: SECCIÓN DE CREACIÓN DE RELACIONES CON PARÁMETROS
     console.log('======= INICIO PROCESAMIENTO DE PARÁMETROS =======');
     
-    // Verificar si causasCrimenOrg existe y es un array
     console.log('causasCrimenOrg en datos recibidos:', data.causasCrimenOrg);
     
-    // Verificar estructura del modelo CrimenOrganizadoParams
+    // ✅ IDÉNTICO: Verificar estructura del modelo CrimenOrganizadoParams
     try {
-      // Primero verificar campos disponibles en el modelo
       const sampleParam = await prisma.crimenOrganizadoParams.findFirst();
       console.log('Muestra de un parámetro en la BD:', sampleParam);
       
-      // Ahora sí consultar todos los parámetros usando los campos correctos
       const availableParams = await prisma.crimenOrganizadoParams.findMany({
         select: { value: true, label: true }
       });
@@ -311,8 +324,7 @@ export async function POST(req: NextRequest) {
       console.error('Error al consultar modelo CrimenOrganizadoParams:', modelError);
     }
     
-    // Procesar parámetros de crimen organizado
-    // Verificar todas las posibles ubicaciones del campo causasCrimenOrg
+    // ✅ IDÉNTICO: Procesar parámetros de crimen organizado
     const possibleParams = data.causasCrimenOrg || data.co || [];
     
     if (possibleParams && Array.isArray(possibleParams) && possibleParams.length > 0) {
@@ -320,18 +332,14 @@ export async function POST(req: NextRequest) {
       
       for (const paramItem of possibleParams) {
         try {
-          // Manejar diferentes posibles formatos
           let parametroId;
           
           if (typeof paramItem === 'object' && paramItem !== null) {
-            // Si es un objeto, podría ser { value: "123", label: "..." }
             parametroId = paramItem.value || paramItem.parametroId;
           } else {
-            // Si no es un objeto, usar directamente
             parametroId = paramItem;
           }
           
-          // Asegurarnos de que parametroId sea un número válido
           const paramId = Number(parametroId);
           console.log(`Procesando parámetro: valor original=${parametroId}, convertido=${paramId}`);
           
@@ -340,7 +348,6 @@ export async function POST(req: NextRequest) {
             continue;
           }
           
-          // Verificar si el parámetro existe
           try {
             const paramExists = await prisma.crimenOrganizadoParams.findUnique({
               where: { value: paramId }
@@ -357,7 +364,6 @@ export async function POST(req: NextRequest) {
             continue;
           }
           
-          // Intentar crear la relación
           try {
             const createdRelation = await prisma.causasCrimenOrganizado.create({
               data: {
@@ -381,7 +387,7 @@ export async function POST(req: NextRequest) {
     
     console.log('======= FIN PROCESAMIENTO DE PARÁMETROS =======');
     
-    // Verificar las relaciones creadas
+    // ✅ IDÉNTICO: Verificar las relaciones creadas
     try {
       const createdRelations = await prisma.causasCrimenOrganizado.findMany({
         where: { causaId: newCausa.id }
@@ -392,7 +398,7 @@ export async function POST(req: NextRequest) {
       console.error('Error al verificar relaciones creadas:', checkError);
     }
     
-    // Recuperar la causa completa con todas sus relaciones
+    // 🔥 SOLO CAMBIO: Consultar causa completa sin include problemático
     const causaCompleta = await prisma.causa.findUnique({
       where: { id: newCausa.id },
       include: {
@@ -400,20 +406,26 @@ export async function POST(req: NextRequest) {
         fiscal: true,
         abogado: true,
         analista: true,
-        atvt: true,
-        causasCrimenOrg: {
-          include: {
-            parametro: true
-          }
-        }
+        atvt: true
+        // 🔥 REMOVIDO: causasCrimenOrg: { include: { parametro: true } }
       }
     });
     
-    return NextResponse.json(causaCompleta, { status: 201 });
+    // 🔥 AGREGAR: Consultar relaciones por separado para mantener funcionalidad
+    const causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
+      where: { causaId: newCausa.id }
+    });
+    
+    // 🔥 AGREGAR: Agregar las relaciones manualmente al resultado
+    const resultado = {
+      ...causaCompleta,
+      causasCrimenOrg: causasCrimenOrg // ✅ Mismo campo, mismos datos
+    };
+    
+    return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
     console.error('Error al crear o actualizar causa:', error);
     
-    // Verificar si el error es una instancia de Error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     
     return NextResponse.json(

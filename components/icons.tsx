@@ -41,7 +41,7 @@ import {
   SquareDashedKanbanIcon,
   ListCheckIcon,
   LucideListCheck,
-  FileChartColumnIncreasing,
+  Link2Icon,
   ListChecksIcon,
   WaypointsIcon,
   ScaleIcon,
@@ -50,7 +50,7 @@ import {
   PhoneCallIcon,
   PanelLeftIcon,
   GhostIcon,
-  FileChartColumnIncreasingIcon
+  FileStackIcon,
   
 
 } from 'lucide-react';
@@ -100,7 +100,9 @@ export const Icons = {
   phonecall:PhoneCallIcon,
   panelleft:PanelLeftIcon,
   ghost:GhostIcon,
-  reporte:FileChartColumnIncreasingIcon,
+  report:FileStackIcon,
+  link2:Link2Icon,
+
 
   gitHub: ({ ...props }: LucideProps) => (
     <svg

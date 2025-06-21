@@ -23,8 +23,9 @@ export async function GET(req: NextRequest) {
       };
     }
     
+    // CAMBIO: Usar usuario_asignado_id en lugar de usuario_id
     if (usuarioId && usuarioId !== 'all') {
-      whereConditions.usuario_id = parseInt(usuarioId);
+      whereConditions.usuario_asignado_id = parseInt(usuarioId);
     }
     
     if (tipoActividadId && tipoActividadId !== 'all') {
@@ -32,7 +33,6 @@ export async function GET(req: NextRequest) {
     }
     
     if (ruc && ruc.trim() !== '') {
-      // Buscar la causa por RUC y luego filtrar actividades
       whereConditions.causa = {
         ruc: {
           contains: ruc,
@@ -65,6 +65,15 @@ export async function GET(req: NextRequest) {
                 nombre: true,
               },
             },
+          },
+        },
+        // CAMBIO: Incluir usuarioAsignado en lugar de usuario
+        usuarioAsignado: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            cargo: true,
           },
         },
         usuario: {
@@ -150,26 +159,31 @@ export async function GET(req: NextRequest) {
       tiemposPromedioFinal[tipoId] = conteo > 0 ? total / conteo : 0;
     }
     
-    // 6. Calcular distribución por usuario
+    // 6. Calcular distribución por usuario asignado
     const distribucionPorUsuario: Record<number, number> = {};
     
     for (const actividad of actividades) {
-      const usuarioId = actividad.usuario_id;
-      if (!distribucionPorUsuario[usuarioId]) {
-        distribucionPorUsuario[usuarioId] = 0;
+      // CAMBIO: Usar usuario_asignado_id, con fallback a usuario_id
+      const usuarioAsignadoId = actividad.usuario_asignado_id || actividad.usuario_id;
+      if (usuarioAsignadoId) {
+        if (!distribucionPorUsuario[usuarioAsignadoId]) {
+          distribucionPorUsuario[usuarioAsignadoId] = 0;
+        }
+        distribucionPorUsuario[usuarioAsignadoId]++;
       }
-      distribucionPorUsuario[usuarioId]++;
     }
     
-    // 7. Obtener información de usuarios
-    //const usuariosIds = [...new Set(actividades.map(a => a.usuario_id))];
-    const usuariosIds = Array.from(new Set(actividades.map(a => a.usuario_id)));
-
+    // 7. Obtener información de usuarios asignados
+    const usuariosAsignadosIds = Array.from(new Set(
+      actividades
+        .map(a => a.usuario_asignado_id || a.usuario_id)
+        .filter(id => id !== null)
+    )) as number[];
     
     const usuarios = await prisma.usuario.findMany({
       where: {
         id: {
-          in: usuariosIds,
+          in: usuariosAsignadosIds,
         },
       },
       select: {
@@ -181,10 +195,7 @@ export async function GET(req: NextRequest) {
     });
     
     // 8. Obtener todos los tipos de actividad
-    //const tiposActividadIds = [...new Set(actividades.map(a => a.tipo_actividad_id))];
     const tiposActividadIds = Array.from(new Set(actividades.map(a => a.tipo_actividad_id)));
-    //const usuariosIds = Array.from(new Set(actividades.map(a => a.usuario_id)));
-
     
     const tiposActividad = await prisma.tipoActividad.findMany({
       where: {
@@ -233,7 +244,7 @@ export async function GET(req: NextRequest) {
     // Preparar resultados por causa
     const resultados = causasIds.map(causaId => {
       const actividadesDeCausa = actividadesPorCausa[causaId];
-      const primerActividad = actividadesDeCausa[0]; // Para obtener info de la causa
+      const primerActividad = actividadesDeCausa[0];
       
       // Calcular días promedio de actividades terminadas
       const actividadesTerminadas = actividadesDeCausa.filter(act => act.estado === 'terminado');
@@ -257,17 +268,21 @@ export async function GET(req: NextRequest) {
         denominacionCausa: primerActividad?.causa.denominacionCausa || 'N/A',
         delito: primerActividad?.causa.delito?.nombre || 'No especificado',
         estadisticas: estadosPorCausa[causaId],
-        actividades: actividadesDeCausa.map(act => ({
-          id: act.id,
-          tipoActividad: act.tipoActividad.nombre,
-          area: act.tipoActividad.area.nombre,
-          fechaInicio: act.fechaInicio,
-          fechaTermino: act.fechaTermino,
-          estado: act.estado,
-          usuario: act.usuario.nombre,
-          observacion: act.observacion || '',
-          vencida: new Date(act.fechaTermino) < hoy && act.estado !== 'terminado'
-        })),
+        actividades: actividadesDeCausa.map(act => {
+          // CAMBIO: Priorizar usuarioAsignado sobre usuario
+          const responsable = act.usuarioAsignado || act.usuario;
+          return {
+            id: act.id,
+            tipoActividad: act.tipoActividad.nombre,
+            area: act.tipoActividad.area.nombre,
+            fechaInicio: act.fechaInicio,
+            fechaTermino: act.fechaTermino,
+            estado: act.estado,
+            usuario: responsable?.nombre || 'Sin asignar',
+            observacion: act.observacion || '',
+            vencida: new Date(act.fechaTermino) < hoy && act.estado !== 'terminado'
+          };
+        }),
         diasPromedio: parseFloat(diasPromedio.toFixed(1))
       };
     });

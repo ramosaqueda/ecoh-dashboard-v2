@@ -3,15 +3,24 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Loader2, Mail, UserCheck } from 'lucide-react';
+import { Loader2, Mail, UserCheck, Clock, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import PageContainer from '@/components/layout/page-container';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import CausaSelector from '@/components/select/CausaSelector';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Actividad {
   id: number;
@@ -26,7 +35,10 @@ interface Actividad {
   fechaInicio: string;
   fechaTermino: string;
   estado: 'inicio' | 'en_proceso' | 'terminado';
-  observacion?: string;  // 🔥 AGREGADO: Campo observaciones
+  observacion?: string;
+  glosa_cierre?: string; // 🔥 Nuevo campo
+  createdAt?: string;
+  updatedAt?: string; // 🔥 Nuevo campo
   usuario?: {
     id: number;
     email?: string;
@@ -71,9 +83,14 @@ export default function ActividadesKanban() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showOnlyUserActivities, setShowOnlyUserActivities] = useState<boolean>(false);
   const [selectedCausaId, setSelectedCausaId] = useState<string>('');
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null); // 🔥 NUEVO: Usuario actual
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  
+  // 🔥 Estados para el modal de cierre
+  const [showCloseDialog, setShowCloseDialog] = useState<boolean>(false);
+  const [actividadToClose, setActividadToClose] = useState<Actividad | null>(null);
+  const [glosaCierre, setGlosaCierre] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
-  // ✅ Esta función mapea posibles variaciones de estado a los valores válidos
   const mapearEstado = (estado: string): 'inicio' | 'en_proceso' | 'terminado' => {
     const estadoLower = estado.toLowerCase();
     
@@ -85,19 +102,15 @@ export default function ActividadesKanban() {
       return 'terminado';
     }
     
-    // Por defecto, retornar 'inicio'
     return 'inicio';
   };
 
-  // ✅ Función para transformar y validar los datos de actividades
   const transformarActividades = (actividadesRaw: any[]): Actividad[] => {
     if (!Array.isArray(actividadesRaw)) {
-      console.error('No se recibió un array de actividades:', actividadesRaw);
       return [];
     }
     
     return actividadesRaw.map((act: any): Actividad => {
-      // Vamos a crear un objeto validado asegurándonos que tenga los campos necesarios
       const actividad: Actividad = {
         id: act.id || 0,
         causa: {
@@ -111,13 +124,15 @@ export default function ActividadesKanban() {
         fechaInicio: act.fechaInicio || act.fecha_inicio || new Date().toISOString(),
         fechaTermino: act.fechaTermino || act.fecha_termino || new Date().toISOString(),
         estado: mapearEstado(act.estado || 'inicio'),
-        observacion: act.observacion || undefined, // 🔥 AGREGADO: Mapear observaciones
+        observacion: act.observacion || undefined,
+        glosa_cierre: act.glosa_cierre || act.glosaCierre || undefined, // 🔥 Nuevo campo
+        createdAt: act.createdAt || act.created_at || undefined,
+        updatedAt: act.updatedAt || act.updated_at || undefined, // 🔥 Nuevo campo
         usuario: {
           id: act.usuario?.id || 0,
           email: act.usuario?.email || undefined,
           nombre: act.usuario?.nombre || undefined
         },
-        // 🔥 NUEVO: Mapear usuario asignado
         usuarioAsignado: act.usuarioAsignado ? {
           id: act.usuarioAsignado.id || 0,
           email: act.usuarioAsignado.email || undefined,
@@ -132,37 +147,28 @@ export default function ActividadesKanban() {
     });
   };
 
-  // 🔥 NUEVO: Obtener información del usuario actual
   const fetchCurrentUser = async (): Promise<void> => {
     try {
       const response = await fetch('/api/usuarios/me');
       if (response.ok) {
         const userData = await response.json();
         setCurrentUserId(userData.id);
-        console.log('🔍 Current user ID:', userData.id);
       }
     } catch (error) {
-      console.error('Error obteniendo usuario actual:', error);
+      // Error silencioso para no interrumpir la experiencia del usuario
     }
   };
 
-  // 🔥 ACTUALIZADO: Función para filtrar actividades por usuario asignado
   const filterByUser = (actividadesList: Actividad[], onlyMyActivities: boolean): Actividad[] => {
     if (!onlyMyActivities || !currentUserId) {
       return actividadesList;
     }
 
     const myActivities = actividadesList.filter((actividad: Actividad) => {
-      // 🔥 NUEVO: Filtrar por usuario ASIGNADO, no por creador
       const assignedUserId = actividad.usuarioAsignado?.id;
-      const isAssignedToMe = assignedUserId === currentUserId;
-      
-      console.log(`Activity ${actividad.id}: assigned to ${assignedUserId}, current user: ${currentUserId}, matches: ${isAssignedToMe}`);
-      
-      return isAssignedToMe;
+      return assignedUserId === currentUserId;
     });
 
-    console.log(`📋 Filtered activities: ${myActivities.length}/${actividadesList.length} assigned to current user`);
     return myActivities;
   };
 
@@ -171,31 +177,23 @@ export default function ActividadesKanban() {
     try {
       const params = new URLSearchParams();
       params.append('limit', '1000');
-      params.append('include_assigned', 'true'); // 🔥 NUEVO: Incluir usuario asignado
+      params.append('include_assigned', 'true');
       
       const url = `/api/actividades?${params.toString()}`;
-      
-      console.log('🔍 Fetching from URL:', url);
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Error al cargar actividades');
       
       const jsonResponse = await response.json();
-      console.log('📥 API Response:', jsonResponse);
-      
       const data = jsonResponse.data || [];
       const actividadesTransformadas = transformarActividades(data);
       
-      console.log('✅ Actividades transformadas:', actividadesTransformadas.length);
-      
       setActividades(actividadesTransformadas);
       
-      // 🔥 ACTUALIZADO: Aplicar filtros de usuario y causa
       const filteredByUser = filterByUser(actividadesTransformadas, showOnlyUserActivities);
       filterActividades(filteredByUser, selectedCausaId);
       
     } catch (error) {
-      console.error('❌ Error:', error);
       toast.error('Error al cargar las actividades');
       setActividades([]);
       setFilteredActividades([]);
@@ -206,8 +204,6 @@ export default function ActividadesKanban() {
 
   const filterActividades = (actividadesList: Actividad[], causaId: string): void => {
     const arrayToFilter = Array.isArray(actividadesList) ? actividadesList : [];
-    console.log('🔍 Filtering actividades. Total count:', arrayToFilter.length);
-    console.log('🔍 Selected Causa ID:', causaId);
     
     if (!causaId) {
       setFilteredActividades(arrayToFilter);
@@ -218,47 +214,31 @@ export default function ActividadesKanban() {
       (actividad: Actividad) => actividad.causa && actividad.causa.id && 
       actividad.causa.id.toString() === causaId
     );
-    console.log('✅ Filtered actividades count:', filtered.length);
     setFilteredActividades(filtered);
   };
 
-  // 🔥 NUEVO: Effect para cargar usuario actual al inicio
   useEffect(() => {
     fetchCurrentUser();
   }, []);
 
-  // 🔥 ACTUALIZADO: Effect que se ejecuta cuando cambia el filtro de usuario o se carga el usuario actual
   useEffect(() => {
     if (currentUserId !== null) {
-      console.log('🔄 Effect triggered - showOnlyUserActivities:', showOnlyUserActivities);
       fetchActividades();
     }
   }, [showOnlyUserActivities, currentUserId]);
 
   useEffect(() => {
-    console.log('🔄 Effect triggered - selectedCausaId:', selectedCausaId);
-    // 🔥 ACTUALIZADO: Aplicar filtro de usuario antes del filtro de causa
     const filteredByUser = filterByUser(actividades, showOnlyUserActivities);
     filterActividades(filteredByUser, selectedCausaId);
   }, [selectedCausaId]);
 
   const actividadesPorEstado = (estado: string): Actividad[] => {
     if (!Array.isArray(filteredActividades)) {
-      console.error('filteredActividades no es un array:', filteredActividades);
       return [];
-    }
-    
-    console.log('🔍 Estados en las actividades:', 
-      Array.from(new Set(filteredActividades.map((a: Actividad) => a.estado)))
-    );
-
-    if (filteredActividades.length > 0) {
-      console.log('📋 Muestra de actividad:', JSON.stringify(filteredActividades[0], null, 2));
     }
     
     const actividades = filteredActividades.filter((actividad: Actividad) => {
       if (!actividad.estado) {
-        console.warn('⚠️ Actividad sin estado:', actividad);
         return false;
       }
       
@@ -271,13 +251,10 @@ export default function ActividadesKanban() {
       return coincide;
     });
     
-    console.log(`📊 Actividades en estado ${estado}:`, actividades.length);
     return actividades;
   };
 
-  // 🔥 NUEVO: Función para obtener información del responsable de la actividad
   const getResponsableInfo = (actividad: Actividad) => {
-    // Priorizar usuario asignado, si no existe, mostrar usuario creador
     const responsable = actividad.usuarioAsignado || actividad.usuario;
     
     if (!responsable) return null;
@@ -293,6 +270,55 @@ export default function ActividadesKanban() {
     };
   };
 
+  // 🔥 Nueva función para manejar el cierre de actividad
+  const handleActivityClose = async (): Promise<void> => {
+    if (!actividadToClose) return;
+
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/actividades?id=${actividadToClose.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          estado: 'terminado',
+          glosa_cierre: glosaCierre.trim() || undefined
+        })
+      });
+
+      if (!response.ok) throw new Error('Error al cerrar la actividad');
+
+      // Actualizar el estado local
+      setActividades((prevActividades: Actividad[]) => {
+        const updatedActividades = prevActividades.map((actividad: Actividad) =>
+          actividad.id === actividadToClose.id
+            ? { 
+                ...actividad, 
+                estado: 'terminado' as const,
+                glosa_cierre: glosaCierre.trim() || undefined,
+                updatedAt: new Date().toISOString()
+              }
+            : actividad
+        );
+        
+        const filteredByUser = filterByUser(updatedActividades, showOnlyUserActivities);
+        filterActividades(filteredByUser, selectedCausaId);
+        
+        return updatedActividades;
+      });
+
+      toast.success('Actividad cerrada correctamente');
+      setShowCloseDialog(false);
+      setActividadToClose(null);
+      setGlosaCierre('');
+    } catch (error) {
+      toast.error('Error al cerrar la actividad');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleDragEnd = async (result: any): Promise<void> => {
     if (!result.destination) return;
 
@@ -300,6 +326,18 @@ export default function ActividadesKanban() {
     const newEstado = destination.droppableId as 'inicio' | 'en_proceso' | 'terminado';
     const actividadId = parseInt(draggableId);
 
+    // 🔥 Si se mueve a "terminado", mostrar el modal de cierre
+    if (newEstado === 'terminado') {
+      const actividad = actividades.find(a => a.id === actividadId);
+      if (actividad) {
+        setActividadToClose(actividad);
+        setGlosaCierre(actividad.glosa_cierre || '');
+        setShowCloseDialog(true);
+        return;
+      }
+    }
+
+    // Para otros estados, actualizar directamente
     try {
       const response = await fetch(`/api/actividades?id=${actividadId}`, {
         method: 'PUT',
@@ -316,12 +354,15 @@ export default function ActividadesKanban() {
       setActividades((prevActividades: Actividad[]) => {
         const updatedActividades = prevActividades.map((actividad: Actividad) =>
           actividad.id === actividadId
-            ? { ...actividad, estado: newEstado }
+            ? { 
+                ...actividad, 
+                estado: newEstado,
+                updatedAt: new Date().toISOString()
+              }
             : actividad
         );
         
-        // 🔥 ACTUALIZADO: Aplicar filtros después de actualizar
-        const filteredByUser = filterByUser(updatedActividades, showOnlyUserActividades);
+        const filteredByUser = filterByUser(updatedActividades, showOnlyUserActivities);
         filterActividades(filteredByUser, selectedCausaId);
         
         return updatedActividades;
@@ -329,7 +370,6 @@ export default function ActividadesKanban() {
 
       toast.success('Estado actualizado correctamente');
     } catch (error) {
-      console.error('❌ Error:', error);
       toast.error('Error al actualizar el estado');
       fetchActividades();
     }
@@ -351,8 +391,7 @@ export default function ActividadesKanban() {
                 id="user-activities"
                 checked={showOnlyUserActivities}
                 onCheckedChange={(value: boolean) => {
-                  console.log('🔄 Switch changed to:', value);
-                  setShowOnlyUserActividades(value);
+                  setShowOnlyUserActivities(value);
                 }}
               />
             </div>
@@ -366,6 +405,65 @@ export default function ActividadesKanban() {
           </div>
         </div>
       </div>
+
+      {/* 🔥 Modal para cierre de actividad */}
+      <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Cerrar Actividad</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium">{actividadToClose?.tipoActividad.nombre}</h3>
+              <p className="text-sm text-muted-foreground">
+                RUC: {actividadToClose?.causa.ruc} - {actividadToClose?.causa.denominacionCausa}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="glosa-cierre" className="text-sm font-medium">
+                Glosa de Cierre (Opcional)
+              </label>
+              <Textarea
+                id="glosa-cierre"
+                placeholder="Ingrese una descripción del cierre de la actividad..."
+                value={glosaCierre}
+                onChange={(e) => setGlosaCierre(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCloseDialog(false);
+                setActividadToClose(null);
+                setGlosaCierre('');
+              }}
+              disabled={isUpdating}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleActivityClose}
+              disabled={isUpdating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cerrando...
+                </>
+              ) : (
+                'Cerrar Actividad'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex-1 overflow-x-auto pb-6">
@@ -427,15 +525,27 @@ export default function ActividadesKanban() {
                                           {actividad.causa.denominacionCausa}
                                         </div>
                                         
-                                        {/* 🔥 NUEVO: Campo observaciones */}
                                         {actividad.observacion && (
                                           <div className="line-clamp-2 text-xs text-gray-600 bg-gray-50 rounded-sm p-2 border-l-2 border-gray-300">
-                                            <span className="font-medium text-gray-700">Observación: </span>
+                                            <span className="font-medium text-gray-700">Descripción: </span>
                                             {actividad.observacion}
                                           </div>
                                         )}
                                         
-                                        <div className="border-t pt-2 text-xs text-muted-foreground">
+                                        {/* 🔥 Mostrar glosa de cierre cuando existe */}
+                                        {actividad.glosa_cierre && (
+                                          <div className="text-xs text-green-700 bg-green-50 rounded-sm p-2 border-l-2 border-green-400">
+                                            <div className="flex items-start gap-1">
+                                              <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                              <div>
+                                                <span className="font-medium">Cierre: </span>
+                                                <span className="break-words">{actividad.glosa_cierre}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                        
+                                        <div className="border-t pt-2 text-xs text-muted-foreground space-y-1">
                                           <div>
                                             Inicio:{' '}
                                             {format(
@@ -452,10 +562,21 @@ export default function ActividadesKanban() {
                                               { locale: es }
                                             )}
                                           </div>
+                                          {/* 🔥 Mostrar fecha de última actualización */}
+                                          {actividad.updatedAt && (
+                                            <div className="flex items-center gap-1 text-xs text-blue-600">
+                                              <Clock className="h-3 w-3" />
+                                              Actualizado:{' '}
+                                              {format(
+                                                new Date(actividad.updatedAt),
+                                                'dd/MM/yyyy HH:mm',
+                                                { locale: es }
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                       </CardContent>
                                       
-                                      {/* 🔥 ACTUALIZADO: Mostrar responsable (usuario asignado o creador) */}
                                       {responsableInfo && (
                                         <CardFooter className="border-t border-secondary px-3 py-2">
                                           <TooltipProvider>

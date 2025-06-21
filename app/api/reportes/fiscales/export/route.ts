@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
       fiscalId: searchParams.get('fiscalId') ? parseInt(searchParams.get('fiscalId')!) : undefined,
       causaEcoh: searchParams.get('causaEcoh') ? searchParams.get('causaEcoh') === 'true' : undefined,
       causaLegada: searchParams.get('causaLegada') ? searchParams.get('causaLegada') === 'true' : undefined,
-      esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? parseInt(searchParams.get('esCrimenOrganizado')!) : undefined,
+      // 🔥 CORREGIDO: Interpretar como boolean en lugar de number
+      esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? 
+        searchParams.get('esCrimenOrganizado') === 'true' : undefined,
     };
 
     if (!formato || !['xlsx', 'csv'].includes(formato)) {
@@ -123,7 +125,8 @@ export async function GET(request: NextRequest) {
         if (causa.causaLegada) stats.totales.legadas++;
         if (causa.constituyeSs) stats.totales.conSS++;
         if (causa.homicidioConsumado) stats.totales.homicidio++;
-        if (causa.esCrimenOrganizado === 0) stats.totales.crimenOrg++;
+        // 🔥 CORREGIDO: Comparar con true en lugar de 0
+        if (causa.esCrimenOrganizado === true) stats.totales.crimenOrg++;
       }
     });
 
@@ -161,7 +164,9 @@ export async function GET(request: NextRequest) {
       'Es Legada': causa.causaLegada ? 'Sí' : (causa.causaLegada === false ? 'No' : 'N/A'),
       'Constituye SS': causa.constituyeSs ? 'Sí' : (causa.constituyeSs === false ? 'No' : 'N/A'),
       'Homicidio Consumado': causa.homicidioConsumado ? 'Sí' : (causa.homicidioConsumado === false ? 'No' : 'N/A'),
-      'Crimen Organizado': causa.esCrimenOrganizado === 0 ? 'Sí' : (causa.esCrimenOrganizado === 1 ? 'No' : 'Desconocido'),
+      // 🔥 CORREGIDO: Lógica para boolean en lugar de number
+      'Crimen Organizado': causa.esCrimenOrganizado === true ? 'Sí' : 
+                          (causa.esCrimenOrganizado === false ? 'No' : 'Desconocido'),
       'Cant. Imputados': causa._count.imputados,
       'Cant. Víctimas': causa._count.victimas,
       'Observación': causa.observacion || ''
@@ -212,8 +217,9 @@ export async function GET(request: NextRequest) {
         { Campo: 'Fiscal Específico', Valor: filtros.fiscalId ? `ID: ${filtros.fiscalId}` : 'Todos' },
         { Campo: 'Solo ECOH', Valor: filtros.causaEcoh !== undefined ? (filtros.causaEcoh ? 'Sí' : 'No') : 'Todos' },
         { Campo: 'Solo Legadas', Valor: filtros.causaLegada !== undefined ? (filtros.causaLegada ? 'Sí' : 'No') : 'Todos' },
+        // 🔥 CORREGIDO: Lógica para boolean
         { Campo: 'Crimen Organizado', Valor: filtros.esCrimenOrganizado !== undefined ? 
-          (filtros.esCrimenOrganizado === 0 ? 'Sí' : filtros.esCrimenOrganizado === 1 ? 'No' : 'Desconocido') : 'Todos' }
+          (filtros.esCrimenOrganizado ? 'Sí' : 'No') : 'Todos' }
       ];
       const wsInfo = XLSX.utils.json_to_sheet(infoReporte);
       XLSX.utils.book_append_sheet(workbook, wsInfo, 'Info del Reporte');
@@ -225,7 +231,7 @@ export async function GET(request: NextRequest) {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="reporte-fiscales-${new Date().toISOString().split('T')[0]}.xlsx"`,
-        },
+        },  
       });
     }
 

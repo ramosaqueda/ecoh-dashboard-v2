@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
           id: telefono.idProveedorServicio,
           nombre: telefono.proveedorServicio.nombre
         },
-        ubicacion: telefono.ubicacion.nombre,
+        ubicacion: telefono.ubicacion?.nombre || 'Sin ubicación',
         ubicacionId: telefono.id_ubicacion,
         solicitaTrafico: telefono.solicitaTrafico || false,
         solicitaImei: telefono.solicitaImei || false,

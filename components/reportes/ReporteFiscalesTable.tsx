@@ -160,8 +160,8 @@ export function ReporteFiscalesTable({ data, onExport }: ReporteFiscalesTablePro
             {causa.homicidioConsumado && (
               <Badge variant="destructive" className="text-xs">Homicidio</Badge>
             )}
-            {causa.esCrimenOrganizado === 0 && (
-              <Badge variant="outline" className="text-xs border-amber-500 text-amber-700 bg-amber-50">Crimen Org.</Badge>
+            {causa.esCrimenOrganizado === true && (
+              <Badge variant="secondary" className="text-xs">Crimen Org.</Badge>
             )}
           </div>
         );

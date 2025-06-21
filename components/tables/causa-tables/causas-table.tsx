@@ -75,6 +75,7 @@ export function CausasDataTable<TData, TValue>({
     foliobw: false
   });
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  console.log(API_BASE_URL)
   // Fetch abogados and analistas
   useEffect(() => {
     const fetchProfessionals = async () => {

@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       fiscalId: searchParams.get('fiscalId') ? parseInt(searchParams.get('fiscalId')!) : undefined,
       causaEcoh: searchParams.get('causaEcoh') ? searchParams.get('causaEcoh') === 'true' : undefined,
       causaLegada: searchParams.get('causaLegada') ? searchParams.get('causaLegada') === 'true' : undefined,
-      esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? parseInt(searchParams.get('esCrimenOrganizado')!) : undefined,
+      // 🔥 CORREGIDO: Usar boolean en lugar de parseInt
+      esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? 
+        searchParams.get('esCrimenOrganizado') === 'true' : undefined,
     };
 
     // Construir condiciones WHERE
@@ -121,7 +123,8 @@ export async function GET(request: NextRequest) {
         if (causa.causaLegada) stats.totales.legadas++;
         if (causa.constituyeSs) stats.totales.conSS++;
         if (causa.homicidioConsumado) stats.totales.homicidio++;
-        if (causa.esCrimenOrganizado === 0) stats.totales.crimenOrg++; // 0 = true según comentario en schema
+        // 🔥 CORREGIDO: Comparar con true en lugar de 0
+        if (causa.esCrimenOrganizado === true) stats.totales.crimenOrg++;
       }
     });
 
@@ -153,7 +156,8 @@ export async function GET(request: NextRequest) {
       causaLegada: causa.causaLegada,
       constituyeSs: causa.constituyeSs,
       homicidioConsumado: causa.homicidioConsumado,
-      esCrimenOrganizado: causa.esCrimenOrganizado || 2,
+      // 🔥 CORREGIDO: Manejar boolean directamente, sin conversión a number
+      esCrimenOrganizado: causa.esCrimenOrganizado,
       rit: causa.rit,
       fiscal: causa.fiscal ? {
         id: causa.fiscal.id,

@@ -128,7 +128,7 @@ export async function POST(
     // Crear registro en base de datos
     const foto = await prisma.fotografia.create({
       data: {
-        url: `/uploads/${fileName}`,
+        url: `/api/uploads/${fileName}`,
         filename: file.name,
         imputadoId,
         esPrincipal
@@ -139,7 +139,7 @@ export async function POST(
     if (esPrincipal) {
       await prisma.imputado.update({
         where: { id: imputadoId },
-        data: { fotoPrincipal: `/uploads/${fileName}` }
+        data: { fotoPrincipal: `/api/uploads/${fileName}` }
       });
     }
 

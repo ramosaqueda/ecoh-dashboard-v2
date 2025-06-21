@@ -19,16 +19,16 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
+  SelectSeparator
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, FileText } from 'lucide-react';
 import CausaSelector from '@/components/select/CausaSelector';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 
-// Schema actualizado con delegación
 const ActividadSchema = z
   .object({
     causaId: z.string().min(1, 'Debe seleccionar una causa'),
@@ -37,17 +37,39 @@ const ActividadSchema = z
     fechaTermino: z.string().min(1, 'Debe seleccionar una fecha de término'),
     observacion: z.string().optional(),
     estado: z.enum(['inicio', 'en_proceso', 'terminado']),
-    usuarioAsignadoId: z.string().optional()
+    usuarioAsignadoId: z.string().optional(),
+    glosa_cierre: z.string().optional()
   })
   .refine((data) => data.fechaTermino >= data.fechaInicio, {
     message: 'La fecha de término debe ser posterior a la fecha de inicio',
     path: ['fechaTermino']
+  })
+  .refine((data) => {
+    const requiresGlosa = data.estado === 'terminado';
+    const hasGlosa = data.glosa_cierre && data.glosa_cierre.trim().length > 0;
+    return !requiresGlosa || hasGlosa;
+  }, {
+    message: 'La glosa de cierre es requerida cuando la actividad está terminada',
+    path: ['glosa_cierre']
   });
+
+// 🆕 Interfaces actualizadas para incluir área
+interface Area {
+  id: number;
+  nombre: string;
+}
 
 interface TipoActividad {
   id: number;
   nombre: string;
   activo: boolean;
+  areaId: number;
+  area?: Area; // Información del área asociada
+}
+
+interface TipoActividadGrouped {
+  area: Area;
+  tipos: TipoActividad[];
 }
 
 interface Usuario {
@@ -74,13 +96,14 @@ interface ActividadFormProps {
     estado: 'inicio' | 'en_proceso' | 'terminado';
     observacion?: string;
     usuarioAsignadoId?: string;
+    glosa_cierre?: string;
   };
 }
 
-// 🔥 COMPONENTE DE DELEGACIÓN SEPARADO - Solo cliente
 const DelegationField = ({ field, userRole }: { field: any; userRole: number | null }) => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -89,9 +112,11 @@ const DelegationField = ({ field, userRole }: { field: any; userRole: number | n
         if (response.ok) {
           const data = await response.json();
           setUsuarios(Array.isArray(data) ? data : []);
+        } else {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('Error:', error);
+        setError(error instanceof Error ? error.message : 'Error desconocido');
       } finally {
         setIsLoading(false);
       }
@@ -105,6 +130,14 @@ const DelegationField = ({ field, userRole }: { field: any; userRole: number | n
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
         Cargando usuarios...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-sm text-red-500">
+        Error cargando usuarios: {error}
       </div>
     );
   }
@@ -136,14 +169,73 @@ const DelegationField = ({ field, userRole }: { field: any; userRole: number | n
   );
 };
 
-// 🔥 COMPONENTE DINÁMICO - Solo se renderiza en cliente
 const DynamicDelegationField = dynamic(
   () => Promise.resolve(DelegationField),
   { 
     ssr: false,
-    loading: () => <div className="h-20 flex items-center text-sm text-muted-foreground">Cargando opciones de delegación...</div>
+    loading: () => (
+      <div className="h-20 flex items-center text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        Cargando opciones de delegación...
+      </div>
+    )
   }
 );
+
+// 🆕 Componente para renderizar el selector agrupado
+const GroupedTipoActividadSelector = ({ 
+  field, 
+  tiposAgrupados, 
+  isLoading 
+}: { 
+  field: any; 
+  tiposAgrupados: TipoActividadGrouped[]; 
+  isLoading: boolean; 
+}) => {
+  return (
+    <Select
+      disabled={isLoading}
+      onValueChange={field.onChange}
+      value={field.value}
+    >
+      <FormControl>
+        <SelectTrigger>
+          <SelectValue placeholder="Seleccione un tipo de actividad" />
+        </SelectTrigger>
+      </FormControl>
+      <SelectContent className="max-h-[400px]">
+        {tiposAgrupados.map((grupo, groupIndex) => (
+          <div key={grupo.area.id}>
+            {/* Separador/Header del área */}
+            {groupIndex > 0 && <SelectSeparator />}
+            
+            {/* Header del área - no seleccionable */}
+            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground bg-muted/50 border-b border-border/50">
+              📂 {grupo.area.nombre}
+            </div>
+            
+            {/* Tipos de actividad del área */}
+            {grupo.tipos.map((tipo) => (
+              <SelectItem 
+                key={tipo.id} 
+                value={tipo.id.toString()}
+                className="pl-6" // Indentación para mostrar que pertenece al área
+              >
+                {tipo.nombre}
+              </SelectItem>
+            ))}
+          </div>
+        ))}
+        
+        {tiposAgrupados.length === 0 && !isLoading && (
+          <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+            No hay tipos de actividad disponibles
+          </div>
+        )}
+      </SelectContent>
+    </Select>
+  );
+};
 
 export default function ActividadForm({
   onSubmit,
@@ -151,8 +243,10 @@ export default function ActividadForm({
   initialData
 }: ActividadFormProps) {
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
+  const [tiposAgrupados, setTiposAgrupados] = useState<TipoActividadGrouped[]>([]);
   const [isLoadingTipos, setIsLoadingTipos] = useState(true);
   const [userRole, setUserRole] = useState<number | null>(null);
+  const [isLoadingUserRole, setIsLoadingUserRole] = useState(true);
 
   const form = useForm<ActividadFormValues>({
     resolver: zodResolver(ActividadSchema),
@@ -163,45 +257,76 @@ export default function ActividadForm({
       fechaTermino: new Date().toISOString().split('T')[0],
       estado: 'inicio',
       observacion: '',
-      usuarioAsignadoId: ''
+      usuarioAsignadoId: '',
+      glosa_cierre: ''
     }
   });
 
-  // Reset form when initialData changes
+  const estadoActual = form.watch('estado');
+  const isEditing = !!initialData?.id;
+
   useEffect(() => {
     if (initialData) {
       form.reset(initialData);
     }
   }, [form, initialData]);
 
-  // Obtener rol del usuario
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const response = await fetch('/api/usuarios/me');
-        if (response.ok) {
-          const userData = await response.json();
-          setUserRole(userData.rolId);
-        }
-      } catch (error) {
-        console.error('Error:', error);
+  const fetchUserRole = useCallback(async () => {
+    try {
+      const response = await fetch('/api/usuarios/me');
+      if (response.ok) {
+        const userData = await response.json();
+        setUserRole(userData.rolId || userData.rol_id);
       }
-    };
-
-    fetchUserRole();
+    } catch (error) {
+      // Silently handle error - continue without delegation
+    } finally {
+      setIsLoadingUserRole(false);
+    }
   }, []);
 
-  // Cargar tipos de actividad
+  useEffect(() => {
+    fetchUserRole();
+  }, [fetchUserRole]);
+
+  // 🆕 Función para agrupar tipos de actividad por área
+  const groupTiposByArea = useCallback((tipos: TipoActividad[]): TipoActividadGrouped[] => {
+    // Agrupar por área
+    const grouped = tipos.reduce((acc, tipo) => {
+      const areaId = tipo.areaId;
+      if (!acc[areaId]) {
+        acc[areaId] = {
+          area: tipo.area || { id: areaId, nombre: `Área ${areaId}` },
+          tipos: []
+        };
+      }
+      acc[areaId].tipos.push(tipo);
+      return acc;
+    }, {} as Record<number, TipoActividadGrouped>);
+
+    // Convertir a array y ordenar por ID de área
+    return Object.values(grouped).sort((a, b) => a.area.id - b.area.id);
+  }, []);
+
   useEffect(() => {
     const fetchTiposActividad = async () => {
       try {
-        const response = await fetch('/api/tipos-actividad');
-        if (!response.ok) throw new Error('Error al cargar tipos de actividad');
+        // 🆕 Modificar el endpoint para incluir información del área
+        const response = await fetch('/api/tipos-actividad?include_area=true');
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
         const data = await response.json();
-        setTiposActividad(data.filter((tipo: TipoActividad) => tipo.activo));
+        const activeTipos = data.filter((tipo: TipoActividad) => tipo.activo);
+        
+        setTiposActividad(activeTipos);
+        
+        // 🆕 Agrupar por área
+        const grouped = groupTiposByArea(activeTipos);
+        setTiposAgrupados(grouped);
+        
       } catch (error) {
-        console.error('Error:', error);
         toast.error('Error al cargar los tipos de actividad');
       } finally {
         setIsLoadingTipos(false);
@@ -209,14 +334,41 @@ export default function ActividadForm({
     };
 
     fetchTiposActividad();
-  }, []);
+  }, [groupTiposByArea]);
 
-  // Verificar si puede delegar
+  const handleSubmit = useCallback(async (data: ActividadFormValues) => {
+    try {
+      if (isSubmitting) {
+        toast.warning('Ya se está procesando la operación...');
+        return;
+      }
+
+      const validationResult = ActividadSchema.safeParse(data);
+      if (!validationResult.success) {
+        validationResult.error.issues.forEach(issue => {
+          const fieldName = issue.path.join('.');
+          const message = issue.message;
+          toast.error(`${fieldName}: ${message}`);
+        });
+        return;
+      }
+
+      await onSubmit(data);
+      
+    } catch (error) {
+      toast.error('Error inesperado en el formulario');
+    }
+  }, [onSubmit, isSubmitting]);
+
   const canDelegate = userRole === 1 || userRole === 4;
+  const showGlosaCierre = estadoActual === 'terminado';
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form 
+        onSubmit={form.handleSubmit(handleSubmit)} 
+        className="space-y-6"
+      >
         <Card>
           <CardHeader>
             <CardTitle>
@@ -240,37 +392,24 @@ export default function ActividadForm({
               )}
             />
 
+            {/* 🆕 Selector agrupado por áreas */}
             <FormField
               control={form.control}
               name="tipoActividadId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Actividad</FormLabel>
-                  <Select
-                    disabled={isLoadingTipos}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione un tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {tiposActividad.map((tipo) => (
-                        <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                          {tipo.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <GroupedTipoActividadSelector
+                    field={field}
+                    tiposAgrupados={tiposAgrupados}
+                    isLoading={isLoadingTipos}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* 🔥 CAMPO DE DELEGACIÓN - SOLUCIÓN SIMPLE SIN HIDRATACIÓN */}
-            {canDelegate && (
+            {!isLoadingUserRole && canDelegate && (
               <FormField
                 control={form.control}
                 name="usuarioAsignadoId"
@@ -324,7 +463,10 @@ export default function ActividadForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Estado</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccione un estado" />
@@ -341,14 +483,44 @@ export default function ActividadForm({
               )}
             />
 
+            {showGlosaCierre && (
+              <FormField
+                control={form.control}
+                name="glosa_cierre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Glosa de Cierre
+                      <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field}
+                        placeholder="Describa los resultados, conclusiones o motivos del cierre de la actividad..."
+                        className="min-h-[100px]"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Requerido para actividades terminadas. Describa los resultados obtenidos o motivos del cierre.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="observacion"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Observación</FormLabel>
+                  <FormLabel>Detalle de la actividad</FormLabel>
                   <FormControl>
-                    <Textarea {...field} />
+                    <Textarea 
+                      {...field} 
+                      placeholder="Ingrese detalles generales sobre la actividad que debe realizar..."
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -358,7 +530,10 @@ export default function ActividadForm({
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || isLoadingTipos}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

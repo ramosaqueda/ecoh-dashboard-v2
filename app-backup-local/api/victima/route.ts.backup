@@ -1,0 +1,102 @@
+// app/api/Victima/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient, Victima } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  try {
+    if (id) {
+      // Obtener un Victima específico
+      const Victima = await prisma.Victima.findUnique({
+        where: { id: number(id) }
+      });
+      if (Victima) {
+        return NextResponse.json(Victima);
+      } else {
+        return NextResponse.json(
+          { message: 'Victima no encontrado' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Obtener todos los Victimas
+      const Victimas = await prisma.Victima.findMany();
+      return NextResponse.json(Victimas);
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al obtener Victima(s)', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { nombre } = await request.json();
+    const Victima = await prisma.Victima.create({
+      data: { nombre }
+    });
+    return NextResponse.json(Victima, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al crear Victima', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para actualizar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { nombre } = await request.json();
+    const Victima = await prisma.Victima.update({
+      where: { id: number(id) },
+      data: { nombre }
+    });
+    return NextResponse.json(Victima);
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al actualizar Victima', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para eliminar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await prisma.Victima.delete({
+      where: { id: number(id) }
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al eliminar Victima', error },
+      { status: 500 }
+    );
+  }
+}

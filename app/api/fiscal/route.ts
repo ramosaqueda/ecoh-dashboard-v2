@@ -1,31 +1,101 @@
-// app/api/reportes/fiscal/route.ts
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+// app/api/Fiscal/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient, Fiscal } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
-  try {
-    const fiscales = await prisma.fiscal.findMany({
-      select: {
-        id: true,
-        nombre: true,
-        _count: {
-          select: {
-            causas: true
-          }
-        }
-      },
-      orderBy: {
-        nombre: 'asc'
-      }
-    });
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
 
-    return NextResponse.json(fiscales);
+  try {
+    if (id) {
+      // Obtener un Fiscal específico
+      const Fiscal = await prisma.fiscal.findUnique({
+        where: { id: Number(id) }
+      });
+      if (Fiscal) {
+        return NextResponse.json(Fiscal);
+      } else {
+        return NextResponse.json(
+          { message: 'Fiscal no encontrado' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Obtener todos los Fiscals
+      const Fiscals = await prisma.fiscal.findMany();
+      return NextResponse.json(Fiscals);
+    }
   } catch (error) {
-    console.error('Error al obtener fiscales:', error);
     return NextResponse.json(
-      { error: 'Error al cargar la lista de fiscales' },
+      { message: 'Error al obtener Fiscal(s)', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { nombre } = await request.json();
+    const Fiscal = await prisma.fiscal.create({
+      data: { nombre }
+    });
+    return NextResponse.json(Fiscal, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al crear Fiscal', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para actualizar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { nombre } = await request.json();
+    const Fiscal = await prisma.fiscal.update({
+      where: { id: Number(id) },
+      data: { nombre }
+    });
+    return NextResponse.json(Fiscal);
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al actualizar Fiscal', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para eliminar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await prisma.fiscal.delete({
+      where: { id: Number(id) }
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al eliminar Fiscal', error },
       { status: 500 }
     );
   }

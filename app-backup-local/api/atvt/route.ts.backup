@@ -1,0 +1,101 @@
+// app/api/atvt/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  try {
+    if (id) {
+      // Obtener un  Atvt específico
+      const  atvt = await prisma.atvt.findUnique({
+ 
+        where: { id: number(id) }
+      });
+      if ( atvt) {
+        return NextResponse.json(atvt);
+      } else {
+        return NextResponse.json(
+          { message: ' Atvt no encontrado' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Obtener todos los  Atvts
+      const  atvts = await prisma.atvt.findMany(); 
+      return NextResponse.json(atvts);
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al obtener  Atvt(s)', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { nombre } = await request.json();
+    const  Atvt = await prisma. atvt.create({
+      data: { nombre }
+    });
+    return NextResponse.json( Atvt, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al crear  Atvt', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para actualizar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const { nombre } = await request.json();
+    const  Atvt = await prisma. atvt.update({
+      where: { id: number(id) },
+      data: { nombre }
+    });
+    return NextResponse.json( Atvt);
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al actualizar  Atvt', error },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return NextResponse.json(
+      { message: 'Se requiere ID para eliminar' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await prisma.atvt.delete({
+      where: { id: number(id) }
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return NextResponse.json(
+      { message: 'Error al eliminar  Atvt', error },
+      { status: 500 }
+    );
+  }
+}

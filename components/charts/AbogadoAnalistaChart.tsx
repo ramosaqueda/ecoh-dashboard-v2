@@ -21,7 +21,7 @@ interface UserData {
 
 // Paleta moderna para abogados
 const LAWYER_COLORS = {
-  fill: '#06b6d4', // Cyanb-500
+  fill: '#06b6d4', // Cyan-500
   hover: '#0891b2', // Cyan-600
   background: '#cffafe' // Cyan-100
 };
@@ -33,29 +33,40 @@ const ANALYST_COLORS = {
   background: '#ccfbf1' // Teal-100
 };
 
+// Paleta moderna para ATVT
+const ATVT_COLORS = {
+  fill: '#8b5cf6', // Violet-500
+  hover: '#7c3aed', // Violet-600
+  background: '#ede9fe' // Violet-100
+};
+
 export default function AbogadoAnalistaChart() {
   const [lawyers, setLawyers] = useState<UserData[]>([]);
   const [analysts, setAnalysts] = useState<UserData[]>([]);
+  const [atvts, setAtvts] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [lawyersResponse, analystsResponse] = await Promise.all([
+        const [lawyersResponse, analystsResponse, atvtsResponse] = await Promise.all([
           fetch('/api/analytics/causas-abogado'),
-          fetch('/api/analytics/causas-analista')
+          fetch('/api/analytics/causas-analista'),
+          fetch('/api/analytics/causas-atvt')
         ]);
 
-        if (!lawyersResponse.ok || !analystsResponse.ok) {
+        if (!lawyersResponse.ok || !analystsResponse.ok || !atvtsResponse.ok) {
           throw new Error('Error al cargar datos');
         }
 
         const lawyersData = await lawyersResponse.json();
         const analystsData = await analystsResponse.json();
+        const atvtsData = await atvtsResponse.json();
 
         setLawyers(lawyersData);
         setAnalysts(analystsData);
+        setAtvts(atvtsData);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -85,9 +96,13 @@ export default function AbogadoAnalistaChart() {
     type
   }: {
     data: UserData[];
-    type: 'lawyers' | 'analysts';
+    type: 'lawyers' | 'analysts' | 'atvts';
   }) => {
-    const colors = type === 'lawyers' ? LAWYER_COLORS : ANALYST_COLORS;
+    const colors = type === 'lawyers' 
+      ? LAWYER_COLORS 
+      : type === 'analysts' 
+        ? ANALYST_COLORS 
+        : ATVT_COLORS;
 
     return (
       <div className="h-[400px] w-full">
@@ -111,7 +126,7 @@ export default function AbogadoAnalistaChart() {
               fill={colors.fill}
               background={{ fill: colors.background }}
               animationDuration={1000}
-              radius={[0, 10, 10, 0]} // Añadido: redondea las esquinas derechas
+              radius={[0, 10, 10, 0]} // Redondea las esquinas derechas
               onMouseOver={(data, index) => {
                 document
                   .querySelector(`path[index="${index}"]`)
@@ -141,7 +156,7 @@ export default function AbogadoAnalistaChart() {
           </div>
         ) : (
           <Tabs defaultValue="lawyers" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger
                 value="lawyers"
                 className="data-[state=active]:bg-cyan-500 data-[state=active]:text-white"
@@ -154,12 +169,21 @@ export default function AbogadoAnalistaChart() {
               >
                 Analistas
               </TabsTrigger>
+              <TabsTrigger
+                value="atvts"
+                className="data-[state=active]:bg-violet-500 data-[state=active]:text-white"
+              >
+                ATVT
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="lawyers">
               <ChartContent data={lawyers} type="lawyers" />
             </TabsContent>
             <TabsContent value="analysts">
               <ChartContent data={analysts} type="analysts" />
+            </TabsContent>
+            <TabsContent value="atvts">
+              <ChartContent data={atvts} type="atvts" />
             </TabsContent>
           </Tabs>
         )}

@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       id: usuario.id,
       email: usuario.email,
       nombre: usuario.nombre,
+      cargo: usuario.cargo,
       rol: usuario.rol
     }));
 

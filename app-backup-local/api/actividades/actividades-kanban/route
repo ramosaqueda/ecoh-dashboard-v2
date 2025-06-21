@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { EstadoActividad } from '@prisma/client';
+
+export async function GET(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const ruc = searchParams.get('ruc');
+    const tipo_actividad_id = searchParams.get('tipo_actividad_id');
+
+    const whereConditions = [];
+
+    if (ruc) {
+      whereConditions.push({ causa: { ruc } });
+    }
+
+    if (tipo_actividad_id) {
+      whereConditions.push({ tipo_actividad_id: Number(tipo_actividad_id) });
+    }
+
+    const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
+
+    const actividades = await prisma.actividad.findMany({
+      where,
+      include: {
+        causa: true,
+        tipoActividad: true,
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        fechaInicio: 'desc',
+      }
+    });
+
+    return NextResponse.json(actividades);
+  } catch (error) {
+    console.error('Error en GET /api/actividades-kanban:', error);
+    return NextResponse.json(
+      { message: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
