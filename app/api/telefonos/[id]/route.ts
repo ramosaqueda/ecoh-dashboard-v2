@@ -44,8 +44,9 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
+    console.log('PUT request body:', body);
 
-    // Validación de campos requeridos
+    // Validación de campos requeridos (NUE es opcional)
     if (!body.idProveedorServicio || !body.imei || !body.abonado || !body.id_ubicacion) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos' },
@@ -71,11 +72,14 @@ export async function PUT(
         },
         imei: body.imei,
         abonado: body.abonado,
+        nue: body.nue || null, // NUEVO CAMPO AGREGADO
         solicitaTrafico: convertCheckboxValue(body.solicitaTrafico),
         solicitaImei: convertCheckboxValue(body.solicitaImei),
         extraccionForense: convertCheckboxValue(body.extraccionForense),
-        enviar_custodia: convertCheckboxValue(body.enviar_custodia), // Nuevo campo
-        id_ubicacion: parseInt(body.id_ubicacion) as any, // Nuevo campo
+        enviar_custodia: convertCheckboxValue(body.enviar_custodia),
+        ubicacion: {
+          connect: { id: parseInt(body.id_ubicacion) }
+        },
         observacion: body.observacion || null
       },
       include: {
@@ -85,7 +89,7 @@ export async function PUT(
             nombre: true
           }
         },
-        ubicacion: {  // Nuevo include para traer los datos de ubicación
+        ubicacion: {
           select: {
             id: true,
             nombre: true

@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
       causaLegada: searchParams.get('causaLegada') ? searchParams.get('causaLegada') === 'true' : undefined,
       // 🔥 CORREGIDO: Interpretar como boolean en lugar de number
       esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? 
-        searchParams.get('esCrimenOrganizado') === 'true' : undefined,
+          (searchParams.get('esCrimenOrganizado') === 'true' ? 1 : 0) : undefined,
+
     };
 
     if (!formato || !['xlsx', 'csv'].includes(formato)) {

@@ -1,7 +1,9 @@
-// types/reporte.ts
+// types/reporte.ts - CORREGIDO PARA BOOLEAN
 import { Causa } from './causa';
 
-// Datos agregados por fiscal
+/**
+ * Datos agregados por fiscal para el resumen del reporte
+ */
 export interface FiscalReporte {
   fiscalId: number | null;
   fiscalNombre: string;
@@ -14,7 +16,10 @@ export interface FiscalReporte {
   porcentajeDelTotal: number;
 }
 
-// Causa simplificada para el detalle del reporte
+/**
+ * Causa simplificada para el detalle del reporte
+ * Nota: esCrimenOrganizado es boolean en BD
+ */
 export interface CausaReporteDetalle {
   id: number;
   ruc: string;
@@ -25,7 +30,7 @@ export interface CausaReporteDetalle {
   causaLegada: boolean | null;
   constituyeSs: boolean | null;
   homicidioConsumado: boolean | null;
-  esCrimenOrganizado: number;
+  esCrimenOrganizado: boolean | null; // ✅ CORREGIDO: boolean en lugar de number
   rit: string | null;
   fiscal: {
     id: number;
@@ -45,17 +50,22 @@ export interface CausaReporteDetalle {
   };
 }
 
-// Parámetros de filtro para el reporte
+/**
+ * Parámetros de filtro para el reporte
+ * Nota: esCrimenOrganizado como boolean para consistencia con BD
+ */
 export interface ReporteFiltros {
   fechaInicio?: string;
   fechaFin?: string;
   fiscalId?: number;
   causaEcoh?: boolean;
   causaLegada?: boolean;
-  esCrimenOrganizado?: number;
+  esCrimenOrganizado?: boolean; // ✅ CORREGIDO: boolean en lugar de number
 }
 
-// Respuesta completa del API de reporte
+/**
+ * Respuesta completa del API de reporte de fiscales
+ */
 export interface ReporteFiscalesResponse {
   resumenPorFiscal: FiscalReporte[];
   detallesCausas: CausaReporteDetalle[];
@@ -70,7 +80,9 @@ export interface ReporteFiscalesResponse {
   };
 }
 
-// Datos para el gráfico
+/**
+ * Datos para gráficos de reportes
+ */
 export interface DatoGrafico {
   fiscal: string;
   causas: number;
@@ -79,7 +91,9 @@ export interface DatoGrafico {
   causasCrimenOrg: number;
 }
 
-// Opciones de exportación
+/**
+ * Opciones de exportación de reportes
+ */
 export interface OpcionesExportacion {
   formato: 'xlsx' | 'csv' | 'pdf';
   incluirDetalle: boolean;

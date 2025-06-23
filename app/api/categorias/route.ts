@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       where.activo = activo === 'true';
     }
 
-    const categorias = await prisma.categoria.findMany({
+    const categorias = await prisma.categorias.findMany({
       where,
       include: {
         _count: {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si ya existe una categoría con ese nombre
-    const categoriaExistente = await prisma.categoria.findUnique({
+    const categoriaExistente = await prisma.categorias.findUnique({
       where: { nombre }
     });
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const nuevaCategoria = await prisma.categoria.create({
+    const nuevaCategoria = await prisma.categorias.create({
       data: {
         nombre,
         descripcion,

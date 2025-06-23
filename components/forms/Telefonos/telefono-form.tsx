@@ -41,6 +41,7 @@ interface TelefonoData {
   id_ubicacion?: number;
   imei?: string;
   abonado?: string;
+  nue?: string; // NUEVO CAMPO AGREGADO
   solicitaTrafico?: boolean | null;
   solicitaImei?: boolean | null;
   extraccionForense?: boolean | null;
@@ -65,6 +66,7 @@ const formSchema = z.object({
   id_ubicacion: z.string().min(1, 'Seleccione una ubicación'),
   imei: z.string().min(1, 'IMEI es requerido'),
   abonado: z.string().min(1, 'Abonado es requerido'),
+  nue: z.string().optional(), // NUEVO CAMPO AGREGADO
   solicitaTrafico: z.boolean().nullable(),
   solicitaImei: z.boolean().nullable(),
   extraccionForense: z.boolean().nullable(),
@@ -92,6 +94,7 @@ export function TelefonoForm({
     id_ubicacion: initialData?.id_ubicacion
       ? initialData.id_ubicacion.toString()
       : '',
+    nue: initialData?.nue || '', // NUEVO CAMPO AGREGADO
     solicitaTrafico: initialData?.solicitaTrafico ?? null,
     solicitaImei: initialData?.solicitaImei ?? null,
     extraccionForense: initialData?.extraccionForense ?? null,
@@ -105,6 +108,32 @@ export function TelefonoForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialValues
   });
+
+  // EFECTO AGREGADO: Resetear el formulario cuando cambien los initialData
+  useEffect(() => {
+    if (initialData) {
+      const resetValues: FormValues = {
+        numeroTelefonico: initialData?.numeroTelefonico 
+          ? initialData.numeroTelefonico.toString() 
+          : '',
+        idProveedorServicio: initialData?.idProveedorServicio 
+          ? initialData.idProveedorServicio.toString()
+          : '',
+        id_ubicacion: initialData?.id_ubicacion
+          ? initialData.id_ubicacion.toString()
+          : '',
+        nue: initialData?.nue || '',
+        solicitaTrafico: initialData?.solicitaTrafico ?? null,
+        solicitaImei: initialData?.solicitaImei ?? null,
+        extraccionForense: initialData?.extraccionForense ?? null,
+        enviar_custodia: initialData?.enviar_custodia ?? null,
+        imei: initialData?.imei || '',
+        abonado: initialData?.abonado || '',
+        observacion: initialData?.observacion || ''
+      };
+      form.reset(resetValues);
+    }
+  }, [initialData, form]);
 
   useEffect(() => {
     const fetchData = async (): Promise<void> => {
@@ -240,6 +269,24 @@ export function TelefonoForm({
                 <Input 
                   {...field} 
                   placeholder="Ingrese el nombre del abonado"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* NUEVO CAMPO NUE AGREGADO */}
+        <FormField
+          control={form.control}
+          name="nue"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>NUE</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  placeholder="Ingrese el NUE"
                 />
               </FormControl>
               <FormMessage />

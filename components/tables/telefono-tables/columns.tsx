@@ -15,6 +15,7 @@ export type Telefono = {
   };
   imei: string;
   abonado: string;
+  nue: string;
   solicitaTrafico: boolean;
   solicitaImei: boolean;
   observacion?: string;
@@ -84,6 +85,12 @@ export const columns: ColumnDef<Telefono>[] = [
     accessorKey: 'imei',
     header: 'IMEI'
   },
+  {
+    accessorKey: 'nue',
+    header: 'NUE',
+    cell: ({ row }) => row.original.nue || '-'
+  },
+   
   {
     accessorKey: 'abonado',
     header: 'Abonado'

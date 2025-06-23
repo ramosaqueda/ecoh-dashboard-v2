@@ -1,15 +1,16 @@
 // app/api/causas-victimas/route.ts
 
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+
 import { z } from 'zod';
 
-const prisma = new PrismaClient();
+
 
 // Schema simple solo con campos que existen
 const CausaVictimaSchema = z.object({
-  causaId: z.string().min(1, 'Debe seleccionar una causa'),
-  victimaId: z.string().min(1, 'La víctima es requerida')
+  causaId: z.coerce.number().int().positive('causaId debe ser un número positivo'),
+  victimaId: z.coerce.number().int().positive('victimaId debe ser un número positivo')
 });
 
 export async function GET(req: Request) {
@@ -119,56 +120,69 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     console.log('POST /api/causas-victimas - Datos recibidos:', body);
     
+    // ✅ Ahora esto funcionará tanto con strings como con numbers
     const validatedData = CausaVictimaSchema.parse(body);
+    console.log('Datos validados:', validatedData);
 
     // Verificar que existan tanto la causa como la víctima
     const [causa, victima] = await Promise.all([
       prisma.causa.findUnique({
-        where: { id: parseInt(validatedData.causaId) }
+        where: { id: validatedData.causaId }
       }),
       prisma.victima.findUnique({
-        where: { id: parseInt(validatedData.victimaId) }
+        where: { id: validatedData.victimaId }
       })
     ]);
 
-    if (!causa || !victima) {
-      return NextResponse.json(
-        { error: 'Causa o Víctima no encontrada' },
+    if (!causa) {
+      return Response.json(
+        { message: 'Causa no encontrada' },
         { status: 404 }
       );
     }
 
-    // Verificar si la relación ya existe
-    const existingRelation = await prisma.causasVictimas.findFirst({
+    if (!victima) {
+      return Response.json(
+        { message: 'Víctima no encontrada' },
+        { status: 404 }
+      );
+    }
+
+    // ✅ CORREGIDO: Cambiar causaVictima por causasVictimas
+    const existingRelation = await prisma.causasVictimas.findUnique({
       where: {
-        causaId: parseInt(validatedData.causaId),
-        victimaId: parseInt(validatedData.victimaId)
+        causaId_victimaId: {
+          causaId: validatedData.causaId,
+          victimaId: validatedData.victimaId
+        }
       }
     });
 
     if (existingRelation) {
-      return NextResponse.json(
-        { message: 'Esta víctima ya está asociada a esta causa' },
-        { status: 400 }
+      return Response.json(
+        { message: 'La víctima ya está asociada a esta causa' },
+        { status: 409 }
       );
     }
 
-    // Crear relación simple
-    const causaVictima = await prisma.causasVictimas.create({
+    // ✅ CORREGIDO: Cambiar causaVictima por causasVictimas
+    const nuevaRelacion = await prisma.causasVictimas.create({
       data: {
-        causaId: parseInt(validatedData.causaId),
-        victimaId: parseInt(validatedData.victimaId)
+        causaId: validatedData.causaId,
+        victimaId: validatedData.victimaId
       },
       include: {
         causa: {
-          include: {
-            delito: true,
-            tribunal: true
+          select: {
+            id: true,
+            ruc: true,
+            denominacionCausa: true,
+            rit: true
           }
         },
         victima: {
@@ -181,22 +195,25 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log('✅ Relación creada exitosamente:', causaVictima);
-    return NextResponse.json(causaVictima, { status: 201 });
+    return Response.json(nuevaRelacion, { status: 201 });
+
   } catch (error) {
-    console.error('Error creating CausaVictima:', error);
-
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Datos de entrada inválidos', details: error.errors },
-        { status: 400 }
-      );
+      console.error('Error de validación Zod:', error.errors);
+      return Response.json({ 
+        message: 'Datos inválidos', 
+        errors: error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }))
+      }, { status: 400 });
     }
-
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    
+    console.error('Error creating CausasVictimas:', error);
+    return Response.json({ 
+      message: 'Error interno del servidor',
+      error: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined
+    }, { status: 500 });
   }
 }
 
@@ -215,6 +232,7 @@ export async function DELETE(req: Request) {
 
     console.log('🗑️ Eliminando relación causa-víctima:', { causaId, victimaId });
 
+    // ✅ CORREGIDO: Ya estaba usando causasVictimas (correcto)
     await prisma.causasVictimas.delete({
       where: {
         causaId_victimaId: {
@@ -229,7 +247,7 @@ export async function DELETE(req: Request) {
       message: 'Relación causa-víctima eliminada exitosamente'
     });
   } catch (error) {
-    console.error('Error deleting CausaVictima:', error);
+    console.error('Error deleting CausasVictimas:', error);
 
     if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
       return NextResponse.json(
@@ -260,7 +278,7 @@ export async function PUT(req: Request) {
 
     console.log('🔄 Verificando relación causa-víctima:', { causaId, victimaId });
 
-    // Como no hay campos actualizables, solo verificamos que la relación existe
+    // ✅ CORREGIDO: Ya estaba usando causasVictimas (correcto)
     const existing = await prisma.causasVictimas.findUnique({
       where: {
         causaId_victimaId: {
@@ -295,7 +313,7 @@ export async function PUT(req: Request) {
     console.log('✅ Relación encontrada');
     return NextResponse.json(existing);
   } catch (error) {
-    console.error('Error in PUT CausaVictima:', error);
+    console.error('Error in PUT CausasVictimas:', error);
 
     return NextResponse.json(
       { error: 'Error interno del servidor' },

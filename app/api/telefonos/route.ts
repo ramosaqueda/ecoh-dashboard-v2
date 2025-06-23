@@ -46,6 +46,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
+    // Validación de campos requeridos (NUE es opcional)
     if (
       !body.numeroTelefonico ||
       !body.idProveedorServicio ||
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
         idProveedorServicio: parseInt(body.idProveedorServicio),
         imei: body.imei,
         abonado: body.abonado,
+        nue: body.nue || null, // NUEVO CAMPO AGREGADO
         id_ubicacion: parseInt(body.id_ubicacion),
         solicitaTrafico: Boolean(body.solicitaTrafico),
         solicitaImei: Boolean(body.solicitaImei),
@@ -117,5 +119,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-  
 }

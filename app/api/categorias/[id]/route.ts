@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const categoria = await prisma.categoria.findUnique({
+    const categoria = await prisma.categorias.findUnique({
       where: { id },
       include: {
         sitios: {
@@ -81,7 +81,7 @@ export async function PUT(
     const body = await request.json();
     const { nombre, descripcion, color, icono, orden, activo } = body;
 
-    const categoriaExistente = await prisma.categoria.findUnique({
+    const categoriaExistente = await prisma.categorias.findUnique({
       where: { id }
     });
 
@@ -93,7 +93,7 @@ export async function PUT(
     }
 
     if (nombre && nombre !== categoriaExistente.nombre) {
-      const nombreDuplicado = await prisma.categoria.findUnique({
+      const nombreDuplicado = await prisma.categorias.findUnique({
         where: { nombre }
       });
 
@@ -113,7 +113,7 @@ export async function PUT(
     if (orden !== undefined) updateData.orden = orden;
     if (activo !== undefined) updateData.activo = activo;
 
-    const categoriaActualizada = await prisma.categoria.update({
+    const categoriaActualizada = await prisma.categorias.update({
       where: { id },
       data: updateData,
       include: {
@@ -154,7 +154,7 @@ export async function DELETE(
       );
     }
 
-    const categoria = await prisma.categoria.findUnique({
+    const categoria = await prisma.categorias.findUnique({
       where: { id },
       include: {
         sitios: {
@@ -182,7 +182,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.categoria.delete({
+    await prisma.categorias.delete({
       where: { id }
     });
 

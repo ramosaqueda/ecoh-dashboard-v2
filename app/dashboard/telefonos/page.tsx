@@ -23,6 +23,7 @@ interface TelefonoFormData {
   id_ubicacion: string;
   imei: string;
   abonado: string;
+  nue?: string; // AGREGADO
   solicitaTrafico: boolean | null;
   solicitaImei: boolean | null;
   extraccionForense: boolean | null;
@@ -69,9 +70,21 @@ export default function TelefonosPage({}: TelefonoPageProps) {
     loadTelefonos();
   }, []);
 
+  // MEJORADO: Ahora carga los datos específicos del teléfono al editar
   const handleEdit = async (telefono: Telefono): Promise<void> => {
-    setSelectedTelefono(telefono);
-    setIsModalOpen(true);
+    try {
+      // Cargar datos completos del teléfono desde el API
+      const response = await fetch(`/api/telefonos/${telefono.id}`);
+      if (!response.ok) {
+        throw new Error('Error al cargar los datos del teléfono');
+      }
+      const telefonoCompleto = await response.json();
+      setSelectedTelefono(telefonoCompleto);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error al cargar teléfono:', error);
+      toast.error('Error al cargar los datos del teléfono');
+    }
   };
 
   const handleDelete = async (id: string): Promise<void> => {
@@ -138,7 +151,7 @@ export default function TelefonosPage({}: TelefonoPageProps) {
     );
   };
 
-  // Función para convertir Telefono a formato compatible con TelefonoForm
+  // CORREGIDO: Función para convertir Telefono a formato compatible con TelefonoForm
   const convertToFormData = (telefono: Telefono | null) => {
     if (!telefono) return undefined;
     
@@ -150,6 +163,7 @@ export default function TelefonosPage({}: TelefonoPageProps) {
                    (telefono as any).id_ubicacion?.toString() || '',
       imei: (telefono as any).imei || '',
       abonado: (telefono as any).abonado || '',
+      nue: (telefono as any).nue || '', // CAMPO AGREGADO - ESTA ERA LA LÍNEA FALTANTE
       solicitaTrafico: (telefono as any).solicitaTrafico ?? null,
       solicitaImei: (telefono as any).solicitaImei ?? null,
       extraccionForense: (telefono as any).extraccionForense ?? null,

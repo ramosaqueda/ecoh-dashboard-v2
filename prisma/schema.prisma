@@ -7,47 +7,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-// Modelo para el Genograma
 model Genograma {
-  id             Int      @id @default(autoincrement())
-  rucCausa       String?  // RUC de la causa vinculada al genograma
-  
-  // Contenido del genograma como JSON
-  personas       Json     // Array de personas con sus atributos
-  relaciones     Json     // Array de relaciones entre personas
-  
-  // Código mermaid generado para visualización
-  mermaidCode    String   @db.Text
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  // Relación con la causa
-  causaId        Int?
-  causa          Causa?   @relation(fields: [causaId], references: [id])
-  
+  id          Int      @id @default(autoincrement())
+  rucCausa    String?  @db.VarChar(255)
+  personas    Json
+  relaciones  Json
+  mermaidCode String
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  causaId     Int?
+  causa       Causa?   @relation(fields: [causaId], references: [id])
+
   @@index([causaId])
   @@index([rucCausa])
 }
 
 model TimelineHito {
-  id           Int      @id @default(autoincrement())
-  titulo       String
-  fecha        DateTime
-  descripcion  String?  @db.Text
-  icono        String?
-  imagenUrl    String?
-  causaId      Int
-  causa        Causa    @relation(fields: [causaId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  fecha       DateTime @db.Timestamp(6)
+  descripcion String?
+  icono       String?
+  imagenUrl   String?
+  causaId     Int
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @db.Timestamp(6)
+  causa       Causa    @relation(fields: [causaId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_causa")
 
-  @@index([causaId])
+  @@index([causaId], map: "idx_timelinehito_causaid")
 }
 
 model Causa {
-  id                        Int               @id @default(autoincrement())
+  id                        Int                  @id @default(autoincrement())
   denominacionCausa         String
   ruc                       String?
   fechaDelHecho             DateTime?
@@ -67,93 +58,81 @@ model Causa {
   fechaHoraTomaConocimiento DateTime?
   comunaId                  Int?
   analistaId                Int?
-  atvtId                    Int?
   fiscalId                  Int?
   focoId                    Int?
   delitoId                  Int?
   abogadoId                 Int?
-  esCrimenOrganizado        Int?
   tribunalId                Int?
   nacionalidadVictimaId     Int?
-  abogado                   Abogado?          @relation(fields: [abogadoId], references: [id])
-  analista                  Analista?         @relation(fields: [analistaId], references: [id])
-  atvt                      Atvt?              @relation(fields: [atvtId], references: [id])   
-  comuna                    Comuna?           @relation(fields: [comunaId], references: [id])
-  delito                    Delito?           @relation(fields: [delitoId], references: [id])
-  fiscal                    Fiscal?           @relation(fields: [fiscalId], references: [id])
-  foco                      Foco?             @relation(fields: [focoId], references: [id])
-  nacionalidadVictima       Nacionalidad?     @relation(fields: [nacionalidadVictimaId], references: [id])
-  tribunal                  Tribunal?         @relation(fields: [tribunalId], references: [id])
+  esCrimenOrganizado        Boolean?
+  atvtId                    Int?
+  actividades               Actividad[]
+  abogado                   Abogado?             @relation(fields: [abogadoId], references: [id])
+  analista                  Analista?            @relation(fields: [analistaId], references: [id])
+  comuna                    Comuna?              @relation(fields: [comunaId], references: [id])
+  delito                    Delito?              @relation(fields: [delitoId], references: [id])
+  fiscal                    Fiscal?              @relation(fields: [fiscalId], references: [id])
+  foco                      Foco?                @relation(fields: [focoId], references: [id])
+  nacionalidadVictima       Nacionalidad?        @relation(fields: [nacionalidadVictimaId], references: [id])
+  tribunal                  Tribunal?            @relation(fields: [tribunalId], references: [id])
+  atvt                      Atvt?                @relation(fields: [atvtId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_causa_atvt")
+  organizaciones            CausaOrganizacion[]
   imputados                 CausasImputados[]
-  actividades              Actividad[]        // Relación con Actividad
-
-  victimas                  CausasVictimas[]
-  telefonos                 TelefonoCausa[]   // Nueva relación agregada
-
- // New relations for related causes
-  causasRelacionadasMadre   CausasRelacionadas[] @relation("CausaMadre")
   causasRelacionadasArista  CausasRelacionadas[] @relation("CausaArista")
-  causasCrimenOrg CausasCrimenOrganizado[]
-  MedidaIntrusiva MedidaIntrusiva[]
-  //relacion para organizaciones.
-  // Se mantiene la relación con la tabla intermedia CausaOrganizacion
-  organizaciones CausaOrganizacion[]
-
-
-  // Nueva relación con Genograma
+  causasRelacionadasMadre   CausasRelacionadas[] @relation("CausaMadre")
+  victimas                  CausasVictimas[]
   genogramas                Genograma[]
+  MedidaIntrusiva           MedidaIntrusiva[]
   hitos                     TimelineHito[]
-  relato                    RelatoHecho?
-   
+  telefonos                 TelefonoCausa[]
+
+  @@index([atvtId], map: "fki_fk_causa_atvt")
 }
 
-// Add this new model to schema.prisma
 model CausaOrganizacion {
   id              Int                   @id @default(autoincrement())
   organizacionId  Int
   causaId         Int
-  fechaAsociacion DateTime              @default(now())
+  fechaAsociacion DateTime              @default(now()) @db.Timestamptz(6)
   observacion     String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  causa           Causa                 @relation(fields: [causaId], references: [id])
-  organizacion    OrganizacionDelictual @relation(fields: [organizacionId], references: [id])
+  createdAt       DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime              @default(now()) @updatedAt @db.Timestamptz(6)
+  causa           Causa                 @relation(fields: [causaId], references: [id], onDelete: Cascade)
+  organizacion    OrganizacionDelictual @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
 
-  @@unique([organizacionId, causaId])
+  @@unique([organizacionId, causaId], map: "CausaOrganizacion_organizacionId_causaId_unique")
   @@index([causaId])
   @@index([organizacionId])
 }
 
 model CrimenOrganizadoParams {
-  value                    Int                      @id @default(autoincrement())
-  label                 String                   @unique @db.VarChar(100)
-  descripcion            String                   @db.VarChar(100)
-  CausasCrimenOrganizado CausasCrimenOrganizado[]
+  value       Int    @id
+  label       String
+  descripcion String
 }
+
 model CausasCrimenOrganizado {
   causaId     Int
   parametroId Int
-  causa       Causa                  @relation(fields: [causaId], references: [id])
-  parametro   CrimenOrganizadoParams @relation(fields: [parametroId], references: [value])
   estado      Boolean?
 
   @@id([causaId, parametroId])
 }
 
-// New model to track cause relationships
 model CausasRelacionadas {
-  id              Int      @id @default(autoincrement())
-  causaMadreId    Int
-  causaAristaId   Int
-  fechaRelacion   DateTime @default(now())
-  observacion     String?
-  tipoRelacion    String?  // Para indicar el tipo de relación si es necesario
-  
-  // Relations to Causa model
-  causaMadre      Causa    @relation("CausaMadre", fields: [causaMadreId], references: [id])
-  causaArista     Causa    @relation("CausaArista", fields: [causaAristaId], references: [id])
+  id            Int      @id @default(autoincrement())
+  causaMadreId  Int
+  causaAristaId Int
+  fechaRelacion DateTime @default(now()) @db.Timestamp(6)
+  observacion   String?
+  tipoRelacion  String?  @db.VarChar(255)
+  causaArista   Causa    @relation("CausaArista", fields: [causaAristaId], references: [id], onDelete: Cascade)
+  causaMadre    Causa    @relation("CausaMadre", fields: [causaMadreId], references: [id], onDelete: Cascade)
 
   @@unique([causaMadreId, causaAristaId])
+  @@index([causaAristaId], map: "idx_causas_relacionadas_arista")
+  @@index([fechaRelacion], map: "idx_causas_relacionadas_fecha")
+  @@index([causaMadreId], map: "idx_causas_relacionadas_madre")
 }
 
 model Victima {
@@ -166,20 +145,19 @@ model Victima {
 }
 
 model Imputado {
-  id             Int                    @id @default(autoincrement())
-  nombreSujeto   String
-  docId          String
-  nacionalidadId Int?
-  alias          String?
-  caracterisiticas          String?
-  createdAt      DateTime?              @default(now())
-  updatedAt      DateTime?              @updatedAt
-  causas         CausasImputados[]
-  fotoPrincipal String?
-  fotografias   Fotografia[]
-  nacionalidad   Nacionalidad?          @relation(fields: [nacionalidadId], references: [id])
-  organizaciones MiembrosOrganizacion[]
-
+  id               Int                    @id @default(autoincrement())
+  nombreSujeto     String
+  docId            String
+  nacionalidadId   Int?
+  createdAt        DateTime?              @default(now())
+  updatedAt        DateTime?              @updatedAt
+  fotoPrincipal    String?
+  alias            String?
+  caracterisiticas String?
+  causas           CausasImputados[]
+  fotografias      Fotografia[]
+  nacionalidad     Nacionalidad?          @relation(fields: [nacionalidadId], references: [id])
+  organizaciones   MiembrosOrganizacion[]
 }
 
 model Fotografia {
@@ -187,11 +165,12 @@ model Fotografia {
   url         String?
   filename    String
   esPrincipal Boolean  @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  imputado    Imputado @relation(fields: [imputadoId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   imputadoId  Int
+  imputado    Imputado @relation(fields: [imputadoId], references: [id])
 }
+
 model Nacionalidad {
   id        Int        @id @default(autoincrement())
   nombre    String
@@ -207,16 +186,15 @@ model Analista {
 }
 
 model Atvt {
-  id     Int     @id @default(autoincrement())
+  id     Int     @id(map: " Atvt_pkey") @default(autoincrement())
   nombre String
   causas Causa[]
-}	
-
+}
 
 model Fiscal {
-  id     Int     @id @default(autoincrement())
-  nombre String
-  causas Causa[]
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  causas          Causa[]
   MedidaIntrusiva MedidaIntrusiva[]
 }
 
@@ -239,10 +217,9 @@ model Abogado {
 }
 
 model Tribunal {
-  id     Int     @id @default(autoincrement())
-  nombre String
-  causas Causa[]
-
+  id              Int               @id @default(autoincrement())
+  nombre          String
+  causas          Causa[]
   MedidaIntrusiva MedidaIntrusiva[]
 }
 
@@ -301,12 +278,10 @@ model OrganizacionDelictual {
   tipoOrganizacionId  Int
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
-  miembros            MiembrosOrganizacion[]
   causas              CausaOrganizacion[]
-
+  miembros            MiembrosOrganizacion[]
   tipoOrganizacion    TipoOrganizacion       @relation(fields: [tipoOrganizacionId], references: [id])
 }
-
 
 model MiembrosOrganizacion {
   id             Int                   @id @default(autoincrement())
@@ -325,68 +300,69 @@ model MiembrosOrganizacion {
 }
 
 model Telefono {
-  id                  Int            @id @default(autoincrement())
-  numeroTelefonico    String?
-  proveedorServicio   Proveedor     @relation(fields: [idProveedorServicio], references: [id])
+  id                  Int                @id @default(autoincrement())
   idProveedorServicio Int
   imei                String
   abonado             String
   solicitaTrafico     Boolean?
   solicitaImei        Boolean?
-  extraccionForense   Boolean?
-  enviar_custodia     Boolean?
-  
   observacion         String?
+  numeroTelefonico    String?
+  extraccionForense   Boolean?
+  existe              Boolean?
+  enviar_custodia     Boolean?
+  id_ubicacion        Int?
+  nue                 String?
+  proveedorServicio   Proveedor          @relation(fields: [idProveedorServicio], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_telefono_proveedor")
+  ubicacion           ubicacionTelefono? @relation(fields: [id_ubicacion], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_telefono_ubicacion")
   telefonosCausa      TelefonoCausa[]
-  id_ubicacion        Int
-  ubicacion           ubicacionTelefono @relation(fields: [id_ubicacion], references: [id])
-  
+
+  @@index([imei], map: "idx_telefonos_imei")
+  @@index([numeroTelefonico], map: "idx_telefonos_numero")
+  @@index([idProveedorServicio], map: "idx_telefonos_proveedor")
+  @@index([id_ubicacion], map: "idx_telefonos_ubicacion")
   @@map("telefonos")
 }
 
 model ubicacionTelefono {
-  id        Int        @id @default(autoincrement())
-  nombre    String
+  id        Int        @id(map: "ubicaciontelefono_pkey") @default(autoincrement())
+  nombre    String     @unique(map: "unique_ubicacion_nombre") @db.VarChar(255)
   telefonos Telefono[]
-   @@map("ubicacion_telefono")
-}
 
+  @@map("ubicacion_telefono")
+}
 
 model Proveedor {
   id        Int        @id @default(autoincrement())
   nombre    String
   telefonos Telefono[]
+
   @@map("proveedores")
 }
 
 model TelefonoCausa {
   id         Int      @id @default(autoincrement())
-  telefono   Telefono @relation(fields: [idTelefono], references: [id])
-  causa      Causa    @relation(fields: [idCausa], references: [id])
   idTelefono Int
   idCausa    Int
+  causa      Causa    @relation(fields: [idCausa], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_telefonocausa_causa")
+  telefono   Telefono @relation(fields: [idTelefono], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_telefonocausa_telefono")
 
   @@map("telefonos_causa")
 }
 
 model Usuario {
-  id            Int       @id @default(autoincrement())
-  clerk_id       String    @unique
-  email         String    @unique
-  nombre        String
-  cargo         String?
-  rolId         Int       @default(3)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // 🔥 ELIMINAR ESTA LÍNEA (comentarla o borrarla):
-  // actividades   Actividad[]  // Nueva relación
- 
-  // 🔥 MANTENER SOLO ESTAS:
-  actividadesCreadas   Actividad[] @relation("ActividadCreador")
-  actividadesAsignadas Actividad[] @relation("ActividadAsignado") 
-  
-  rol           Rol       @relation(fields: [rolId], references: [id])
+  id                   Int                        @id @default(autoincrement())
+  clerk_id             String                     @unique
+  email                String                     @unique
+  nombre               String
+  cargo                String?
+  rolId                Int                        @default(3)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  actividadesCreadas   Actividad[]                @relation("ActividadCreador")
+  actividadesAsignadas Actividad[]                @relation("ActividadAsignado")
+  correlativos         CorrelativoTipoActividad[]
+  rol                  Rol                        @relation(fields: [rolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_rol")
 
   @@map("usuarios")
 }
@@ -397,13 +373,179 @@ model Rol {
   descripcion String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
   usuarios    Usuario[]
 
   @@map("roles")
 }
 
-// Mantener las definiciones existentes y agregar las nuevas entidades en sintaxis Prisma
+model Area {
+  id             Int             @id @default(autoincrement())
+  nombre         String          @unique
+  descripcion    String?
+  activo         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  tiposActividad TipoActividad[]
+}
+
+model TipoActividad {
+  id           Int                        @id @default(autoincrement())
+  nombre       String                     @unique @db.VarChar(100)
+  descripcion  String?                    @db.VarChar(500)
+  areaId       Int
+  activo       Boolean                    @default(true)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  reqinforme   Boolean?                   @default(false)
+  siglainf     String?
+  actividades  Actividad[]
+  correlativos CorrelativoTipoActividad[]
+  area         Area                       @relation(fields: [areaId], references: [id])
+
+  @@index([areaId])
+}
+
+model CorrelativoTipoActividad {
+  id                    Int           @id @default(autoincrement())
+  numero                Int?
+  sigla                 String?
+  tipoActividad         Int
+  usuario               Int?
+  createdAt             DateTime?     @db.Timestamp(6)
+  usuarioRelation       Usuario?      @relation(fields: [usuario], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fkUsuario")
+  tipoActividadRelation TipoActividad @relation(fields: [tipoActividad], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fktipoActividad")
+
+  @@map("CorrelativoTipoActividad")
+}
+
+model Actividad {
+  id                  Int             @id @default(autoincrement())
+  causa_id            Int
+  tipo_actividad_id   Int
+  usuario_id          Int
+  fechaInicio         DateTime
+  fechaTermino        DateTime
+  estado              EstadoActividad @default(inicio)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  observacion         String?
+  usuario_asignado_id Int?
+  glosa_cierre        String?         @map(" glosa_cierre")
+  causa               Causa           @relation(fields: [causa_id], references: [id])
+  tipoActividad       TipoActividad   @relation(fields: [tipo_actividad_id], references: [id])
+  usuario             Usuario         @relation("ActividadCreador", fields: [usuario_id], references: [id])
+  usuarioAsignado     Usuario?        @relation("ActividadAsignado", fields: [usuario_asignado_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_actividad_usuario_asignado")
+
+  @@index([causa_id])
+  @@index([tipo_actividad_id])
+  @@index([usuario_id])
+  @@index([usuario_asignado_id], map: "idx_actividad_usuario_asignado")
+}
+
+model MedidaIntrusiva {
+  id                   Int               @id @default(autoincrement())
+  causa_id             Int
+  tipo_medida_id       Int
+  fiscal_id            Int
+  tribunal_id          Int
+  cantidad_domicilios  Int?
+  domicilios_aprobados Int?
+  detenidos            Int?
+  unidad_policial_id   Int
+  fechaSolicitud       DateTime          @db.Timestamp(6)
+  nombreJuez           String?           @db.VarChar(255)
+  estado               estadoactividad   @default(inicio)
+  observacion          String?
+  createdAt            DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt            DateTime          @default(now()) @db.Timestamp(6)
+  causa                Causa             @relation(fields: [causa_id], references: [id], onUpdate: NoAction)
+  fiscal               Fiscal            @relation(fields: [fiscal_id], references: [id], onUpdate: NoAction)
+  tipo_medida          TipoMedida        @relation(fields: [tipo_medida_id], references: [id], onUpdate: NoAction)
+  tribunal             Tribunal          @relation(fields: [tribunal_id], references: [id], onUpdate: NoAction)
+  unidad_policial      UnidadPolicial    @relation(fields: [unidad_policial_id], references: [id], onUpdate: NoAction)
+  Medida_Hallazgo      Medida_Hallazgo[]
+
+  @@index([causa_id], map: "medida_intrusiva_causa_id_idx")
+  @@index([fiscal_id], map: "medida_intrusiva_fiscal_id_idx")
+  @@index([tipo_medida_id], map: "medida_intrusiva_tipo_medida_id_idx")
+}
+
+model ResolucionTribunal {
+  id         Int      @id @default(autoincrement())
+  resolucion String   @unique @db.VarChar(100)
+  activo     Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@map("resoluciones_tribunal")
+}
+
+model UnidadPolicial {
+  id              Int               @id @default(autoincrement())
+  nombre          String            @unique @db.VarChar(100)
+  MedidaIntrusiva MedidaIntrusiva[]
+}
+
+model MIHallazgos {
+  id              Int               @id @default(autoincrement())
+  nombre          String            @unique @db.VarChar(100)
+  Medida_Hallazgo Medida_Hallazgo[]
+}
+
+model TipoMedida {
+  id                Int               @id @default(autoincrement())
+  nombre            String            @unique @db.VarChar(100)
+  activo            Boolean           @default(true)
+  createdAt         DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  medidasIntrusivas MedidaIntrusiva[]
+}
+
+model Medida_Hallazgo {
+  medida_id       Int
+  hallazgo_id     Int
+  createdAt       DateTime        @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime        @default(now()) @db.Timestamp(6)
+  MIHallazgos     MIHallazgos     @relation(fields: [hallazgo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  MedidaIntrusiva MedidaIntrusiva @relation(fields: [medida_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([medida_id, hallazgo_id])
+}
+
+model categorias {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique @db.VarChar(50)
+  descripcion String?
+  color       String?  @db.VarChar(20)
+  icono       String?  @db.VarChar(50)
+  activo      Boolean  @default(true)
+  orden       Int?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  sitios      sitios[]
+
+  @@index([activo], map: "idx_categorias_activo")
+  @@index([orden], map: "idx_categorias_orden")
+}
+
+model sitios {
+  id           Int         @id @default(autoincrement())
+  nombre       String      @db.VarChar(100)
+  descripcion  String
+  url          String      @db.VarChar(500)
+  icono        String      @db.VarChar(50)
+  activo       Boolean     @default(true)
+  orden        Int?
+  categoria_id Int?
+  created_at   DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime    @default(now()) @db.Timestamptz(6)
+  categorias   categorias? @relation(fields: [categoria_id], references: [id], onUpdate: NoAction, map: "fk_sitios_categoria")
+
+  @@index([activo], map: "idx_sitios_activo")
+  @@index([categoria_id], map: "idx_sitios_categoria_id")
+  @@index([nombre], map: "idx_sitios_nombre")
+  @@index([orden], map: "idx_sitios_orden")
+}
 
 enum EstadoActividad {
   inicio
@@ -411,141 +553,8 @@ enum EstadoActividad {
   terminado
 }
 
-model Area {
-  id            Int             @id @default(autoincrement())
-  nombre        String          @unique
-  descripcion   String?
-  activo        Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  tiposActividad TipoActividad[]
-}
-
-model TipoActividad {
-  id          Int          @id @default(autoincrement())
-  nombre      String       @unique @db.VarChar(100)
-  descripcion String?      @db.VarChar(500)
-  areaId      Int
-  area        Area         @relation(fields: [areaId], references: [id])
-  activo      Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  actividades Actividad[]
-
-  @@index([areaId])
-}
-
-
-
-model Actividad {
-  id              Int            @id @default(autoincrement())
-  causa_id        Int            
-  tipo_actividad_id Int         
-  usuario_id      Int            
-  usuario_asignado_id Int?       // 🔥 AGREGAR ESTA LÍNEA
-  fechaInicio     DateTime
-  fechaTermino    DateTime
-  estado          EstadoActividad @default(inicio)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  observacion     String? 
- 
-  // Relaciones actualizadas
-  causa            Causa          @relation(fields: [causa_id], references: [id])
-  tipoActividad    TipoActividad  @relation(fields: [tipo_actividad_id], references: [id])
-  usuario          Usuario        @relation("ActividadCreador", fields: [usuario_id], references: [id])
-  usuarioAsignado  Usuario?       @relation("ActividadAsignado", fields: [usuario_asignado_id], references: [id])
-
-  @@index([causa_id])
-  @@index([tipo_actividad_id])
-  @@index([usuario_id])
-  @@index([usuario_asignado_id])
-}
-
-
-// Nueva entidad para registrar Medidas instrusivas. 
-model MedidaIntrusiva {
-  id                    Int            @id @default(autoincrement())
-  causa_id              Int            
-  tipo_medida_id        Int            
-  fiscal_id             Int            
-  tribunal_id           Int
-  cantidad_domicilios   Int?
-  domicilios_aprobados  Int?
-  detenidos             Int?
-  unidad_policial_id    Int	
-  fecha_solicitud       DateTime
-  nombre_juez           String?
-  id_resolucion         Int
-  fecha_resolucion      DateTime?      // Añadido: fecha en que se emitió la resolución
-  created_at            DateTime       @default(now())
-  updated_at            DateTime       @updatedAt
-  observacion           String?
-  causa                 Causa          @relation(fields: [causa_id], references: [id])
-  tipo_medida          TipoMedida     @relation(fields: [tipo_medida_id], references: [id])
-  fiscal               Fiscal         @relation(fields: [fiscal_id], references: [id])
-  tribunal             Tribunal       @relation(fields: [tribunal_id], references: [id])
-  unidad_policial      UnidadPolicial @relation(fields: [unidad_policial_id], references: [id])
-  resolucion_tribunal  ResolucionTribunal  @relation(fields: [id_resolucion], references: [id])
-  medidas_hallazgos    MedidaHallazgo[]
-
-  @@index([causa_id])
-  @@index([tipo_medida_id])
-  @@index([fiscal_id])
-  @@index([tribunal_id])
-  @@index([unidad_policial_id])
-  @@index([id_resolucion])
-}
-
-model ResolucionTribunal {
-  id                Int              @id @default(autoincrement())
-  resolucion                    String           @unique @db.VarChar(100)
-  activo            Boolean          @default(true)
-  created_at        DateTime         @default(now())
-  updated_at        DateTime         @updatedAt
-  medidas_intrusivas MedidaIntrusiva[]
-
-  @@map("resoluciones_tribunal")
-}
-
-model UnidadPolicial {
-  id          Int          @id @default(autoincrement())
-  nombre      String       @unique @db.VarChar(100)
-  MedidaIntrusiva MedidaIntrusiva[]
-}
-
-model MIHallazgos {
-  id          Int          @id @default(autoincrement())
-  nombre      String       @unique @db.VarChar(100)
-
-  Medida_Hallazgo MedidaHallazgo[]
-}
-
-model MedidaHallazgo {  // Removido guión bajo
-  medida_id    Int
-  hallazgo_id  Int
-  created_at   DateTime        @default(now())
-  updated_at   DateTime        @updatedAt
-  medida       MedidaIntrusiva @relation(fields: [medida_id], references: [id])
-  hallazgo     MIHallazgos     @relation(fields: [hallazgo_id], references: [id])
-  
-  @@id([medida_id, hallazgo_id])
-  @@index([hallazgo_id]) // Añadido índice para mejorar performance en búsquedas
-}
-
-model TipoMedida {
-  id          Int          @id @default(autoincrement())
-  nombre      String       @unique @db.VarChar(100)
-  activo      Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  medidasIntrusivas MedidaIntrusiva[]
-}
-
-
-model RelatoHecho {
-  id          Int                    @id @default(autoincrement())
-  causaId     Int                    @unique
-  causa       Causa                  @relation(fields: [causaId], references: [id])
-  relato      String 
+enum estadoactividad {
+  inicio
+  en_proceso
+  terminado
 }
