@@ -11,14 +11,15 @@ export async function GET(request: NextRequest) {
     const where: any = {};
     
     if (categoria) {
-      where.categoria = categoria;
+      // 🔥 CORREGIDO: Usar 'categorias' en lugar de 'categoria'
+      where.categorias = categoria;
     }
     
     if (activo !== null) {
       where.activo = activo === 'true';
     }
 
-    const sitios = await prisma.sitio.findMany({
+    const sitios = await prisma.sitios.findMany({
       where,
       orderBy: [
         { orden: 'asc' },
@@ -52,13 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const nuevoSitio = await prisma.sitio.create({
+    const nuevoSitio = await prisma.sitios.create({
       data: {
         nombre,
         descripcion,
         url,
         icono,
-        categoria,
+        // 🔥 CORREGIDO: Usar 'categorias' en lugar de 'categoria'
+        categorias: categoria,
         orden: orden || null
       }
     });

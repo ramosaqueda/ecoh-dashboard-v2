@@ -51,6 +51,7 @@ import {
   PanelLeftIcon,
   GhostIcon,
   FileStackIcon,
+  WrenchIcon,
   
 
 } from 'lucide-react';
@@ -102,6 +103,8 @@ export const Icons = {
   ghost:GhostIcon,
   report:FileStackIcon,
   link2:Link2Icon,
+  tool:WrenchIcon,
+
 
 
   gitHub: ({ ...props }: LucideProps) => (

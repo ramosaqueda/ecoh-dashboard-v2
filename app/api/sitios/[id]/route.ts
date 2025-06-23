@@ -18,10 +18,10 @@ export async function GET(
       );
     }
 
-    const sitio = await prisma.sitio.findUnique({
+    const sitio = await prisma.sitios.findUnique({
       where: { id },
       include: {
-        categoria: {
+        categorias: {
           select: {
             id: true,
             nombre: true,
@@ -74,7 +74,7 @@ export async function PUT(
     const { nombre, descripcion, url, icono, categoriaId, orden, activo } = body;
 
     // Verificar que el sitio existe
-    const sitioExistente = await prisma.sitio.findUnique({
+    const sitioExistente = await prisma.sitios.findUnique({
       where: { id }
     });
 
@@ -102,7 +102,7 @@ export async function PUT(
 
     // Verificar que la categoría existe si se proporciona
     if (categoriaId !== undefined && categoriaId !== null) {
-      const categoria = await prisma.categoria.findUnique({
+      const categoria = await prisma.categorias.findUnique({
         where: { id: parseInt(categoriaId.toString()) }
       });
 
@@ -126,11 +126,11 @@ export async function PUT(
     if (orden !== undefined) updateData.orden = orden;
     if (activo !== undefined) updateData.activo = activo;
 
-    const sitioActualizado = await prisma.sitio.update({
+    const sitioActualizado = await prisma.sitios.update({
       where: { id },
       data: updateData,
       include: {
-        categoria: {
+        categorias: {
           select: {
             id: true,
             nombre: true,
@@ -168,7 +168,7 @@ export async function DELETE(
     }
 
     // Verificar que el sitio existe
-    const sitio = await prisma.sitio.findUnique({
+    const sitio = await prisma.sitios.findUnique({
       where: { id },
       select: {
         id: true,
@@ -183,7 +183,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.sitio.delete({
+    await prisma.sitios.delete({
       where: { id }
     });
 

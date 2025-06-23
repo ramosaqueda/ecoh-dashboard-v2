@@ -114,10 +114,27 @@ export const navItems: NavItem[] = [
     icon: 'report',
     label: 'reportes'
   },
+
   {
-    title: 'LaunchPad',
-    href: '/dashboard/LaunchpadECOH',
-    icon: 'link2',
-    label: 'reportes'
-  }
+    title: 'Utiles',    
+    icon: 'tool',
+    label: 'utiles',
+      subItems: [
+        {
+          title: 'Correlativos',
+          href: '/dashboard/correlativos',
+          icon: 'report',
+          label: 'correlativos',
+        },
+        {
+          title: 'LaunchPad',
+          href: '/dashboard/LaunchpadECOH',
+          icon: 'link2',
+          label: 'reportes'
+        }
+        
+      ]
+  },
+  
+  
 ];

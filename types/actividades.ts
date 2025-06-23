@@ -13,6 +13,8 @@ export interface Actividad {
     fechaInicio: string;
     fechaTermino: string;
     observacion: string;
+    glosa_cierre?: string; // 🔥 AGREGAR ESTE CAMPO
+    usuarioAsignadoId?: string; // 🔥 AGREGAR ESTE CAMPO
     estado: 'inicio' | 'en_proceso' | 'terminado';
     usuario: {
       email: string;
@@ -27,6 +29,8 @@ export interface Actividad {
     fechaTermino: string;
     estado: 'inicio' | 'en_proceso' | 'terminado';
     observacion?: string;
+    glosa_cierre?: string; // 🔥 AGREGAR ESTE CAMPO
+    usuarioAsignadoId?: string; // 🔥 AGREGAR ESTE CAMPO
   }
   
   export interface TipoActividad {

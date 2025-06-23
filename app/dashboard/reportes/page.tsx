@@ -14,7 +14,8 @@ import {
   Clock,
   Phone,
   MapPin,
-  Scale
+  Scale,
+  GitBranch
 } from 'lucide-react';
 
 interface ReporteItem {
@@ -38,9 +39,18 @@ const reportesDisponibles: ReporteItem[] = [
     categoria: 'operacional'
   },
   {
+    id: 'causas-relacionadas',
+    titulo: 'Causas Relacionadas',
+    descripcion: 'Análisis de relaciones entre causas en el sistema',
+    icono: <GitBranch className="h-6 w-6" />,
+    href: '/dashboard/reportes/CausasRelacionadas',
+    disponible: true,
+    categoria: 'operacional'
+  },
+  {
     id: 'reporte-fiscal-causas',
     titulo: 'Reporte de Causas por Fiscal/Formalizados',
-    descripcion: 'Análisis detallado de causas por fiscal, imputados formalizados y medidas cautelares (Prisión Preventiva e Internación Provisoria)',
+    descripcion: 'Análisis de causas asignadas e imputados con medidas cautelares',
     icono: <Scale className="h-6 w-6" />,
     href: '/dashboard/reportes/ReporteFiscalCausas',
     disponible: true,
