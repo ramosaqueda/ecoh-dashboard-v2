@@ -1,8 +1,7 @@
 // app/api/correlativos/route.ts
 import { NextRequest, NextResponse } from 'next/server';
- 
 import { prisma } from '@/lib/prisma';
- 
+
 // Obtener correlativo actual por tipo de actividad
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +17,8 @@ export async function GET(request: NextRequest) {
 
     const currentYear = new Date().getFullYear();
 
-    // Buscar el correlativo más alto para este tipo y año actual
-    const correlativo = await prisma.correlativoTipoActividad.findFirst({
+    // 🔥 CORREGIDO: Primero intentar buscar con filtro de año
+    let correlativo = await prisma.correlativoTipoActividad.findFirst({
       where: {
         tipoActividad: parseInt(tipoActividadId),
         createdAt: {
@@ -31,6 +30,19 @@ export async function GET(request: NextRequest) {
         numero: 'desc',
       },
     });
+
+    // 🔥 NUEVO: Si no encuentra registros con filtro de año, buscar sin filtro de fecha
+    // Esto maneja el caso donde createdAt no se está guardando correctamente
+    if (!correlativo) {
+      correlativo = await prisma.correlativoTipoActividad.findFirst({
+        where: {
+          tipoActividad: parseInt(tipoActividadId),
+        },
+        orderBy: {
+          numero: 'desc',
+        },
+      });
+    }
 
     // Obtener información del tipo de actividad
     const tipoActividad = await prisma.tipoActividad.findUnique({
@@ -66,6 +78,14 @@ export async function GET(request: NextRequest) {
       sigla: tipoActividad.siglainf,
       correlativoCompleto: `${tipoActividad.siglainf}-${String(siguienteNumero).padStart(3, '0')}`,
       año: currentYear,
+      // 🔥 NUEVO: Información adicional para debugging
+      debug: {
+        registroEncontrado: !!correlativo,
+        fechaUltimoRegistro: correlativo?.createdAt || null,
+        totalRegistrosEnTabla: await prisma.correlativoTipoActividad.count({
+          where: { tipoActividad: parseInt(tipoActividadId) }
+        })
+      }
     });
 
   } catch (error) {
@@ -92,8 +112,8 @@ export async function POST(request: NextRequest) {
 
     const currentYear = new Date().getFullYear();
 
-    // Obtener el número actual para este año
-    const correlativoActual = await prisma.correlativoTipoActividad.findFirst({
+    // 🔥 CORREGIDO: Mismo enfoque que en GET - primero con filtro de año, luego sin filtro
+    let correlativoActual = await prisma.correlativoTipoActividad.findFirst({
       where: {
         tipoActividad: parseInt(tipoActividadId),
         createdAt: {
@@ -105,6 +125,18 @@ export async function POST(request: NextRequest) {
         numero: 'desc',
       },
     });
+
+    // Si no encuentra con filtro de año, buscar sin filtro
+    if (!correlativoActual) {
+      correlativoActual = await prisma.correlativoTipoActividad.findFirst({
+        where: {
+          tipoActividad: parseInt(tipoActividadId),
+        },
+        orderBy: {
+          numero: 'desc',
+        },
+      });
+    }
 
     const nuevoNumero = (correlativoActual?.numero || 0) + 1;
 
@@ -133,13 +165,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear el nuevo correlativo
+    // 🔥 CORREGIDO: Crear el nuevo correlativo asegurando que createdAt se guarde
     const nuevoCorrelativo = await prisma.correlativoTipoActividad.create({
       data: {
         numero: nuevoNumero,
         sigla: tipoActividad.siglainf,
         tipoActividad: parseInt(tipoActividadId),
         usuario: parseInt(usuarioId),
+        // 🔥 NUEVO: Asegurar que createdAt se guarde explícitamente
+        createdAt: new Date(),
       },
     });
 

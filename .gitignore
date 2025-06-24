@@ -30,6 +30,10 @@ yarn.lock
 .env
 .env.old
 .env.local.old
+.env.dev.old
+.env.prod.old
+.env.test.old
+
 
 
 #script sh
