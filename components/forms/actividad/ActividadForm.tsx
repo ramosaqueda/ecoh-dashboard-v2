@@ -38,6 +38,7 @@ const ActividadSchema = z
     observacion: z.string().optional(),
     estado: z.enum(['inicio', 'en_proceso', 'terminado']),
     usuarioAsignadoId: z.string().optional(),
+    // ✅ CAMBIO: Hacer glosa_cierre opcional por defecto
     glosa_cierre: z.string().optional()
   })
   .refine((data) => data.fechaTermino >= data.fechaInicio, {
@@ -45,15 +46,17 @@ const ActividadSchema = z
     path: ['fechaTermino']
   })
   .refine((data) => {
-    const requiresGlosa = data.estado === 'terminado';
-    const hasGlosa = data.glosa_cierre && data.glosa_cierre.trim().length > 0;
-    return !requiresGlosa || hasGlosa;
+    // ✅ CAMBIO: Solo requerir glosa_cierre si el estado es terminado
+    if (data.estado === 'terminado') {
+      return data.glosa_cierre && data.glosa_cierre.trim().length > 0;
+    }
+    return true; // No requerir para otros estados
   }, {
     message: 'La glosa de cierre es requerida cuando la actividad está terminada',
     path: ['glosa_cierre']
   });
 
-// 🆕 Interfaces actualizadas para incluir área
+// Interfaces actualizadas para incluir área
 interface Area {
   id: number;
   nombre: string;
@@ -182,7 +185,7 @@ const DynamicDelegationField = dynamic(
   }
 );
 
-// 🆕 Componente para renderizar el selector agrupado
+// Componente para renderizar el selector agrupado
 const GroupedTipoActividadSelector = ({ 
   field, 
   tiposAgrupados, 
@@ -247,6 +250,8 @@ export default function ActividadForm({
   const [isLoadingTipos, setIsLoadingTipos] = useState(true);
   const [userRole, setUserRole] = useState<number | null>(null);
   const [isLoadingUserRole, setIsLoadingUserRole] = useState(true);
+  // ✅ NUEVO: Flag para controlar cuando el formulario está listo
+  const [isFormReady, setIsFormReady] = useState(false);
 
   const form = useForm<ActividadFormValues>({
     resolver: zodResolver(ActividadSchema),
@@ -258,18 +263,56 @@ export default function ActividadForm({
       estado: 'inicio',
       observacion: '',
       usuarioAsignadoId: '',
-      glosa_cierre: ''
+      glosa_cierre: '' // ✅ Siempre string vacío por defecto
     }
   });
 
   const estadoActual = form.watch('estado');
   const isEditing = !!initialData?.id;
 
+  // ✅ CAMBIO PRINCIPAL: useEffect mejorado con normalización
   useEffect(() => {
-    if (initialData) {
-      form.reset(initialData);
+    console.group('🎯 ACTIVIDAD FORM - useEffect reset');
+    console.log('📥 initialData:', initialData);
+    console.log('🔄 isLoadingTipos:', isLoadingTipos);
+    console.log('✅ isFormReady antes:', isFormReady);
+    
+    if (initialData && !isLoadingTipos) {
+      setIsFormReady(false);
+      console.log('🔄 Preparando reset del formulario...');
+      
+      const timer = setTimeout(() => {
+        // ✅ CAMBIO: Normalizar los datos antes del reset
+        const normalizedData = {
+          ...initialData,
+          observacion: initialData.observacion || '',
+          glosa_cierre: initialData.glosa_cierre || '', // ✅ Asegurar string vacío
+          usuarioAsignadoId: initialData.usuarioAsignadoId || ''
+        };
+        
+        console.log('📝 Ejecutando form.reset con datos normalizados:', normalizedData);
+        form.reset(normalizedData);
+        setIsFormReady(true);
+        console.log('✅ Formulario ready establecido a true');
+      }, 50);
+      
+      return () => {
+        console.log('🧹 Cleanup timer');
+        clearTimeout(timer);
+      };
+    } else if (!initialData) {
+      console.log('📝 No hay initialData, estableciendo ready según loading');
+      setIsFormReady(!isLoadingTipos);
     }
-  }, [form, initialData]);
+    console.groupEnd();
+  }, [form, initialData, isLoadingTipos]);
+
+  // ✅ NUEVO: Efecto para manejar el estado ready cuando cambia isLoadingTipos
+  useEffect(() => {
+    if (!isLoadingTipos && !initialData) {
+      setIsFormReady(true);
+    }
+  }, [isLoadingTipos, initialData]);
 
   const fetchUserRole = useCallback(async () => {
     try {
@@ -289,7 +332,7 @@ export default function ActividadForm({
     fetchUserRole();
   }, [fetchUserRole]);
 
-  // 🆕 Función para agrupar tipos de actividad por área
+  // Función para agrupar tipos de actividad por área
   const groupTiposByArea = useCallback((tipos: TipoActividad[]): TipoActividadGrouped[] => {
     // Agrupar por área
     const grouped = tipos.reduce((acc, tipo) => {
@@ -311,7 +354,7 @@ export default function ActividadForm({
   useEffect(() => {
     const fetchTiposActividad = async () => {
       try {
-        // 🆕 Modificar el endpoint para incluir información del área
+        // Modificar el endpoint para incluir información del área
         const response = await fetch('/api/tipos-actividad?include_area=true');
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -322,7 +365,7 @@ export default function ActividadForm({
         
         setTiposActividad(activeTipos);
         
-        // 🆕 Agrupar por área
+        // Agrupar por área
         const grouped = groupTiposByArea(activeTipos);
         setTiposAgrupados(grouped);
         
@@ -336,29 +379,67 @@ export default function ActividadForm({
     fetchTiposActividad();
   }, [groupTiposByArea]);
 
+  // ✅ FIX 5: handleSubmit mejorado con logs completos y validaciones defensivas
   const handleSubmit = useCallback(async (data: ActividadFormValues) => {
+    console.group('📋 FORM SUBMIT - INICIO');
+    console.log('📥 Data del formulario:', data);
+    console.log('⚡ isSubmitting:', isSubmitting);
+    console.log('✅ isFormReady:', isFormReady);
+    console.log('📊 initialData actual:', initialData);
+    
     try {
       if (isSubmitting) {
+        console.warn('❌ Ya está enviando');
         toast.warning('Ya se está procesando la operación...');
         return;
       }
 
-      const validationResult = ActividadSchema.safeParse(data);
+      if (!isFormReady) {
+        console.warn('❌ Formulario no ready');
+        toast.warning('El formulario aún se está cargando...');
+        return;
+      }
+
+      // ✅ FIX 5: Verificar si hay campos undefined en el data
+      Object.entries(data).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+          console.warn(`⚠️ Campo en data ${key} es:`, value);
+        }
+      });
+
+      // ✅ FIX 5: Normalizar datos antes de validar
+      const normalizedData = {
+        ...data,
+        observacion: data.observacion || '',
+        glosa_cierre: data.glosa_cierre || '',
+        usuarioAsignadoId: data.usuarioAsignadoId || ''
+      };
+
+      console.log('📝 Datos normalizados para validación:', normalizedData);
+
+      const validationResult = ActividadSchema.safeParse(normalizedData);
       if (!validationResult.success) {
+        console.error('❌ Validación fallida:', validationResult.error);
         validationResult.error.issues.forEach(issue => {
           const fieldName = issue.path.join('.');
           const message = issue.message;
+          console.error(`❌ Campo ${fieldName}: ${message}`);
           toast.error(`${fieldName}: ${message}`);
         });
         return;
       }
 
-      await onSubmit(data);
+      console.log('✅ Validación exitosa, llamando onSubmit...');
+      await onSubmit(normalizedData); // ✅ FIX 5: Usar datos normalizados
+      console.log('✅ onSubmit completado');
       
     } catch (error) {
+      console.error('💥 Error en form submit:', error);
       toast.error('Error inesperado en el formulario');
+    } finally {
+      console.groupEnd();
     }
-  }, [onSubmit, isSubmitting]);
+  }, [onSubmit, isSubmitting, isFormReady, initialData]); // ✅ FIX 5: Agregar initialData a dependencies
 
   const canDelegate = userRole === 1 || userRole === 4;
   const showGlosaCierre = estadoActual === 'terminado';
@@ -376,6 +457,14 @@ export default function ActividadForm({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* ✅ NUEVO: Mostrar loading state cuando el formulario no esté listo */}
+            {!isFormReady && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Preparando formulario...
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="causaId"
@@ -392,7 +481,7 @@ export default function ActividadForm({
               )}
             />
 
-            {/* 🆕 Selector agrupado por áreas */}
+            {/* Selector agrupado por áreas */}
             <FormField
               control={form.control}
               name="tipoActividadId"
@@ -530,14 +619,20 @@ export default function ActividadForm({
         </Card>
 
         <div className="flex justify-end">
+          {/* ✅ CAMBIO: Botón mejorado con estados de loading */}
           <Button 
             type="submit" 
-            disabled={isSubmitting || isLoadingTipos}
+            disabled={isSubmitting || isLoadingTipos || !isFormReady}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Guardando...
+              </>
+            ) : !isFormReady ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cargando...
               </>
             ) : (
               'Guardar'

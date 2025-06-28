@@ -67,8 +67,12 @@ export function CausasDataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [abogados, setAbogados] = useState<Professional[]>([]);
   const [analistas, setAnalistas] = useState<Professional[]>([]);
+  // ✅ NUEVO: Estado para ATVTs
+  const [atvts, setAtvts] = useState<Professional[]>([]);
   const [selectedAbogado, setSelectedAbogado] = useState<string>('all');
   const [selectedAnalista, setSelectedAnalista] = useState<string>('all');
+  // ✅ NUEVO: Estado para ATVT seleccionado
+  const [selectedATVT, setSelectedATVT] = useState<string>('all');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     rit: false,
     observacion: false,
@@ -76,20 +80,24 @@ export function CausasDataTable<TData, TValue>({
   });
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
   console.log(API_BASE_URL)
-  // Fetch abogados and analistas
+
+  // ✅ ACTUALIZADO: Fetch abogados, analistas y ATVTs
   useEffect(() => {
     const fetchProfessionals = async () => {
       try {
-        const [abogadosRes, analistasRes] = await Promise.all([
+        const [abogadosRes, analistasRes, atvtsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/abogado`),
-          fetch(`${API_BASE_URL}/api/analista`)
+          fetch(`${API_BASE_URL}/api/analista`),
+          fetch(`${API_BASE_URL}/api/atvt`) // ✅ NUEVO: Fetch de ATVTs
         ]);
 
-        if (abogadosRes.ok && analistasRes.ok) {
+        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok) {
           const abogadosData = await abogadosRes.json();
           const analistasData = await analistasRes.json();
+          const atvtsData = await atvtsRes.json(); // ✅ NUEVO
           setAbogados(abogadosData);
           setAnalistas(analistasData);
+          setAtvts(atvtsData); // ✅ NUEVO
         }
       } catch (error) {
         console.error('Error fetching professionals:', error);
@@ -99,7 +107,7 @@ export function CausasDataTable<TData, TValue>({
     fetchProfessionals();
   }, []);
 
-  // Filter the data based on selected professionals
+  // ✅ ACTUALIZADO: Filter the data based on selected professionals (incluyendo ATVT)
   const filteredData = useMemo(() => {
     return (data as any[]).filter((item) => {
       const abogadoMatch =
@@ -108,9 +116,13 @@ export function CausasDataTable<TData, TValue>({
       const analistaMatch =
         selectedAnalista === 'all' ||
         item.analista?.id.toString() === selectedAnalista;
-      return abogadoMatch && analistaMatch;
+      // ✅ NUEVO: Filtro para ATVT
+      const atvtMatch =
+        selectedATVT === 'all' ||
+        item.atvt?.id.toString() === selectedATVT;
+      return abogadoMatch && analistaMatch && atvtMatch;
     });
-  }, [data, selectedAbogado, selectedAnalista]);
+  }, [data, selectedAbogado, selectedAnalista, selectedATVT]); // ✅ NUEVO: Agregar selectedATVT a dependencies
 
   const table = useReactTable({
     data: filteredData,
@@ -142,7 +154,7 @@ export function CausasDataTable<TData, TValue>({
         const rowData: any = {};
         columns.forEach((column: any) => {
           if (column.accessorKey && !column.id?.includes('actions')) {
-            // Manejar nested properties (e.g., 'abogado.nombre')
+            // Manejar nested properties (e.g., 'abogado.nombre', 'atvt.nombre')
             const keys = column.accessorKey.split('.');
             let value = row.original;
             for (const key of keys) {
@@ -209,6 +221,7 @@ export function CausasDataTable<TData, TValue>({
             onChange={(event) => setGlobalFilter(String(event.target.value))}
             className="max-w-sm"
           />
+          
           <Select value={selectedAbogado} onValueChange={setSelectedAbogado}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filtrar por abogado" />
@@ -222,6 +235,7 @@ export function CausasDataTable<TData, TValue>({
               ))}
             </SelectContent>
           </Select>
+          
           <Select value={selectedAnalista} onValueChange={setSelectedAnalista}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filtrar por analista" />
@@ -231,6 +245,21 @@ export function CausasDataTable<TData, TValue>({
               {analistas.map((analista) => (
                 <SelectItem key={analista.id} value={analista.id.toString()}>
                   {analista.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* ✅ NUEVO: Select para filtrar por ATVT */}
+          <Select value={selectedATVT} onValueChange={setSelectedATVT}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por ATVT" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los ATVT</SelectItem>
+              {atvts.map((atvt) => (
+                <SelectItem key={atvt.id} value={atvt.id.toString()}>
+                  {atvt.nombre}
                 </SelectItem>
               ))}
             </SelectContent>

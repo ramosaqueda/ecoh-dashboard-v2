@@ -22,11 +22,15 @@ export async function GET(
           select: {
             nombre: true
           }
-        }
+        },
+        // ✅ FIX: Agregar atvt al include
+        atvt: true,
+        abogado: true // ✅ También agregar abogado que faltaba
       }
       
     });
-    console.log('Causa:', causa);
+    console.log('🔍 DEBUG GET - Causa obtenida:', causa);
+    console.log('🔍 DEBUG GET - ATVT en causa:', causa?.atvt);
     return NextResponse.json(causa);
   } catch (error) {
     console.error('Error fetching causa:', error);
@@ -45,9 +49,9 @@ export async function PUT(
     const data = await req.json();
     const { id } = await params;
 
-
-    console.log('Received data:', data);
-    console.log('Updating causa with ID:', id);
+    console.log('🔍 DEBUG PUT - Received data:', data);
+    console.log('🔍 DEBUG PUT - atvtId en data:', data.atvtId);
+    console.log('🔍 DEBUG PUT - Updating causa with ID:', id);
 
     const updatedCausa = await prisma.causa.update({
       where: { id: parseInt(id) },
@@ -55,7 +59,7 @@ export async function PUT(
         causaEcoh: data.causaEcoh,
         causaLegada: data.causaLegada,
         constituyeSs: data.constituyeSs,
-        homicidioConsumado: data.homicidioConsumado ?? false, // Agregamos el nuevo campo
+        homicidioConsumado: data.homicidioConsumado ?? false,
         denominacionCausa: data.denominacionCausa,
         ruc: data.ruc,
         foliobw: data.foliobw,
@@ -73,7 +77,9 @@ export async function PUT(
         tribunalId: data.tribunalId,
         fiscalId: data.fiscalId,
         abogadoId: data.abogadoId,
-        analistaId: data.analistaId
+        analistaId: data.analistaId,
+        // ✅ FIX PRINCIPAL: Agregar atvtId que faltaba
+        atvtId: data.atvtId
       },
       include: {
         delito: true,
@@ -86,6 +92,8 @@ export async function PUT(
             nombre: true
           }
         },
+        // ✅ FIX: Agregar atvt al include del response
+        atvt: true,
         _count: {
           select: {
             imputados: true
@@ -93,6 +101,9 @@ export async function PUT(
         }
       }
     });
+
+    console.log('🔍 DEBUG PUT - Causa actualizada:', updatedCausa);
+    console.log('🔍 DEBUG PUT - ATVT en causa actualizada:', updatedCausa.atvt);
 
     return NextResponse.json(updatedCausa);
   } catch (error) {
@@ -104,7 +115,6 @@ export async function PUT(
   }
 }
 
-// El endpoint DELETE no necesita cambios ya que elimina toda la causa
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

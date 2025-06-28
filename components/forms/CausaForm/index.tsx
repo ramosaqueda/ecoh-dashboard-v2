@@ -22,9 +22,17 @@ import TribunalSelect from '@/components/select/TribunalSelect';
 import FiscalSelect from '@/components/select/FiscalSelect';
 import FocoSelect from '@/components/select/FocoSelect';
 
+
+import {
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form';
+
 import { causaSchema } from '@/schemas/causaSchema';
 import type { CausaFormData } from '@/types/causa';
-import DatosRelato from '@/components/relato-hecho/datos-relato';
+//import DatosRelato from '@/components/relato-hecho/datos-relato';
 import CrimenOrgParamsSelect from "@/components/select/CrimenOrgParamsSelect"
 
 // ✅ Función helper para conversión segura de string a number
@@ -369,10 +377,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
                 <RadioGroup
                   value={form.watch('esCrimenOrganizado') === true ? '0' : form.watch('esCrimenOrganizado') === false ? '1' : '2'}
                   onValueChange={(value) => {
-                    // Convertir a booleano antes de guardarlo en el formulario
-                    // '0' = Es crimen organizado (true)
-                    // '1' = No es crimen organizado (false)
-                    // '2' = Se desconoce (null o false, dependiendo de tu caso de uso)
+                   
                     const booleanValue = value === '0' ? true : false;
                     form.setValue('esCrimenOrganizado', booleanValue, {
                       shouldValidate: true,
@@ -401,13 +406,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
               <h3 className="font-medium">Observaciones</h3>
               
               {/* Campo Datos Relevantes con label personalizado */}
-              <div className="space-y-2">
-                <div className='flex items-center gap-2'>
-                  <label className="text-sm font-medium">Datos Relevantes</label>
-                  <TriangleAlert size={20} className='text-red-500' />
-                </div>
-                <DatosRelato causaId={initialValues.causaId?.toString() || ''} />
-              </div>
+              
 
               <FormField form={form} name="observacion" label="Observación">
                 <Textarea

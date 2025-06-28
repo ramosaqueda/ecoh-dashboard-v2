@@ -19,7 +19,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
@@ -307,6 +308,7 @@ export default function ActividadesPage() {
     fetchActividades();
   }, []);
 
+  // ✅ FIX 1: handleSubmit con limpieza diferida
   const handleSubmit = useCallback(async (data: ActividadFormData): Promise<void> => {
     if (isSubmitting || !dialogOpen) return;
 
@@ -339,7 +341,11 @@ export default function ActividadesPage() {
       
       toast.success(successMessage);
       setDialogOpen(false);
-      setActividadEditing(undefined);
+      
+      // ✅ CAMBIO: Limpiar con delay
+      setTimeout(() => {
+        setActividadEditing(undefined);
+      }, 100);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -362,21 +368,29 @@ export default function ActividadesPage() {
     fetchActividades(tipoActividadFilter, estadoFilter, usuarioAsignadoFilter, 1);
   };
 
-  const handleEdit = (actividad: Actividad): void => {
-    const editData: ActividadFormData = {
-      id: actividad.id,
-      causaId: actividad.causa.id.toString(),
-      tipoActividadId: actividad.tipoActividad.id.toString(),
-      fechaInicio: actividad.fechaInicio.split('T')[0],
-      fechaTermino: actividad.fechaTermino.split('T')[0],
-      estado: actividad.estado,
-      observacion: actividad.observacion,
-      glosa_cierre: actividad.glosa_cierre,
-      usuarioAsignadoId: actividad.usuarioAsignado?.id.toString()
-    };
-    setActividadEditing(editData);
-    setDialogOpen(true);
+ const handleEdit = (actividad: Actividad): void => {
+  const editData: ActividadFormData = {
+    id: actividad.id,
+    causaId: actividad.causa.id.toString(),
+    tipoActividadId: actividad.tipoActividad.id.toString(),
+    fechaInicio: actividad.fechaInicio.split('T')[0],
+    fechaTermino: actividad.fechaTermino.split('T')[0],
+    estado: actividad.estado,
+    observacion: actividad.observacion || '', // ✅ Asegurar string vacío si es undefined
+    // ✅ CAMBIO PRINCIPAL: Manejar glosa_cierre condicionalmente
+    glosa_cierre: actividad.estado === 'terminado' ? (actividad.glosa_cierre || '') : '',
+    usuarioAsignadoId: actividad.usuarioAsignado?.id.toString() || '' // ✅ Manejar undefined
   };
+  
+  console.log('📝 EditData preparado:', editData); // Para debug temporal
+  
+  setActividadEditing(editData);
+  
+  setTimeout(() => {
+    setDialogOpen(true);
+  }, 0);
+};
+
 
   const handleDelete = (id: number): void => {
     setDeleteId(id);
@@ -431,12 +445,16 @@ export default function ActividadesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Gestión de Actividades</h1>
+        {/* ✅ FIX 3: Dialog con onOpenChange mejorado y DialogDescription agregada */}
         <Dialog
           open={dialogOpen}
           onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) {
-              setActividadEditing(undefined);
+              // ✅ CAMBIO: Delay la limpieza para evitar race conditions
+              setTimeout(() => {
+                setActividadEditing(undefined);
+              }, 150);
             }
           }}
         >
@@ -451,6 +469,13 @@ export default function ActividadesPage() {
               <DialogTitle>
                 {actividadEditing ? 'Editar Actividad' : 'Nueva Actividad'}
               </DialogTitle>
+              {/* ✅ FIX 4: Agregar DialogDescription para solucionar el warning */}
+              <DialogDescription>
+                {actividadEditing 
+                  ? 'Modifica los campos necesarios y guarda los cambios.'
+                  : 'Completa el formulario para crear una nueva actividad.'
+                }
+              </DialogDescription>
             </DialogHeader>
             <ActividadForm
               onSubmit={handleSubmit}

@@ -36,6 +36,11 @@ export type Causa = {
     id: number;
     nombre: string;
   };
+  // ✅ NUEVO: Agregar atvt a la interfaz
+  atvt?: {
+    id: number;
+    nombre: string;
+  };
   _count?: {
     imputados: number;
     causasRelacionadasMadre?: number;
@@ -335,6 +340,25 @@ export const columns: ColumnDef<Causa>[] = [
   {
     accessorKey: 'analista.nombre',
     header: 'Analista'
+  },
+  // ✅ NUEVA COLUMNA: ATVT
+  {
+    accessorKey: 'atvt.nombre',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          ATVT
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const atvt = row.original.atvt;
+      return atvt?.nombre || '-';
+    }
   },
   {
     id: 'imputados',
