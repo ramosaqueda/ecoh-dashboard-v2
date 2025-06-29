@@ -37,6 +37,23 @@ model TimelineHito {
   @@index([causaId], map: "idx_timelinehito_causaid")
 }
 
+model OrigenCausa {
+  id     Int      @id @default(autoincrement())
+  codigo String   @unique @db.VarChar(50)
+  nombre String   @db.VarChar(100)
+  activo Boolean? @default(true)
+  causas Causa[]
+}
+
+model EstadoCausa {
+  id          Int      @id @default(autoincrement())
+  codigo      String   @unique @db.VarChar(50)
+  nombre      String   @db.VarChar(100)
+  descripcion String?
+  activo      Boolean? @default(true)
+  causas      Causa[]
+}
+
 model Causa {
   id                        Int                  @id @default(autoincrement())
   denominacionCausa         String
@@ -66,6 +83,8 @@ model Causa {
   nacionalidadVictimaId     Int?
   esCrimenOrganizado        Boolean?
   atvtId                    Int?
+  idOrigen                  Int?
+  idEstado                  Int?
   actividades               Actividad[]
   abogado                   Abogado?             @relation(fields: [abogadoId], references: [id])
   analista                  Analista?            @relation(fields: [analistaId], references: [id])
@@ -76,6 +95,8 @@ model Causa {
   nacionalidadVictima       Nacionalidad?        @relation(fields: [nacionalidadVictimaId], references: [id])
   tribunal                  Tribunal?            @relation(fields: [tribunalId], references: [id])
   atvt                      Atvt?                @relation(fields: [atvtId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_causa_atvt")
+  estado                    EstadoCausa?         @relation(fields: [idEstado], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_causa_estado")
+  origen                    OrigenCausa?         @relation(fields: [idOrigen], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_causa_origen")
   organizaciones            CausaOrganizacion[]
   imputados                 CausasImputados[]
   causasRelacionadasArista  CausasRelacionadas[] @relation("CausaArista")
@@ -87,6 +108,8 @@ model Causa {
   telefonos                 TelefonoCausa[]
 
   @@index([atvtId], map: "fki_fk_causa_atvt")
+  @@index([idEstado], map: "idx_causa_estado")
+  @@index([idOrigen], map: "idx_causa_origen")
 }
 
 model CausaOrganizacion {

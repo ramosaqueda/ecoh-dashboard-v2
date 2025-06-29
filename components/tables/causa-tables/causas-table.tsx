@@ -67,37 +67,53 @@ export function CausasDataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [abogados, setAbogados] = useState<Professional[]>([]);
   const [analistas, setAnalistas] = useState<Professional[]>([]);
-  // ✅ NUEVO: Estado para ATVTs
   const [atvts, setAtvts] = useState<Professional[]>([]);
+  // 🔥 NUEVOS ESTADOS PARA ORIGEN Y ESTADO
+  const [origenes, setOrigenes] = useState<Professional[]>([]);
+  const [estados, setEstados] = useState<Professional[]>([]);
+  
   const [selectedAbogado, setSelectedAbogado] = useState<string>('all');
   const [selectedAnalista, setSelectedAnalista] = useState<string>('all');
-  // ✅ NUEVO: Estado para ATVT seleccionado
   const [selectedATVT, setSelectedATVT] = useState<string>('all');
+  // 🔥 NUEVOS FILTROS
+  const [selectedOrigen, setSelectedOrigen] = useState<string>('all');
+  const [selectedEstado, setSelectedEstado] = useState<string>('all');
+  
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     rit: false,
     observacion: false,
-    foliobw: false
+    foliobw: false,
+    // 🔥 OCULTAR COLUMNA LEGACY POR DEFECTO
+    causaEcoh: false
   });
+  
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  console.log(API_BASE_URL)
+  console.log(API_BASE_URL);
 
-  // ✅ ACTUALIZADO: Fetch abogados, analistas y ATVTs
+  // 🔥 ACTUALIZADO: Fetch todos los catálogos incluyendo origen y estado
   useEffect(() => {
     const fetchProfessionals = async () => {
       try {
-        const [abogadosRes, analistasRes, atvtsRes] = await Promise.all([
+        const [abogadosRes, analistasRes, atvtsRes, origenesRes, estadosRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/abogado`),
           fetch(`${API_BASE_URL}/api/analista`),
-          fetch(`${API_BASE_URL}/api/atvt`) // ✅ NUEVO: Fetch de ATVTs
+          fetch(`${API_BASE_URL}/api/atvt`),
+          fetch(`${API_BASE_URL}/api/origen-causa?activo=true`), // 🔥 NUEVO
+          fetch(`${API_BASE_URL}/api/estado-causa?activo=true`)  // 🔥 NUEVO
         ]);
 
-        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok) {
+        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok && origenesRes.ok && estadosRes.ok) {
           const abogadosData = await abogadosRes.json();
           const analistasData = await analistasRes.json();
-          const atvtsData = await atvtsRes.json(); // ✅ NUEVO
+          const atvtsData = await atvtsRes.json();
+          const origenesData = await origenesRes.json(); // 🔥 NUEVO
+          const estadosData = await estadosRes.json();   // 🔥 NUEVO
+          
           setAbogados(abogadosData);
           setAnalistas(analistasData);
-          setAtvts(atvtsData); // ✅ NUEVO
+          setAtvts(atvtsData);
+          setOrigenes(origenesData); // 🔥 NUEVO
+          setEstados(estadosData);   // 🔥 NUEVO
         }
       } catch (error) {
         console.error('Error fetching professionals:', error);
@@ -107,7 +123,7 @@ export function CausasDataTable<TData, TValue>({
     fetchProfessionals();
   }, []);
 
-  // ✅ ACTUALIZADO: Filter the data based on selected professionals (incluyendo ATVT)
+  // 🔥 ACTUALIZADO: Filtrar datos incluyendo origen y estado
   const filteredData = useMemo(() => {
     return (data as any[]).filter((item) => {
       const abogadoMatch =
@@ -116,13 +132,25 @@ export function CausasDataTable<TData, TValue>({
       const analistaMatch =
         selectedAnalista === 'all' ||
         item.analista?.id.toString() === selectedAnalista;
-      // ✅ NUEVO: Filtro para ATVT
       const atvtMatch =
         selectedATVT === 'all' ||
         item.atvt?.id.toString() === selectedATVT;
-      return abogadoMatch && analistaMatch && atvtMatch;
+      
+      // 🔥 NUEVOS FILTROS
+      const origenMatch =
+        selectedOrigen === 'all' ||
+        item.origen?.id.toString() === selectedOrigen ||
+        // Fallback para campos legacy
+        (selectedOrigen === 'ECOH' && item.causaEcoh === true) ||
+        (selectedOrigen === 'LEGADA' && item.causaLegada === true);
+        
+      const estadoMatch =
+        selectedEstado === 'all' ||
+        item.estado?.id.toString() === selectedEstado;
+      
+      return abogadoMatch && analistaMatch && atvtMatch && origenMatch && estadoMatch;
     });
-  }, [data, selectedAbogado, selectedAnalista, selectedATVT]); // ✅ NUEVO: Agregar selectedATVT a dependencies
+  }, [data, selectedAbogado, selectedAnalista, selectedATVT, selectedOrigen, selectedEstado]); // 🔥 NUEVO: Agregar nuevos filtros a dependencies
 
   const table = useReactTable({
     data: filteredData,
@@ -214,13 +242,46 @@ export function CausasDataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
+        {/* 🔥 FILTROS ACTUALIZADOS */}
+        <div className="flex items-center gap-4 flex-wrap">
           <Input
             placeholder="Buscar en todas las columnas..."
             value={globalFilter ?? ''}
             onChange={(event) => setGlobalFilter(String(event.target.value))}
             className="max-w-sm"
           />
+          
+          {/* 🔥 NUEVOS FILTROS PRIMERO */}
+          <Select value={selectedOrigen} onValueChange={setSelectedOrigen}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por origen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los orígenes</SelectItem>
+              {origenes.map((origen) => (
+                <SelectItem key={origen.id} value={origen.id.toString()}>
+                  {origen.nombre}
+                </SelectItem>
+              ))}
+              {/* Opciones legacy para compatibilidad */}
+              <SelectItem value="ECOH">ECOH (Legacy)</SelectItem>
+              <SelectItem value="LEGADA">Legada (Legacy)</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedEstado} onValueChange={setSelectedEstado}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estados</SelectItem>
+              {estados.map((estado) => (
+                <SelectItem key={estado.id} value={estado.id.toString()}>
+                  {estado.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
           <Select value={selectedAbogado} onValueChange={setSelectedAbogado}>
             <SelectTrigger className="w-[200px]">
@@ -250,7 +311,6 @@ export function CausasDataTable<TData, TValue>({
             </SelectContent>
           </Select>
 
-          {/* ✅ NUEVO: Select para filtrar por ATVT */}
           <Select value={selectedATVT} onValueChange={setSelectedATVT}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filtrar por ATVT" />
@@ -292,6 +352,12 @@ export function CausasDataTable<TData, TValue>({
                     >
                       {column.id === 'fechaHoraTomaConocimiento'
                         ? 'Fecha Toma Conocimiento'
+                        : column.id === 'causaEcoh'
+                        ? 'Causa ECOH (Legacy)'
+                        : column.id === 'origen.nombre'
+                        ? 'Origen'
+                        : column.id === 'estado.nombre'
+                        ? 'Estado'
                         : column.id.replace(/([A-Z])/g, ' $1').trim()}
                     </DropdownMenuCheckboxItem>
                   );
