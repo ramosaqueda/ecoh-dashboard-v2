@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import MultipleSelector, { Option } from '@/components/ui/multiple-selector';
 import CrimenOrgGauge from '@/components/CrimenorgGauge';
 
-// Interfaces para tipificar los datos
+// ✅ FIX: Interface corregida para coincidir con el endpoint
 interface ParametroCrimenOrg {
-  id: number;
+  value: number;      // ✅ El endpoint devuelve "value" como number
   label: string;
-  value: string;
   description?: string;
 }
 
@@ -16,13 +15,12 @@ interface CausaParametro {
   parametro?: ParametroCrimenOrg;
 }
 
-// ✅ FIX: Interface actualizada para recibir props directamente
 interface CrimenOrganizadoParamsProps {
   causaId?: string | number;
-  value?: number[];              // ✅ Valor del formulario
-  onChange?: (value: number[]) => void;  // ✅ Callback para cambios
-  onBlur?: () => void;          // ✅ Para react-hook-form
-  name?: string;                // ✅ Para react-hook-form
+  value?: number[];
+  onChange?: (value: number[]) => void;
+  onBlur?: () => void;
+  name?: string;
 }
 
 const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({ 
@@ -38,6 +36,11 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
 
+  // ✅ FIX: Función para limpiar labels
+  const cleanLabel = (label: string): string => {
+    return label.replace(/\n/g, '').trim();
+  };
+
   // Función para cargar los parámetros disponibles
   useEffect(() => {
     const fetchParams = async () => {
@@ -49,12 +52,12 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
           throw new Error('Error al cargar los parámetros');
         }
         const data: ParametroCrimenOrg[] = await response.json();
-        console.log('🔍 DEBUG CrimenOrg - Parámetros recibidos:', data);
+        console.log('🔍 DEBUG CrimenOrg - Parámetros recibidos del endpoint:', data);
         
-        // Convertir a formato Option
+        // ✅ FIX: Mapear correctamente usando "value" en lugar de "id"
         const options = Array.isArray(data) ? data.map((param: ParametroCrimenOrg) => ({
-          value: param.id.toString(),
-          label: param.label
+          value: param.value.toString(), // ✅ Usar param.value que sí existe
+          label: cleanLabel(param.label)  // ✅ Limpiar caracteres de nueva línea
         })) : [];
         
         setParams(options);
@@ -68,7 +71,7 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
     fetchParams();
   }, [API_BASE_URL]);
 
-  // ✅ FIX: Cargar parámetros seleccionados si es una edición (solo una vez)
+  // Cargar parámetros seleccionados si es una edición (solo una vez)
   useEffect(() => {
     if (causaId && params.length > 0 && !hasLoadedInitialData) {
       const fetchSelectedParams = async () => {
@@ -85,7 +88,7 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
           const paramIds = data.map((item: CausaParametro) => item.parametroId);
           console.log('🔍 DEBUG CrimenOrg - IDs extraídos:', paramIds);
           
-          // ✅ Llamar onChange para actualizar el formulario
+          // Llamar onChange para actualizar el formulario
           if (onChange && paramIds.length > 0) {
             onChange(paramIds);
           }
@@ -101,15 +104,17 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
     }
   }, [causaId, API_BASE_URL, params.length, hasLoadedInitialData, onChange]);
 
-  // ✅ FIX: Sincronizar selectedParams cuando cambie el valor del formulario
+  // Sincronizar selectedParams cuando cambie el valor del formulario
   useEffect(() => {
     if (params.length > 0 && Array.isArray(value)) {
       console.log('🔍 DEBUG CrimenOrg - Sincronizando con valor del formulario:', value);
+      console.log('🔍 DEBUG CrimenOrg - Params disponibles:', params);
       
       // Convertir IDs del formulario a Options
       const newSelectedParams = value
         .map(id => {
           const param = params.find(p => p.value === id.toString());
+          console.log(`🔍 DEBUG CrimenOrg - Buscando param con value=${id}, encontrado:`, param);
           return param;
         })
         .filter(Boolean) as Option[];
@@ -122,7 +127,7 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
     }
   }, [value, params]);
 
-  // ✅ FIX: Manejar cambios del MultipleSelector
+  // Manejar cambios del MultipleSelector
   const handleParamsChange = (newParams: Option[]) => {
     console.log('🔍 DEBUG CrimenOrg - Parámetros seleccionados cambiados:', newParams);
     
@@ -133,13 +138,13 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
     const paramIds = newParams.map(param => parseInt(param.value));
     console.log('🔍 DEBUG CrimenOrg - Nuevos IDs para formulario:', paramIds);
     
-    // ✅ Llamar onChange si está disponible
+    // Llamar onChange si está disponible
     if (onChange) {
       onChange(paramIds);
     }
   };
 
-  // ✅ Manejar onBlur para react-hook-form
+  // Manejar onBlur para react-hook-form
   const handleBlur = () => {
     if (onBlur) {
       onBlur();
@@ -171,31 +176,7 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
         />
       </div>
       
-      {/* Depuración - mostrar valores actuales */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="col-span-3 mt-2 text-xs text-gray-500">
-          <details>
-            <summary>🔍 Debug Info CrimenOrg</summary>
-            <div className="mt-2 space-y-1">
-              <div><strong>Params disponibles:</strong> {params.length}</div>
-              <div><strong>Selected Params:</strong> {selectedParams.length}</div>
-              <div><strong>Form Value (props):</strong> {JSON.stringify(value)}</div>
-              <div><strong>CausaId:</strong> {causaId || 'No causaId'}</div>
-              <div><strong>Is Loading:</strong> {isLoading ? 'Sí' : 'No'}</div>
-              <div><strong>Has Loaded Initial:</strong> {hasLoadedInitialData ? 'Sí' : 'No'}</div>
-              <div><strong>OnChange disponible:</strong> {onChange ? 'Sí' : 'No'}</div>
-            </div>
-            <details className="mt-2">
-              <summary>Ver JSON completo</summary>
-              <pre className="text-[10px]">
-Selected Params: {JSON.stringify(selectedParams, null, 2)}
-Form Value: {JSON.stringify(value, null, 2)}
-Available Params: {JSON.stringify(params.slice(0, 3), null, 2)}...
-              </pre>
-            </details>
-          </details>
-        </div>
-      )}
+
     </div>
   );
 };
