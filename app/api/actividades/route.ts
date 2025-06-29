@@ -13,14 +13,44 @@ export async function GET(req: NextRequest) {
     const usuario_asignado_id = searchParams.get('usuario_asignado_id');
     const fechaDesde = searchParams.get('fechaDesde');
     const fechaHasta = searchParams.get('fechaHasta');
+    
+    // 🔥 NUEVOS FILTROS
+    const origen_id = searchParams.get('origen_id');
+    const estado_causa_id = searchParams.get('estado_causa_id');
+    
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
     const includeAssigned = searchParams.get('include_assigned') === 'true';
 
+    // 🔥 INCLUDE ACTUALIZADO con nuevas relaciones
     const includeConfig: any = {
-      causa: true, // Solo necesitamos datos básicos de la causa
+      causa: {
+        select: {
+          id: true,
+          ruc: true,
+          denominacionCausa: true,
+          // 🔥 NUEVAS RELACIONES
+          origen: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
+            }
+          },
+          estado: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
+            }
+          },
+          // Mantener campos antiguos temporalmente para compatibilidad
+          causaEcoh: true,
+          causaLegada: true
+        }
+      },
       tipoActividad: {
         include: {
           area: {
@@ -72,6 +102,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(actividad);
     }
 
+    // 🔥 WHERE CONDITIONS ACTUALIZADAS
     const whereConditions = [];
 
     if (ruc) {
@@ -96,6 +127,15 @@ export async function GET(req: NextRequest) {
 
     if (fechaHasta) {
       whereConditions.push({ fechaTermino: { lte: new Date(fechaHasta) } });
+    }
+
+    // 🔥 NUEVOS FILTROS POR ORIGEN Y ESTADO DE CAUSA
+    if (origen_id) {
+      whereConditions.push({ causa: { idOrigen: Number(origen_id) } });
+    }
+
+    if (estado_causa_id) {
+      whereConditions.push({ causa: { idEstado: Number(estado_causa_id) } });
     }
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
@@ -166,7 +206,61 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🔥 FORZAR TIPADO - Solución rápida
+    // 🔥 INCLUDE ACTUALIZADO para la respuesta
+    const includeConfigResponse = {
+      causa: {
+        select: {
+          id: true,
+          ruc: true,
+          denominacionCausa: true,
+          origen: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
+            }
+          },
+          estado: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
+            }
+          }
+        }
+      },
+      tipoActividad: {
+        include: {
+          area: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
+      },
+      usuario: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true
+        }
+      },
+      usuarioAsignado: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          rol: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
+      }
+    };
+
     const actividad = await (prisma.actividad as any).create({
       data: {
         causa_id: parseInt(data.causaId),
@@ -179,39 +273,7 @@ export async function POST(req: NextRequest) {
         observacion: data.observacion,
         glosa_cierre: data.glosa_cierre || null
       },
-      include: {
-        causa: true, // Solo necesitamos datos básicos de la causa
-        tipoActividad: {
-          include: {
-            area: {
-              select: {
-                id: true,
-                nombre: true
-              }
-            }
-          }
-        },
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true
-          }
-        },
-        usuarioAsignado: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            rol: {
-              select: {
-                id: true,
-                nombre: true
-              }
-            }
-          }
-        }
-      },
+      include: includeConfigResponse,
     });
 
     return NextResponse.json(actividad, { status: 201 });
@@ -290,43 +352,65 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // 🔥 FORZAR TIPADO - Solución rápida
-    const actividad = await (prisma.actividad as any).update({
-      where: { id: Number(id) },
-      data: updateData,
-      include: {
-        causa: true, // Solo necesitamos datos básicos de la causa
-        tipoActividad: {
-          include: {
-            area: {
-              select: {
-                id: true,
-                nombre: true
-              }
+    // 🔥 INCLUDE ACTUALIZADO para la respuesta
+    const includeConfigResponse = {
+      causa: {
+        select: {
+          id: true,
+          ruc: true,
+          denominacionCausa: true,
+          origen: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
             }
-          }
-        },
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true
-          }
-        },
-        usuarioAsignado: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            rol: {
-              select: {
-                id: true,
-                nombre: true
-              }
+          },
+          estado: {
+            select: {
+              id: true,
+              codigo: true,
+              nombre: true
             }
           }
         }
       },
+      tipoActividad: {
+        include: {
+          area: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
+      },
+      usuario: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true
+        }
+      },
+      usuarioAsignado: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          rol: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
+        }
+      }
+    };
+
+    const actividad = await (prisma.actividad as any).update({
+      where: { id: Number(id) },
+      data: updateData,
+      include: includeConfigResponse,
     });
 
     return NextResponse.json(actividad);

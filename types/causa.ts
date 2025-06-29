@@ -1,7 +1,32 @@
-// causa.ts
+// causa.ts - Interfaces actualizadas sin enums
+
+// Interfaces básicas para las nuevas entidades
+export interface OrigenCausa {
+  id: number;
+  codigo: string;
+  nombre: string;
+  activo: boolean;
+}
+
+export interface EstadoCausa {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+}
+
+// Interfaz para formularios - ACTUALIZADA
 export interface CausaFormData {
-  causaEcoh: boolean;
-  causaLegada: boolean;
+  // Campos antiguos (mantener temporalmente para compatibilidad)
+  causaEcoh?: boolean;
+  causaLegada?: boolean;
+  
+  // Nuevos campos obligatorios
+  idOrigen?: number;
+  idEstado?: number;
+  
+  // Resto de campos existentes
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;
@@ -10,7 +35,7 @@ export interface CausaFormData {
   fechaPpp?: string | null;
   ruc: string;
   folioBw: string;
-  causaId?: string; // ✅ Agregar esta línea
+  causaId?: string | number;
   coordenadasSs: string;
   delito: number;
   foco: number;
@@ -22,10 +47,8 @@ export interface CausaFormData {
   analista: number;
   atvt: number;
   esCrimenOrganizado: boolean;
-
   numeroIta: string;
   causasCrimenOrg: number[];
-  
   numeroPpp: string;
   victima: string;
   rut: string;
@@ -33,11 +56,23 @@ export interface CausaFormData {
   observacion: string;
 }
 
-// Definición de la interfaz Causa para representar el modelo de respuesta del servidor
+// Interfaz para el modelo de respuesta - ACTUALIZADA
 export interface Causa {
-  id: number;
-  causaEcoh: boolean;
-  causaLegada: boolean;
+  id: string;
+  
+  // Campos antiguos (mantener durante transición)
+  causaEcoh?: boolean;
+  causaLegada?: boolean;
+  
+  // Nuevos campos
+  idOrigen?: number;
+  idEstado?: number;
+  
+  // Nuevas relaciones (opcionales durante migración)
+  origen?: OrigenCausa;
+  estado?: EstadoCausa;
+  
+  // Resto de campos existentes
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;
@@ -54,7 +89,7 @@ export interface Causa {
   numeroPpp?: string;
   observacion?: string;
   
-  // IDs de relaciones
+  // IDs de relaciones existentes
   delitoId: number;
   focoId?: number;
   tribunalId?: number;
@@ -63,7 +98,7 @@ export interface Causa {
   analistaId?: number;
   atvtId?: number;
   
-  // Relaciones
+  // Relaciones existentes
   delito?: {
     id: number;
     nombre: string;
@@ -93,7 +128,7 @@ export interface Causa {
     nombre: string;
   };
   
-  // Relaciones muchos a muchos
+  // Relaciones muchos a muchos existentes
   causasCrimenOrg?: Array<{
     causaId: number;
     parametroId: number;
@@ -115,4 +150,30 @@ export interface Causa {
     causasRelacionadasMadre?: number;
     causasRelacionadasArista?: number;
   };
+}
+
+// Nueva interfaz simplificada para selección en formularios
+export interface CausaSimple {
+  id: number;
+  ruc: string;
+  denominacionCausa?: string;
+  origen?: {
+    id: number;
+    codigo: string;
+    nombre: string;
+  };
+  estado?: {
+    id: number;
+    codigo: string;
+    nombre: string;
+  };
+}
+
+// Interfaz para crear/editar causa con nuevos campos
+export interface CausaCreateUpdate {
+  ruc: string;
+  denominacionCausa: string;
+  idOrigen?: number;
+  idEstado?: number;
+  // ... otros campos según necesidad
 }

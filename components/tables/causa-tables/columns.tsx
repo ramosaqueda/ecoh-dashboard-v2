@@ -3,6 +3,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, Edit, Trash2, Users, Eye, ExternalLink, Link2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useState } from 'react';
@@ -20,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// 🔥 INTERFAZ ACTUALIZADA
 export type Causa = {
   id: string;
   denominacionCausa: string;
@@ -29,14 +31,45 @@ export type Causa = {
   observacion: string;
   foliobw: string;
   fechaHoraTomaConocimiento: string;
-  causaEcoh: boolean;
+  
+  // Campos antiguos (mantener temporalmente)
+  causaEcoh?: boolean;
+  causaLegada?: boolean;
+  
+  // Nuevos campos
+  idOrigen?: number;
+  idEstado?: number;
+  
+  // Nuevas relaciones
+  origen?: {
+    id: number;
+    codigo: string;
+    nombre: string;
+  };
+  estado?: {
+    id: number;
+    codigo: string;
+    nombre: string;
+  };
+  
   fiscalId: string;
   delitoId: string;
   delito: {
     id: number;
     nombre: string;
   };
-  // ✅ NUEVO: Agregar atvt a la interfaz
+  fiscal?: {
+    id: number;
+    nombre: string;
+  };
+  abogado?: {
+    id: number;
+    nombre: string;
+  };
+  analista?: {
+    id: number;
+    nombre: string;
+  };
   atvt?: {
     id: number;
     nombre: string;
@@ -139,7 +172,6 @@ const DeleteButton = ({ causa, onDelete }: DeleteButtonProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { canDelete } = useUserPermissions();
   
-  // Solo mostrar el botón si el usuario tiene permisos
   if (!canDelete) return null;
   
   return (
@@ -203,11 +235,11 @@ const DeleteButton = ({ causa, onDelete }: DeleteButtonProps) => {
   );
 };
 
-// Componente de acciones extraído a un componente separado para poder usar hooks
+// Componente de acciones
 const ActionsCell = ({ row, table }: ActionsCellProps) => {
   const causa = row.original;
   const { onEdit, onDelete } = table.options.meta || {};
-  const { canEdit } = useUserPermissions(); // Ahora es válido usar hooks aquí
+  const { canEdit } = useUserPermissions();
 
   const totalRelaciones = (causa._count?.causasRelacionadasMadre || 0) + 
                       (causa._count?.causasRelacionadasArista || 0);
@@ -246,12 +278,12 @@ const ActionsCell = ({ row, table }: ActionsCellProps) => {
         </Button>
       )}
       
-      {/* Reemplazamos el botón de eliminar con nuestro componente con confirmación */}
       <DeleteButton causa={causa} onDelete={onDelete} />
     </div>
   );
 };
 
+// 🔥 COLUMNAS ACTUALIZADAS
 export const columns: ColumnDef<Causa>[] = [
   {
     accessorKey: 'denominacionCausa',
@@ -288,6 +320,72 @@ export const columns: ColumnDef<Causa>[] = [
       );
     }
   },
+  // 🔥 NUEVA COLUMNA: ORIGEN
+  {
+    accessorKey: 'origen.nombre',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Origen
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const origen = row.original.origen;
+      const causaEcoh = row.original.causaEcoh;
+      const causaLegada = row.original.causaLegada;
+      
+      // Mostrar información nueva o legacy
+      if (origen) {
+        return (
+          <div className="flex items-center gap-1">
+            <span>{origen.nombre}</span>
+            <Badge variant="secondary" className="text-xs">
+              {origen.codigo}
+            </Badge>
+          </div>
+        );
+      }
+      
+      // Fallback para campos legacy
+      if (causaEcoh) return <Badge variant="outline">ECOH</Badge>;
+      if (causaLegada) return <Badge variant="outline">Legada</Badge>;
+      
+      return <span className="text-muted-foreground">-</span>;
+    }
+  },
+  // 🔥 NUEVA COLUMNA: ESTADO
+  {
+    accessorKey: 'estado.nombre',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Estado
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const estado = row.original.estado;
+      
+      if (estado) {
+        return (
+          <div className="flex items-center gap-1">
+            <span>{estado.nombre}</span>
+          </div>
+        );
+      }
+      
+      return <span className="text-muted-foreground">Sin estado</span>;
+    }
+  },
   {
     accessorKey: 'delito.nombre',
     header: ({ column }) => {
@@ -314,10 +412,21 @@ export const columns: ColumnDef<Causa>[] = [
     accessorKey: 'foliobw',
     header: 'Folio BW'
   },
+  // 🔥 ACTUALIZADA: Mostrar campo legacy solo si no hay origen nuevo
   {
     accessorKey: 'causaEcoh',
-    header: 'Causa ECOH',
-    cell: ({ row }) => (row.getValue('causaEcoh') ? 'Sí' : 'No')
+    header: 'Causa ECOH (Legacy)',
+    cell: ({ row }) => {
+      const origen = row.original.origen;
+      const causaEcoh = row.original.causaEcoh;
+      
+      // Si hay origen nuevo, no mostrar campo legacy
+      if (origen) {
+        return <span className="text-muted-foreground">-</span>;
+      }
+      
+      return causaEcoh ? 'Sí' : 'No';
+    }
   },
   {
     accessorKey: 'fechaHoraTomaConocimiento',
@@ -341,7 +450,6 @@ export const columns: ColumnDef<Causa>[] = [
     accessorKey: 'analista.nombre',
     header: 'Analista'
   },
-  // ✅ NUEVA COLUMNA: ATVT
   {
     accessorKey: 'atvt.nombre',
     header: ({ column }) => {
