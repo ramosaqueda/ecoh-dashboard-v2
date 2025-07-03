@@ -213,7 +213,7 @@ export const causaService = {
       analistaId: data.analista ? parseInt(data.analista.toString()) : null,
       // ✅ FIX: Mejor manejo de atvt
       atvtId: (() => {
-        if (data.atvt === undefined || data.atvt === null || data.atvt === '') {
+        if (data.atvt === undefined || data.atvt === null || data.atvt === 0) {
           return null;
         }
         const parsed = parseInt(data.atvt.toString());

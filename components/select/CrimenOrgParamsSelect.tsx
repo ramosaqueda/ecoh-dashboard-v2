@@ -157,10 +157,12 @@ const CrimenOrgParamsSelect: React.FC<CrimenOrganizadoParamsProps> = ({
         <MultipleSelector
           value={selectedParams}
           onChange={handleParamsChange}
-          onBlur={handleBlur}
           options={params}
           placeholder={isLoading ? "Cargando parámetros..." : "Seleccione un parámetro"}
           disabled={isLoading}
+          inputProps={{
+            onBlur: handleBlur
+          }}
           emptyIndicator={
             <p className="text-center text-lg leading-10 text-gray-600 dark:text-gray-400">
               {isLoading ? "Cargando..." : "No se encontraron resultados."}

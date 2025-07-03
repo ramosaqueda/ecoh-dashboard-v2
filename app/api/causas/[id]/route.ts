@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // ✅ PASO 2: Probar consulta de parámetros CO - con múltiples intentos
-    let causasCrimenOrg = [];
+    let causasCrimenOrg: any[] = [];
     
     // Intento 1: Con include parametro
     try {
@@ -57,7 +57,7 @@ export async function GET(
         include: {
           parametro: true
         }
-      });
+      }) as any[];
       console.log('✅ Consulta con include parametro exitosa:', causasCrimenOrg.length, 'registros');
     } catch (includeError) {
       console.error('❌ ERROR con include parametro:', includeError);
@@ -67,7 +67,7 @@ export async function GET(
         console.log('🔍 DEBUG GET - Intentando consulta sin include...');
         causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
           where: { causaId: parseInt(id) }
-        });
+        }) as any[];
         console.log('✅ Consulta sin include exitosa:', causasCrimenOrg.length, 'registros');
       } catch (basicError) {
         console.error('❌ ERROR consulta básica de parámetros CO:', basicError);
@@ -242,7 +242,7 @@ export async function PUT(
     try {
       const createdRelations = await prisma.causasCrimenOrganizado.findMany({
         where: { causaId: causaId }
-      });
+      }) as any[];
       
       console.log(`Se encontraron ${createdRelations.length} relaciones actualizadas:`, createdRelations);
     } catch (checkError) {
@@ -275,7 +275,7 @@ export async function PUT(
     // ✅ 5. Consultar parámetros de crimen organizado por separado
     const causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
       where: { causaId: causaId }
-    });
+    }) as any[];
 
     // ✅ 6. Combinar resultado final
     const resultado = {

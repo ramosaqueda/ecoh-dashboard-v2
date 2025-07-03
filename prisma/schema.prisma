@@ -106,15 +106,17 @@ model CausaOrganizacion {
 }
 
 model CrimenOrganizadoParams {
-  value       Int    @id
-  label       String
-  descripcion String
+  value                 Int                     @id
+  label                 String
+  descripcion           String
+  causasCrimenOrganizado CausasCrimenOrganizado[] @relation("ParametroCO")
 }
 
 model CausasCrimenOrganizado {
   causaId     Int
   parametroId Int
   estado      Boolean?
+  parametro   CrimenOrganizadoParams @relation("ParametroCO", fields: [parametroId], references: [value])
 
   @@id([causaId, parametroId])
 }
