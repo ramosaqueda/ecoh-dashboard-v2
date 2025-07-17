@@ -59,9 +59,15 @@ interface TelefonoFormProps {
 
 const formSchema = z.object({
   numeroTelefonico: z.string()
-    .min(9, 'El número debe tener al menos 9 dígitos')
-    .max(12, 'El número no debe exceder 12 dígitos')
-    .regex(/^\+?[0-9]+$/, 'El número solo puede contener dígitos y opcionalmente el símbolo +'),
+    .optional()
+    .refine((val) => {
+      // Permitir valores vacíos (números desconocidos)
+      if (!val || val.trim() === '') return true;
+      // Si tiene valor, debe cumplir las validaciones
+      return val.length >= 9 && val.length <= 12 && /^\+?[0-9]+$/.test(val);
+    }, {
+      message: 'Si ingresa un número, debe tener entre 9 y 12 dígitos y solo contener números (y opcionalmente +)'
+    }),
   idProveedorServicio: z.string().min(1, 'Seleccione un proveedor'),
   id_ubicacion: z.string().min(1, 'Seleccione una ubicación'),
   imei: z.string().min(1, 'IMEI es requerido'),
@@ -167,7 +173,10 @@ export function TelefonoForm({
     try {
       const formattedValues = {
         ...values,
-        numeroTelefonico: values.numeroTelefonico.replace(/\D/g, '') // Elimina todo excepto dígitos
+        // Solo formatear si hay un número, si está vacío mantenerlo vacío
+        numeroTelefonico: values.numeroTelefonico && values.numeroTelefonico.trim() !== '' 
+          ? values.numeroTelefonico.replace(/\D/g, '') // Elimina todo excepto dígitos
+          : '' // Mantener vacío para números desconocidos
       };
       await onSubmit(formattedValues);
     } catch (error) {
@@ -189,11 +198,11 @@ export function TelefonoForm({
           name="numeroTelefonico"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Número Telefónico</FormLabel>
+              <FormLabel>Número Telefónico <span className="text-sm text-gray-500">(Opcional)</span></FormLabel>
               <FormControl>
                 <Input
                   type="tel"
-                  placeholder="+56912345678"
+                  placeholder="+56912345678 o dejar vacío si es desconocido"
                   {...field}
                   onChange={(e) => {
                     const value = e.target.value;

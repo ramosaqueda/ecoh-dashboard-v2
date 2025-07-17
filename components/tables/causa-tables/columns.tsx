@@ -29,6 +29,7 @@ export type Causa = {
   observacion: string;
   foliobw: string;
   fechaHoraTomaConocimiento: string;
+  fechaDelHecho: string; // ✅ NUEVO: Campo para fecha del hecho
   causaEcoh: boolean;
   fiscalId: string;
   delitoId: string;
@@ -36,7 +37,6 @@ export type Causa = {
     id: number;
     nombre: string;
   };
-  // ✅ NUEVO: Agregar atvt a la interfaz
   atvt?: {
     id: number;
     nombre: string;
@@ -319,13 +319,24 @@ export const columns: ColumnDef<Causa>[] = [
     header: 'Causa ECOH',
     cell: ({ row }) => (row.getValue('causaEcoh') ? 'Sí' : 'No')
   },
+  // ✅ ACTUALIZADO: Cambiar fechaHoraTomaConocimiento por fechaDelHecho
   {
-    accessorKey: 'fechaHoraTomaConocimiento',
-    header: 'Fecha Toma Conocimiento',
+    accessorKey: 'fechaDelHecho',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Fecha del Hecho
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
     cell: ({ row }) => {
-      const fecha = row.getValue('fechaHoraTomaConocimiento') as string;
+      const fecha = row.getValue('fechaDelHecho') as string;
       return fecha
-        ? format(new Date(fecha), 'dd/MM/yyyy HH:mm', { locale: es })
+        ? format(new Date(fecha), 'dd/MM/yyyy', { locale: es })
         : '-';
     }
   },
@@ -341,7 +352,6 @@ export const columns: ColumnDef<Causa>[] = [
     accessorKey: 'analista.nombre',
     header: 'Analista'
   },
-  // ✅ NUEVA COLUMNA: ATVT
   {
     accessorKey: 'atvt.nombre',
     header: ({ column }) => {

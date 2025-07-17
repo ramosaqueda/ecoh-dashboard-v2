@@ -49,6 +49,11 @@ interface Professional {
   nombre: string;
 }
 
+interface Delito {
+  id: number;
+  nombre: string;
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -67,37 +72,39 @@ export function CausasDataTable<TData, TValue>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [abogados, setAbogados] = useState<Professional[]>([]);
   const [analistas, setAnalistas] = useState<Professional[]>([]);
-  // ✅ NUEVO: Estado para ATVTs
   const [atvts, setAtvts] = useState<Professional[]>([]);
+  const [delitos, setDelitos] = useState<Delito[]>([]);
   const [selectedAbogado, setSelectedAbogado] = useState<string>('all');
   const [selectedAnalista, setSelectedAnalista] = useState<string>('all');
-  // ✅ NUEVO: Estado para ATVT seleccionado
   const [selectedATVT, setSelectedATVT] = useState<string>('all');
+  const [selectedDelito, setSelectedDelito] = useState<string>('all'); // ✅ NUEVO: Estado para delito
+  const [selectedYear, setSelectedYear] = useState<string>('all'); // ✅ NUEVO: Estado para año
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     rit: false,
     observacion: false,
     foliobw: false
   });
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  console.log(API_BASE_URL)
 
-  // ✅ ACTUALIZADO: Fetch abogados, analistas y ATVTs
   useEffect(() => {
     const fetchProfessionals = async () => {
       try {
-        const [abogadosRes, analistasRes, atvtsRes] = await Promise.all([
+        const [abogadosRes, analistasRes, atvtsRes, delitosRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/abogado`),
           fetch(`${API_BASE_URL}/api/analista`),
-          fetch(`${API_BASE_URL}/api/atvt`) // ✅ NUEVO: Fetch de ATVTs
+          fetch(`${API_BASE_URL}/api/atvt`),
+          fetch(`${API_BASE_URL}/api/delito`) // ✅ NUEVO: Fetch de delitos
         ]);
 
-        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok) {
+        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok && delitosRes.ok) {
           const abogadosData = await abogadosRes.json();
           const analistasData = await analistasRes.json();
-          const atvtsData = await atvtsRes.json(); // ✅ NUEVO
+          const atvtsData = await atvtsRes.json();
+          const delitosData = await delitosRes.json(); // ✅ NUEVO
           setAbogados(abogadosData);
           setAnalistas(analistasData);
-          setAtvts(atvtsData); // ✅ NUEVO
+          setAtvts(atvtsData);
+          setDelitos(delitosData); // ✅ NUEVO
         }
       } catch (error) {
         console.error('Error fetching professionals:', error);
@@ -107,7 +114,21 @@ export function CausasDataTable<TData, TValue>({
     fetchProfessionals();
   }, []);
 
-  // ✅ ACTUALIZADO: Filter the data based on selected professionals (incluyendo ATVT)
+  // ✅ NUEVO: Generar lista de años únicos basada en fechaDelHecho
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    (data as any[]).forEach((item) => {
+      if (item.fechaDelHecho) {
+        const year = new Date(item.fechaDelHecho).getFullYear();
+        if (!isNaN(year)) {
+          years.add(year);
+        }
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Ordenar descendente
+  }, [data]);
+
+  // ✅ ACTUALIZADO: Filter the data based on selected filters (incluyendo año y delito)
   const filteredData = useMemo(() => {
     return (data as any[]).filter((item) => {
       const abogadoMatch =
@@ -116,13 +137,25 @@ export function CausasDataTable<TData, TValue>({
       const analistaMatch =
         selectedAnalista === 'all' ||
         item.analista?.id.toString() === selectedAnalista;
-      // ✅ NUEVO: Filtro para ATVT
       const atvtMatch =
         selectedATVT === 'all' ||
         item.atvt?.id.toString() === selectedATVT;
-      return abogadoMatch && analistaMatch && atvtMatch;
+      
+      // ✅ NUEVO: Filtro por delito
+      const delitoMatch =
+        selectedDelito === 'all' ||
+        item.delito?.id.toString() === selectedDelito;
+      
+      // ✅ NUEVO: Filtro por año
+      const yearMatch = selectedYear === 'all' || (() => {
+        if (!item.fechaDelHecho) return false;
+        const itemYear = new Date(item.fechaDelHecho).getFullYear();
+        return itemYear.toString() === selectedYear;
+      })();
+      
+      return abogadoMatch && analistaMatch && atvtMatch && delitoMatch && yearMatch;
     });
-  }, [data, selectedAbogado, selectedAnalista, selectedATVT]); // ✅ NUEVO: Agregar selectedATVT a dependencies
+  }, [data, selectedAbogado, selectedAnalista, selectedATVT, selectedDelito, selectedYear]);
 
   const table = useReactTable({
     data: filteredData,
@@ -161,10 +194,10 @@ export function CausasDataTable<TData, TValue>({
               value = value?.[key];
             }
 
-            // Formatear fechas si es necesario
-            if (column.accessorKey === 'fechaHoraTomaConocimiento' && value) {
+            // ✅ ACTUALIZADO: Formatear fechaDelHecho en lugar de fechaHoraTomaConocimiento
+            if (column.accessorKey === 'fechaDelHecho' && value) {
               try {
-                value = format(new Date(value), 'dd/MM/yyyy HH:mm', {
+                value = format(new Date(value), 'dd/MM/yyyy', {
                   locale: es
                 });
               } catch (error) {
@@ -214,7 +247,7 @@ export function CausasDataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <Input
             placeholder="Buscar en todas las columnas..."
             value={globalFilter ?? ''}
@@ -250,7 +283,6 @@ export function CausasDataTable<TData, TValue>({
             </SelectContent>
           </Select>
 
-          {/* ✅ NUEVO: Select para filtrar por ATVT */}
           <Select value={selectedATVT} onValueChange={setSelectedATVT}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filtrar por ATVT" />
@@ -260,6 +292,36 @@ export function CausasDataTable<TData, TValue>({
               {atvts.map((atvt) => (
                 <SelectItem key={atvt.id} value={atvt.id.toString()}>
                   {atvt.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* ✅ NUEVO: Filtro por delito */}
+          <Select value={selectedDelito} onValueChange={setSelectedDelito}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por delito" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los delitos</SelectItem>
+              {delitos.map((delito) => (
+                <SelectItem key={delito.id} value={delito.id.toString()}>
+                  {delito.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* ✅ NUEVO: Filtro por año */}
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por año" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los años</SelectItem>
+              {availableYears.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -290,7 +352,9 @@ export function CausasDataTable<TData, TValue>({
                         column.toggleVisibility(!!value)
                       }
                     >
-                      {column.id === 'fechaHoraTomaConocimiento'
+                      {column.id === 'fechaDelHecho'
+                        ? 'Fecha del Hecho'
+                        : column.id === 'fechaHoraTomaConocimiento'
                         ? 'Fecha Toma Conocimiento'
                         : column.id.replace(/([A-Z])/g, ' $1').trim()}
                     </DropdownMenuCheckboxItem>

@@ -131,6 +131,12 @@ export const navItems: NavItem[] = [
           href: '/dashboard/LaunchpadECOH',
           icon: 'link2',
           label: 'reportes'
+        },
+        {
+          title: 'Validar RUN',
+          href: '/dashboard/validarut',
+          icon: 'check',
+          label: 'Validar RUN'
         }
         
       ]

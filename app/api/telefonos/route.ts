@@ -46,9 +46,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // Validación de campos requeridos (NUE es opcional)
+    // Validación de campos requeridos (numeroTelefonico y NUE son opcionales)
     if (
-      !body.numeroTelefonico ||
       !body.idProveedorServicio ||
       !body.imei ||
       !body.abonado ||
@@ -60,9 +59,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Procesar número telefónico: si está vacío o es undefined, usar "no definido"
+    const numeroTelefonico = body.numeroTelefonico && body.numeroTelefonico.trim() !== '' 
+      ? body.numeroTelefonico 
+      : 'no definido';
+
     const telefono = await prisma.telefono.create({
       data: {
-        numeroTelefonico: body.numeroTelefonico,
+        numeroTelefonico: numeroTelefonico,
         idProveedorServicio: parseInt(body.idProveedorServicio),
         imei: body.imei,
         abonado: body.abonado,
