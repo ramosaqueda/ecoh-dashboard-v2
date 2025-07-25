@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DashboardNav } from '@/components/dashboard-nav';
 import { navItems } from '@/constants/data';
 import { cn } from '@/lib/utils';
-import { Menu, ChevronLeft } from 'lucide-react';
+import { Menu, ChevronLeft, ExternalLink } from 'lucide-react';
 import { useSidebar } from '@/hooks/useSidebar';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,6 +29,15 @@ const Sidebar = ({ className }: SidebarProps) => {
     console.log('Toggle clicked - current isMinimized:', isMinimized);
     toggle();
     console.log('Toggle called - new isMinimized should be:', !isMinimized);
+  };
+
+  // Obtener la URL del enlace ECOH desde las variables de entorno
+  const ecohLink = process.env.NEXT_PUBLIC_ECOHLINK || '#';
+
+  const handleEcohLinkClick = () => {
+    if (ecohLink && ecohLink !== '#') {
+      window.open(ecohLink, '_blank');
+    }
   };
 
   return (
@@ -85,6 +94,17 @@ const Sidebar = ({ className }: SidebarProps) => {
                     />
                   </div>
                   <span className="font-medium text-gray-800 z-10">Clave Única</span>
+                </Button>
+
+                {/* Botón ECOHLINK en mobile */}
+                <Button
+                  variant="outline"
+                  className="w-full h-12 relative overflow-hidden bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-purple-200 justify-start gap-3 px-3"
+                  onClick={handleEcohLinkClick}
+                  disabled={!ecohLink || ecohLink === '#'}
+                >
+                  <ExternalLink className="h-6 w-6 flex-shrink-0 z-10 text-purple-600" />
+                  <span className="font-medium text-gray-800 z-10">ECOH Link</span>
                 </Button>
               </div>
             </div>
@@ -206,11 +226,45 @@ const Sidebar = ({ className }: SidebarProps) => {
                         </div>
                       </div>
                     </Button>
+
+                    {/* Botón ECOHLINK - Desktop */}
+                    <Button
+                      variant="outline"
+                      className="w-full h-16 relative overflow-hidden bg-gradient-to-r from-purple-100 to-purple-200 hover:from-purple-200 hover:to-purple-300 border-purple-200 justify-start gap-4 px-4"
+                      onClick={handleEcohLinkClick}
+                      disabled={!ecohLink || ecohLink === '#'}
+                    >
+                      <div className="relative h-10 w-10 flex-shrink-0 z-10 flex items-center justify-center">
+                        <ExternalLink className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <span className="font-medium text-base text-gray-800 z-10">
+                        ECOH Link
+                      </span>
+                      
+                      {/* Icono de fondo sutil */}
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-10">
+                        <ExternalLink className="h-12 w-12 text-purple-600" />
+                      </div>
+                    </Button>
                   </div>
                 </div>
               )}
 
-               
+              {/* Versión minimizada del botón ECOHLINK */}
+              {isMinimized && (
+                <div className="px-2 py-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-10 h-10 bg-gradient-to-r from-purple-100 to-purple-200 hover:from-purple-200 hover:to-purple-300 border-purple-200"
+                    onClick={handleEcohLinkClick}
+                    disabled={!ecohLink || ecohLink === '#'}
+                    title="ECOH Link"
+                  >
+                    <ExternalLink className="h-5 w-5 text-purple-600" />
+                  </Button>
+                </div>
+              )}
             </nav>
           </ScrollArea>
 

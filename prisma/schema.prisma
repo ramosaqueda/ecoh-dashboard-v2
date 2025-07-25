@@ -50,6 +50,7 @@ model Causa {
   observacion               String?
   foliobw                   String?
   causaEcoh                 Boolean
+  causaSacfi                Boolean
   causaLegada               Boolean?
   coordenadasSs             String?
   homicidioConsumado        Boolean?

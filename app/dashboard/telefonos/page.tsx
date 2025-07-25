@@ -16,14 +16,14 @@ import { TelefonoCausaManager } from '@/components/forms/Telefonos/TelefonoCausa
 import { toast } from 'sonner';
 import { Loader2, Plus } from 'lucide-react';
 
-// Interfaces de tipos
+// Interfaces de tipos - CORREGIDO
 interface TelefonoFormData {
-  numeroTelefonico: string;
+  numeroTelefonico?: string; // Cambiado a opcional
   idProveedorServicio: string;
   id_ubicacion: string;
   imei: string;
   abonado: string;
-  nue?: string; // AGREGADO
+  nue?: string;
   solicitaTrafico: boolean | null;
   solicitaImei: boolean | null;
   extraccionForense: boolean | null;
@@ -105,8 +105,24 @@ export default function TelefonosPage({}: TelefonoPageProps) {
     }
   };
 
-  const handleSubmit = async (formData: TelefonoFormData): Promise<void> => {
+  // CORREGIDO: Función handleSubmit con mejor manejo de tipos
+  const handleSubmit = async (values: any): Promise<void> => {
     try {
+      // Preparar los datos asegurando que tengan los valores correctos
+      const formData: TelefonoFormData = {
+        numeroTelefonico: values.numeroTelefonico || '',
+        idProveedorServicio: values.idProveedorServicio,
+        id_ubicacion: values.id_ubicacion,
+        imei: values.imei,
+        abonado: values.abonado,
+        nue: values.nue || '',
+        solicitaTrafico: values.solicitaTrafico,
+        solicitaImei: values.solicitaImei,
+        extraccionForense: values.extraccionForense,
+        enviar_custodia: values.enviar_custodia,
+        observacion: values.observacion || ''
+      };
+
       const url = selectedTelefono
         ? `/api/telefonos/${selectedTelefono.id}`
         : '/api/telefonos';
@@ -163,7 +179,7 @@ export default function TelefonosPage({}: TelefonoPageProps) {
                    (telefono as any).id_ubicacion?.toString() || '',
       imei: (telefono as any).imei || '',
       abonado: (telefono as any).abonado || '',
-      nue: (telefono as any).nue || '', // CAMPO AGREGADO - ESTA ERA LA LÍNEA FALTANTE
+      nue: (telefono as any).nue || '',
       solicitaTrafico: (telefono as any).solicitaTrafico ?? null,
       solicitaImei: (telefono as any).solicitaImei ?? null,
       extraccionForense: (telefono as any).extraccionForense ?? null,

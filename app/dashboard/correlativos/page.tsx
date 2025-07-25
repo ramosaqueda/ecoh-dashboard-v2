@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, RefreshCw } from 'lucide-react';
+import { FileText, Plus, RefreshCw, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TipoActividadInforme {
@@ -58,17 +58,40 @@ interface CorrelativoHistorial {
   createdAt: string;
 }
 
+interface Usuario {
+  id: number;
+  email: string;
+  nombre?: string;
+}
+
 export default function CorrelativosPage() {
   const [tiposActividad, setTiposActividad] = useState<TipoActividadInforme[]>([]);
   const [tipoSeleccionado, setTipoSeleccionado] = useState<string>('');
   const [correlativoInfo, setCorrelativoInfo] = useState<CorrelativoInfo | null>(null);
   const [historial, setHistorial] = useState<CorrelativoHistorial[]>([]);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // TODO: Obtener el usuario actual del contexto de autenticación
-  const usuarioId = 1; // Por ahora hardcodeado, debes reemplazar con el usuario actual
+  const fetchUsuario = async () => {
+    try {
+      setIsLoadingUser(true);
+      const response = await fetch('/api/usuarios/me');
+      if (!response.ok) {
+        throw new Error('Error al obtener información del usuario');
+      }
+      const userData = await response.json();
+      setUsuario(userData);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error al cargar información del usuario');
+      // En caso de error, podrías redirigir al login o mostrar un mensaje apropiado
+    } finally {
+      setIsLoadingUser(false);
+    }
+  };
 
   const fetchTiposActividad = async () => {
     try {
@@ -129,11 +152,18 @@ export default function CorrelativosPage() {
   };
 
   const handleGenerateCorrelativo = () => {
+    if (!usuario) {
+      toast.error('No se pudo obtener la información del usuario');
+      return;
+    }
     setShowConfirmDialog(true);
   };
 
   const confirmGenerate = async () => {
-    if (!tipoSeleccionado) return;
+    if (!tipoSeleccionado || !usuario) {
+      toast.error('Información insuficiente para generar el correlativo');
+      return;
+    }
 
     setIsGenerating(true);
     try {
@@ -144,7 +174,7 @@ export default function CorrelativosPage() {
         },
         body: JSON.stringify({
           tipoActividadId: tipoSeleccionado,
-          usuarioId: usuarioId,
+          usuarioId: usuario.id,
         }),
       });
 
@@ -183,6 +213,8 @@ export default function CorrelativosPage() {
   };
 
   useEffect(() => {
+    // Cargar usuario primero, luego los demás datos
+    fetchUsuario();
     fetchTiposActividad();
     fetchHistorial();
   }, []);
@@ -190,6 +222,43 @@ export default function CorrelativosPage() {
   const tipoActividadNombre = tiposActividad.find(
     t => t.id.toString() === tipoSeleccionado
   )?.nombre || '';
+
+  // Mostrar loading si aún no se ha cargado el usuario
+  if (isLoadingUser) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-2">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+            <p className="text-muted-foreground">Cargando información del usuario...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mostrar error si no se pudo cargar el usuario
+  if (!usuario) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-4">
+            <User className="h-12 w-12 mx-auto text-muted-foreground" />
+            <div>
+              <h2 className="text-lg font-semibold">Error al cargar usuario</h2>
+              <p className="text-muted-foreground">
+                No se pudo obtener la información del usuario. Por favor, intenta recargar la página.
+              </p>
+            </div>
+            <Button onClick={fetchUsuario} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Intentar de nuevo
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -199,6 +268,12 @@ export default function CorrelativosPage() {
           <p className="text-muted-foreground mt-2">
             Genera correlativos secuenciales para informes de actividades
           </p>
+          {usuario && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span>Usuario: {usuario.nombre || usuario.email}</span>
+            </div>
+          )}
         </div>
         <FileText className="h-8 w-8 text-muted-foreground" />
       </div>
@@ -268,7 +343,7 @@ export default function CorrelativosPage() {
                 Selecciona un tipo de actividad para ver su correlativo
               </div>
             ) : correlativoInfo ? (
-                              <div className="space-y-4">
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted/50">
                     <label className="text-sm font-medium text-muted-foreground">
@@ -294,7 +369,7 @@ export default function CorrelativosPage() {
                 <div className="pt-4 border-t">
                   <Button
                     onClick={handleGenerateCorrelativo}
-                    disabled={isGenerating}
+                    disabled={isGenerating || !usuario}
                     className="w-full"
                     size="lg"
                   >
@@ -385,13 +460,22 @@ export default function CorrelativosPage() {
               <br />
               <br />
               Esta acción no se puede deshacer y el correlativo será incrementado permanentemente.
+              {usuario && (
+                <>
+                  <br />
+                  <br />
+                  <span className="text-sm">
+                    Será registrado a nombre de: <strong>{usuario.nombre || usuario.email}</strong>
+                  </span>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || !usuario}
             >
               {isGenerating ? 'Generando...' : 'Confirmar'}
             </AlertDialogAction>
