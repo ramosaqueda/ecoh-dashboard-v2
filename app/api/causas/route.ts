@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// 🔥 SOLO CAMBIO NECESARIO: Interface corregida para coincidir con schema
+// ✅ Interface actualizada para incluir causaSacfi
 interface WhereClause {
   causaEcoh?: boolean;
+  causaSacfi?: boolean; // ✅ Nuevo campo agregado
   causaLegada?: boolean;
   homicidioConsumado?: boolean;
-  esCrimenOrganizado?: boolean; // 🔥 CAMBIO: boolean en lugar de number
+  esCrimenOrganizado?: boolean;
   fechaDelHecho?: {
     gte: Date;
     lte: Date;
@@ -18,18 +19,19 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const count = searchParams.get('count');
     const causaEcoh = searchParams.get('causaEcoh');
+    const causaSacfi = searchParams.get('causaSacfi'); // ✅ Nuevo parámetro
     const causaLegada = searchParams.get('causaLegada');
     const homicidioConsumado = searchParams.get('homicidioConsumado');
     const crimenorg = searchParams.get('esCrimenOrganizado');
     const yearParam = searchParams.get('year');
     
-    // ✅ IDÉNTICO: Función helper para crear filtro de fechas
+    // ✅ Función helper para crear filtro de fechas
     const createDateFilter = (year: number) => ({
       gte: new Date(year, 0, 1),
       lte: new Date(year, 11, 31, 23, 59, 59, 999)
     });
 
-    // ✅ IDÉNTICO: Validar año si está presente
+    // ✅ Validar año si está presente
     let yearFilter = null;
     if (yearParam && yearParam !== 'todos') {
       const year = parseInt(yearParam);
@@ -42,10 +44,10 @@ export async function GET(req: NextRequest) {
       yearFilter = createDateFilter(year);
     }
 
-    // 🔥 SOLO CAMBIO: Corregir valor boolean (era 0, ahora false)
+    // ✅ Caso especial para crimen organizado
     if (crimenorg !== null) {
       const crimeOrgWhereClause: WhereClause = {
-        esCrimenOrganizado: false // 🔥 CAMBIO: false en lugar de 0
+        esCrimenOrganizado: false
       };
       
       if (yearFilter) {
@@ -59,11 +61,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ count: totalCausas });
     }
 
-    // ✅ IDÉNTICO: Construir whereClause para casos normales
+    // ✅ Construir whereClause incluyendo causaSacfi
     const whereClause: WhereClause = {};
 
     if (causaEcoh !== null) {
       whereClause.causaEcoh = causaEcoh === 'true';
+    }
+
+    if (causaSacfi !== null) { // ✅ Nuevo filtro
+      whereClause.causaSacfi = causaSacfi === 'true';
     }
 
     if (causaLegada !== null) {
@@ -78,7 +84,7 @@ export async function GET(req: NextRequest) {
       whereClause.fechaDelHecho = yearFilter;
     }
 
-    // ✅ IDÉNTICO: Ejecutar consulta
+    // ✅ Ejecutar consulta
     if (count === 'true') {
       console.log('Contando causas con filtros:', whereClause);
       const totalCausas = await prisma.causa.count({
@@ -86,7 +92,6 @@ export async function GET(req: NextRequest) {
       });
       return NextResponse.json({ count: totalCausas });
     } else {
-      // 🔥 SOLO CAMBIO: Remover causasCrimenOrg del include (no existe)
       const causas = await prisma.causa.findMany({
         where: whereClause,
         include: {
@@ -127,11 +132,10 @@ export async function GET(req: NextRequest) {
               causasRelacionadasArista: true
             }
           }
-          // 🔥 REMOVIDO: causasCrimenOrg: true (no existe en schema)
         }
       });
 
-      // 🔥 AGREGAR: Consulta separada para mantener funcionalidad exacta
+      // ✅ Consulta separada para parámetros de crimen organizado
       const causasIds = causas.map(causa => causa.id);
       const crimenOrgRelations = causasIds.length > 0 
         ? await prisma.causasCrimenOrganizado.findMany({
@@ -139,7 +143,7 @@ export async function GET(req: NextRequest) {
           })
         : [];
 
-      // ✅ IDÉNTICO + MEJORADO: Formatear causas (agregando causasCrimenOrg manualmente)
+      // ✅ Formatear causas
       const formattedCausas = causas.map((causa) => ({
         ...causa,
         fiscal: causa.fiscal
@@ -159,7 +163,6 @@ export async function GET(req: NextRequest) {
           causasRelacionadasMadre: causa._count?.causasRelacionadasMadre || 0,
           causasRelacionadasArista: causa._count?.causasRelacionadasArista || 0
         },
-        // 🔥 AGREGAR: causasCrimenOrg manualmente para mantener funcionalidad
         causasCrimenOrg: crimenOrgRelations.filter(rel => rel.causaId === causa.id)
       }));
 
@@ -180,22 +183,23 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     console.log('Datos recibidos:', JSON.stringify(data, null, 2));
     
-    // ✅ IDÉNTICO: Verificar específicamente causasCrimenOrg
+    // ✅ Verificar específicamente causasCrimenOrg
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
     
-    // ✅ IDÉNTICO: Crear causa con campos mínimos
+    // ✅ Crear causa con campos mínimos incluyendo causaSacfi
     const newCausa = await prisma.causa.create({
       data: {
         denominacionCausa: data.denominacionCausa || '',
-        causaEcoh: data.causaEcoh === true ? true : false
+        causaEcoh: data.causaEcoh === true ? true : false,
+        causaSacfi: data.causaSacfi === true ? true : false // ✅ Nuevo campo
       }
     });
     
     console.log('Causa creada con ID:', newCausa.id);
     
-    // ✅ IDÉNTICO: Actualizar cada campo individualmente
+    // ✅ Actualizar cada campo individualmente
     try {
-      // ✅ IDÉNTICO: Actualizar campos de texto
+      // ✅ Actualizar campos de texto
       if (data.ruc !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -210,11 +214,19 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // ✅ IDÉNTICO: Actualizar campos booleanos
+      // ✅ Actualizar campos booleanos incluyendo causaSacfi
       if (data.causaLegada !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
           data: { causaLegada: data.causaLegada === true ? true : false }
+        });
+      }
+
+      // ✅ Campo causaSacfi ya fue creado inicialmente, pero se puede actualizar si es necesario
+      if (data.causaSacfi !== undefined) {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { causaSacfi: data.causaSacfi === true ? true : false }
         });
       }
       
@@ -232,7 +244,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // ✅ IDÉNTICO: Actualizar fechas
+      // ✅ Actualizar fechas
       if (data.fechaHoraTomaConocimiento) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -247,7 +259,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // ✅ IDÉNTICO: Actualizar IDs de relaciones
+      // ✅ Actualizar IDs de relaciones
       if (data.delito || data.delitoId) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -283,9 +295,8 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // 🔥 SOLO CAMBIO: Corregir lógica de esCrimenOrganizado para usar boolean
+      // ✅ Actualizar esCrimenOrganizado
       if (data.esCrimenOrganizado !== undefined) {
-        // Interpretar diversos formatos y convertir a boolean
         let boolValue: boolean;
         if (data.esCrimenOrganizado === true || data.esCrimenOrganizado === 1 || data.esCrimenOrganizado === '1') {
           boolValue = true;
@@ -306,12 +317,12 @@ export async function POST(req: NextRequest) {
       console.error('Error al actualizar campos:', updateError);
     }
     
-    // ✅ IDÉNTICO: SECCIÓN DE CREACIÓN DE RELACIONES CON PARÁMETROS
+    // ✅ SECCIÓN DE CREACIÓN DE RELACIONES CON PARÁMETROS
     console.log('======= INICIO PROCESAMIENTO DE PARÁMETROS =======');
     
     console.log('causasCrimenOrg en datos recibidos:', data.causasCrimenOrg);
     
-    // ✅ IDÉNTICO: Verificar estructura del modelo CrimenOrganizadoParams
+    // ✅ Verificar estructura del modelo CrimenOrganizadoParams
     try {
       const sampleParam = await prisma.crimenOrganizadoParams.findFirst();
       console.log('Muestra de un parámetro en la BD:', sampleParam);
@@ -324,7 +335,7 @@ export async function POST(req: NextRequest) {
       console.error('Error al consultar modelo CrimenOrganizadoParams:', modelError);
     }
     
-    // ✅ IDÉNTICO: Procesar parámetros de crimen organizado
+    // ✅ Procesar parámetros de crimen organizado
     const possibleParams = data.causasCrimenOrg || data.co || [];
     
     if (possibleParams && Array.isArray(possibleParams) && possibleParams.length > 0) {
@@ -387,7 +398,7 @@ export async function POST(req: NextRequest) {
     
     console.log('======= FIN PROCESAMIENTO DE PARÁMETROS =======');
     
-    // ✅ IDÉNTICO: Verificar las relaciones creadas
+    // ✅ Verificar las relaciones creadas
     try {
       const createdRelations = await prisma.causasCrimenOrganizado.findMany({
         where: { causaId: newCausa.id }
@@ -398,7 +409,7 @@ export async function POST(req: NextRequest) {
       console.error('Error al verificar relaciones creadas:', checkError);
     }
     
-    // 🔥 SOLO CAMBIO: Consultar causa completa sin include problemático
+    // ✅ Consultar causa completa
     const causaCompleta = await prisma.causa.findUnique({
       where: { id: newCausa.id },
       include: {
@@ -407,19 +418,18 @@ export async function POST(req: NextRequest) {
         abogado: true,
         analista: true,
         atvt: true
-        // 🔥 REMOVIDO: causasCrimenOrg: { include: { parametro: true } }
       }
     });
     
-    // 🔥 AGREGAR: Consultar relaciones por separado para mantener funcionalidad
+    // ✅ Consultar relaciones por separado
     const causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
       where: { causaId: newCausa.id }
     });
     
-    // 🔥 AGREGAR: Agregar las relaciones manualmente al resultado
+    // ✅ Combinar resultado final
     const resultado = {
       ...causaCompleta,
-      causasCrimenOrg: causasCrimenOrg // ✅ Mismo campo, mismos datos
+      causasCrimenOrg: causasCrimenOrg
     };
     
     return NextResponse.json(resultado, { status: 201 });

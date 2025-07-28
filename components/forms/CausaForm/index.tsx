@@ -59,6 +59,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
     defaultValues: {
       // Valores por defecto para campos booleanos
       causaEcoh: false,
+      causaSacfi: false, // ✅ Nuevo campo agregado
       causaLegada: false,
       constituyeSs: false,
       homicidioConsumado: false,
@@ -67,6 +68,25 @@ const CausaForm: React.FC<CausaFormProps> = ({
       ...initialValues
     }
   });
+
+  // ✅ Lógica para controlar la interacción entre causaEcoh y causaSacfi
+  const causaEcohValue = form.watch('causaEcoh');
+  const causaSacfiValue = form.watch('causaSacfi');
+
+  // ✅ Efecto para manejar la lógica de los switches
+  React.useEffect(() => {
+    // Si causaEcoh se pone en true, causaSacfi debe ser false
+    if (causaEcohValue === true && causaSacfiValue === true) {
+      form.setValue('causaSacfi', false, { shouldDirty: true });
+    }
+  }, [causaEcohValue, form]);
+
+  React.useEffect(() => {
+    // Si causaSacfi se pone en true, causaEcoh debe ser false
+    if (causaSacfiValue === true && causaEcohValue === true) {
+      form.setValue('causaEcoh', false, { shouldDirty: true });
+    }
+  }, [causaSacfiValue, form]);
 
   const handleSubmit = async (data: CausaFormData) => {
     console.log('Formulario antes de enviar:', data);
@@ -162,6 +182,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
               <h3 className="mb-4 font-medium">Configuración inicial</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                 <SwitchField form={form} name="causaEcoh" label="Causa ECOH" />
+                <SwitchField form={form} name="causaSacfi" label="Causa SACFI" />
                 <SwitchField
                   form={form}
                   name="causaLegada"

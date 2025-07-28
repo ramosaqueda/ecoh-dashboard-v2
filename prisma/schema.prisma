@@ -50,7 +50,7 @@ model Causa {
   observacion               String?
   foliobw                   String?
   causaEcoh                 Boolean
-  causaSacfi                Boolean
+  causaSacfi                Boolean                 @default(false)
   causaLegada               Boolean?
   coordenadasSs             String?
   homicidioConsumado        Boolean?
@@ -312,7 +312,7 @@ model Telefono {
   observacion         String?
   numeroTelefonico    String?
   extraccionForense   Boolean?
-  existe              Boolean?
+
   enviar_custodia     Boolean?
   id_ubicacion        Int?
   nue                 String?

@@ -4,6 +4,7 @@ import * as z from 'zod';
 export const causaSchema = z.object({
   // Campos booleanos
   causaEcoh: z.boolean().default(false),
+  causaSacfi: z.boolean().default(false), // ✅ Nuevo campo agregado
   causaLegada: z.boolean().default(false),
   constituyeSs: z.boolean().default(false),
   homicidioConsumado: z.boolean().optional(),

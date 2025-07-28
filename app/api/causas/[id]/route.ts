@@ -46,53 +46,40 @@ export async function GET(
       );
     }
 
-    // ✅ PASO 2: Probar consulta de parámetros CO - con múltiples intentos
+    // ✅ PASO 2: Consulta de parámetros CO
     let causasCrimenOrg: any[] = [];
     
-    // Intento 1: Con include parametro
     try {
-      console.log('🔍 DEBUG GET - Intentando consulta con include parametro...');
+      console.log('🔍 DEBUG GET - Consultando parámetros de crimen organizado...');
       causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
         where: { causaId: parseInt(id) },
         include: {
           parametro: true
         }
       }) as any[];
-      console.log('✅ Consulta con include parametro exitosa:', causasCrimenOrg.length, 'registros');
+      console.log('✅ Parámetros CO obtenidos:', causasCrimenOrg.length, 'registros');
     } catch (includeError) {
-      console.error('❌ ERROR con include parametro:', includeError);
+      console.error('❌ ERROR con parámetros CO:', includeError);
       
-      // Intento 2: Sin include
+      // Intento fallback sin include
       try {
-        console.log('🔍 DEBUG GET - Intentando consulta sin include...');
         causasCrimenOrg = await prisma.causasCrimenOrganizado.findMany({
           where: { causaId: parseInt(id) }
         }) as any[];
-        console.log('✅ Consulta sin include exitosa:', causasCrimenOrg.length, 'registros');
+        console.log('✅ Parámetros CO sin include:', causasCrimenOrg.length, 'registros');
       } catch (basicError) {
         console.error('❌ ERROR consulta básica de parámetros CO:', basicError);
-        
-        // Intento 3: Verificar si la tabla existe
-        try {
-          console.log('🔍 DEBUG GET - Verificando estructura de tabla...');
-          const testQuery = await prisma.$queryRaw`SELECT * FROM CausasCrimenOrganizado LIMIT 1`;
-          console.log('✅ Tabla CausasCrimenOrganizado existe, muestra:', testQuery);
-        } catch (tableError) {
-          console.error('❌ ERROR: La tabla CausasCrimenOrganizado no existe o tiene diferente nombre:', tableError);
-        }
-        
-        // Si todo falla, continuar sin parámetros CO
         causasCrimenOrg = [];
       }
     }
 
-    // ✅ PASO 3: Construir respuesta
+    // ✅ PASO 3: Construir respuesta incluyendo causaSacfi
     const causaCompleta = {
       ...causa,
       causasCrimenOrg: causasCrimenOrg
     };
     
-    console.log('🔍 DEBUG GET - Respuesta final construida con', causasCrimenOrg.length, 'parámetros CO');
+    console.log('🔍 DEBUG GET - Respuesta final construida. causaSacfi:', causa.causaSacfi);
     
     return NextResponse.json(causaCompleta);
   } catch (error) {
@@ -116,11 +103,12 @@ export async function PUT(
     const causaId = parseInt(id);
 
     console.log('🔍 DEBUG PUT - Received data:', data);
+    console.log('🔍 DEBUG PUT - causaSacfi:', data.causaSacfi); // ✅ Log del nuevo campo
     console.log('🔍 DEBUG PUT - causasCrimenOrg:', data.causasCrimenOrg);
 
-    // ✅ 1. Actualizar la causa principal (campos básicos)
+    // ✅ 1. Actualizar la causa principal incluyendo causaSacfi
     
-    // ✅ FIX: Convertir esCrimenOrganizado a booleano (igual que en POST)
+    // ✅ Convertir esCrimenOrganizado a booleano
     let esCrimenOrganizadoValue: boolean | null = null;
     if (data.esCrimenOrganizado !== undefined) {
       if (data.esCrimenOrganizado === true || data.esCrimenOrganizado === 1 || data.esCrimenOrganizado === '1') {
@@ -136,6 +124,7 @@ export async function PUT(
       where: { id: causaId },
       data: {
         causaEcoh: data.causaEcoh,
+        causaSacfi: data.causaSacfi, // ✅ Nuevo campo agregado
         causaLegada: data.causaLegada,
         constituyeSs: data.constituyeSs,
         homicidioConsumado: data.homicidioConsumado ?? false,
@@ -158,13 +147,13 @@ export async function PUT(
         abogadoId: data.abogadoId,
         analistaId: data.analistaId,
         atvtId: data.atvtId,
-        esCrimenOrganizado: esCrimenOrganizadoValue  // ✅ Usar el valor convertido
+        esCrimenOrganizado: esCrimenOrganizadoValue
       }
     });
 
-    console.log('Causa básica actualizada correctamente');
+    console.log('Causa básica actualizada correctamente. causaSacfi:', updatedCausa.causaSacfi);
 
-    // ✅ 2. Procesar parámetros de crimen organizado (EXACTA LÓGICA DEL POST)
+    // ✅ 2. Procesar parámetros de crimen organizado
     console.log('======= INICIO PROCESAMIENTO DE PARÁMETROS EN PUT =======');
     
     // Eliminar relaciones existentes
@@ -283,7 +272,7 @@ export async function PUT(
       causasCrimenOrg: causasCrimenOrg
     };
 
-    console.log('🔍 DEBUG PUT - Causa actualizada completamente:', resultado);
+    console.log('🔍 DEBUG PUT - Causa actualizada completamente. causaSacfi:', resultado.causaSacfi);
 
     return NextResponse.json(resultado);
   } catch (error) {

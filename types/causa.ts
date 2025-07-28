@@ -1,6 +1,7 @@
 // causa.ts
 export interface CausaFormData {
   causaEcoh: boolean;
+  causaSacfi: boolean; // ✅ Nuevo campo agregado
   causaLegada: boolean;
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
@@ -37,6 +38,7 @@ export interface CausaFormData {
 export interface Causa {
   id: number;
   causaEcoh: boolean;
+  causaSacfi: boolean; // ✅ Nuevo campo agregado
   causaLegada: boolean;
   constituyeSs: boolean;
   homicidioConsumado?: boolean;

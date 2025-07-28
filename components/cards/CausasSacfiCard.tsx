@@ -8,13 +8,13 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { useYearContext } from '@/components/YearSelector';
-import { Scale } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface CausasCountResponse {
   count: number;
 }
 
-const CausasEcohCard: React.FC = () => {
+const CausasSacfiCard: React.FC = () => {
   const { selectedYear } = useYearContext();
   const [count, setCount] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,7 +28,7 @@ const CausasEcohCard: React.FC = () => {
         // Construir URL para la API
         const url = new URL('/api/causas', window.location.origin);
         url.searchParams.append('count', 'true');
-        url.searchParams.append('causaEcoh', 'true');
+        url.searchParams.append('causaSacfi', 'true');
         
         // Solo añadir year si no es "todos"
         if (selectedYear !== 'todos') {
@@ -43,7 +43,7 @@ const CausasEcohCard: React.FC = () => {
         const data: CausasCountResponse = await response.json();
         setCount(data.count);
       } catch (err) {
-        setError('Error al obtener el conteo de causas ECOH');
+        setError('Error al obtener el conteo de causas SACFI');
         console.error('Error:', err);
       } finally {
         setLoading(false);
@@ -54,11 +54,11 @@ const CausasEcohCard: React.FC = () => {
   }, [selectedYear]);
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
+    <Card className="border-l-4 border-l-orange-500">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center space-x-2">
-          <Scale className="h-4 w-4 text-blue-600" />
-          <CardTitle className="text-sm font-medium">CAUSAS ECOH</CardTitle>
+          <Shield className="h-4 w-4 text-orange-600" />
+          <CardTitle className="text-sm font-medium">CAUSAS SACFI</CardTitle>
         </div>
         <span className="text-xs text-muted-foreground">
           {selectedYear === 'todos' ? 'Todos los años' : selectedYear}
@@ -73,11 +73,11 @@ const CausasEcohCard: React.FC = () => {
           <p className="text-red-500 text-sm">{error}</p>
         ) : (
           <div className="space-y-1">
-            <p className="text-3xl font-bold text-blue-600">
+            <p className="text-3xl font-bold text-orange-600">
               {count !== null ? count.toLocaleString() : 'N/A'}
             </p>
             <p className="text-xs text-muted-foreground">
-              Equipo Contra el Crimen Organizado y Homicidios
+              Sistema de Análisis Criminal y Focalización de la Investigación
             </p>
           </div>
         )}
@@ -86,4 +86,4 @@ const CausasEcohCard: React.FC = () => {
   );
 };
 
-export default CausasEcohCard;
+export default CausasSacfiCard;

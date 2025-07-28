@@ -1,4 +1,5 @@
 import { CausaFormData, Causa } from '@/types/causa';
+import { ca } from 'date-fns/locale';
 
 interface ErrorResponse {
   error: string;
@@ -174,6 +175,7 @@ export const causaService = {
     const transformedData: Record<string, any> = {
       // Campos booleanos
       causaEcoh: data.causaEcoh,
+      causaSacfi: data.causaSacfi,
       causaLegada: data.causaLegada,
       constituyeSs: data.constituyeSs,
       homicidioConsumado: data.homicidioConsumado,
@@ -290,6 +292,7 @@ export const causaService = {
     const transformedData = {
       id: data.id,
       causaEcoh: data.causaEcoh || false,
+      causaSacfi: data.causaSacfi || false,
       causaLegada: data.causaLegada || false,
       constituyeSs: data.constituyeSs || false,
       denominacionCausa: data.denominacionCausa || '',

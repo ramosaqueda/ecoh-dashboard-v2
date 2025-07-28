@@ -11,8 +11,10 @@ import FormalizationChart from '@/components/charts/FormalizationChart';
 import CauseTimeline from '@/components/CauseTimeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CausasEcohCard from '@/components/cards/CausasEcohCard';
+import CausasSacfiCard from '@/components/cards/CausasSacfiCard';
 import CausasCard from '@/components/cards/CausasCard';
 import CausasLegadaCard from '@/components/cards/CausasLegadaCard';
+import EcohSacfiComparisonCard from '@/components/cards/EcohSacfiComparisonCard';
 import { EsclarecimientoCard } from '@/components/cards/EsclarecimientoCard';
 import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
 import NationalityDistribution from '@/components/charts/NationalityDistribution';
@@ -53,19 +55,28 @@ export default function DashboardPage() {
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
-              {/* Nueva disposición de los indicadores principales */}
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* Primera columna - Causas apiladas */}
-                <div className="flex flex-col gap-4">
-                  <CausasCard />
-                  <CausasEcohCard />
-                  <CausasLegadaCard />
-                </div>
+              {/* ✅ NUEVO: Layout mejorado con diferenciación ECOH/SACFI */}
+              <div className="grid gap-4 md:grid-cols-4">
+                {/* Causas generales */}
+                <CausasCard />
                 
-                {/* Segunda columna - Crimen Organizado */}
+                {/* Causas especializadas */}
+                <CausasEcohCard />
+                <CausasSacfiCard />
+                
+                {/* Causas legadas */}
+                <CausasLegadaCard />
+              </div>
+
+              {/* ✅ NUEVO: Segunda fila con cards de análisis */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Comparativa ECOH vs SACFI */}
+                <EcohSacfiComparisonCard />
+                
+                {/* Crimen Organizado */}
                 <CrimenOrganizadoCard />
                 
-                {/* Tercera columna - Esclarecimiento */}
+                {/* Esclarecimiento */}
                 <EsclarecimientoCard />
               </div>
 
