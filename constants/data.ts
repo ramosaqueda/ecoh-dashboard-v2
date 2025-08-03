@@ -132,7 +132,6 @@ export const navItems: NavItem[] = [
           icon: 'check',
           label: 'Validar RUN'
         }
-        
       ]
   },
   
