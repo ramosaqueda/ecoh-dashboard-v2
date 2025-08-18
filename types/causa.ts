@@ -1,8 +1,28 @@
 // causa.ts
+
+// Interfaz para OrigenCausa
+export interface OrigenCausa {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  codigo: string;
+  activo: boolean;
+  orden?: number;
+  color?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CausaFormData {
+  // NUEVO: Relación con origen de causa
+  origenCausaId?: number;
+  origenCausa?: OrigenCausa;
+  
+  // DEPRECATED: Mantener para compatibilidad temporal
   causaEcoh: boolean;
-  causaSacfi: boolean; // ✅ Nuevo campo agregado
+  causaSacfi: boolean;
   causaLegada: boolean;
+  
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;
@@ -11,7 +31,7 @@ export interface CausaFormData {
   fechaPpp?: string | null;
   ruc: string;
   folioBw: string;
-  causaId?: string; // ✅ Agregar esta línea
+  causaId?: string;
   coordenadasSs: string;
   delito: number;
   foco: number;
@@ -37,9 +57,16 @@ export interface CausaFormData {
 // Definición de la interfaz Causa para representar el modelo de respuesta del servidor
 export interface Causa {
   id: number;
+  
+  // NUEVO: Relación con origen de causa
+  origenCausaId?: number;
+  origenCausa?: OrigenCausa;
+  
+  // DEPRECATED: Mantener para compatibilidad temporal  
   causaEcoh: boolean;
-  causaSacfi: boolean; // ✅ Nuevo campo agregado
+  causaSacfi: boolean;
   causaLegada: boolean;
+  
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;

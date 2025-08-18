@@ -21,6 +21,7 @@ import DelitoSelect from '@/components/select/DelitoSelect';
 import TribunalSelect from '@/components/select/TribunalSelect';
 import FiscalSelect from '@/components/select/FiscalSelect';
 import FocoSelect from '@/components/select/FocoSelect';
+import OrigenCausaSelector from '@/components/select/OrigenCausaSelector'; // Nuevo selector
 
 
 import {
@@ -30,8 +31,7 @@ import {
   FormMessage
 } from '@/components/ui/form';
 
-import { causaSchema } from '@/schemas/causaSchema';
-import type { CausaFormData } from '@/types/causa';
+import { causaSchema, type CausaFormData } from '@/schemas/causaSchema';
 //import DatosRelato from '@/components/relato-hecho/datos-relato';
 import CrimenOrgParamsSelect from "@/components/select/CrimenOrgParamsSelect"
 
@@ -69,27 +69,33 @@ const CausaForm: React.FC<CausaFormProps> = ({
     }
   });
 
-  // ✅ Lógica para controlar la interacción entre causaEcoh y causaSacfi
+  // ✅ Lógica mejorada para manejar la compatibilidad entre nuevo selector y switches antiguos
+  const origenCausaIdValue = form.watch('origenCausaId');
   const causaEcohValue = form.watch('causaEcoh');
   const causaSacfiValue = form.watch('causaSacfi');
+  const causaLegadaValue = form.watch('causaLegada');
 
-  // ✅ Efecto para manejar la lógica de los switches
+  // ✅ Efecto para sincronizar selector nuevo con switches antiguos
   React.useEffect(() => {
-    // Si causaEcoh se pone en true, causaSacfi debe ser false
-    if (causaEcohValue === true && causaSacfiValue === true) {
-      form.setValue('causaSacfi', false, { shouldDirty: true });
+    // Si no hay origen seleccionado, usar lógica antigua de switches mutuamente excluyentes
+    if (!origenCausaIdValue) {
+      if (causaEcohValue === true && causaSacfiValue === true) {
+        form.setValue('causaSacfi', false, { shouldDirty: true });
+      }
+      if (causaSacfiValue === true && causaEcohValue === true) {
+        form.setValue('causaEcoh', false, { shouldDirty: true });
+      }
     }
-  }, [causaEcohValue, form]);
-
-  React.useEffect(() => {
-    // Si causaSacfi se pone en true, causaEcoh debe ser false
-    if (causaSacfiValue === true && causaEcohValue === true) {
-      form.setValue('causaEcoh', false, { shouldDirty: true });
-    }
-  }, [causaSacfiValue, form]);
+  }, [causaEcohValue, causaSacfiValue, origenCausaIdValue, form]);
 
   const handleSubmit = async (data: CausaFormData) => {
-    console.log('Formulario antes de enviar:', data);
+    console.log('📋 Formulario antes de enviar:', data);
+    console.log('🎯 origenCausaId específico:', {
+      valor: data.origenCausaId,
+      tipo: typeof data.origenCausaId,
+      esNull: data.origenCausaId === null,
+      esUndefined: data.origenCausaId === undefined
+    });
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
   
     // Asegurar que causasCrimenOrg sea un array de números
@@ -127,6 +133,8 @@ const CausaForm: React.FC<CausaFormProps> = ({
 
       const formattedValues = {
         ...initialValues,
+        // ✅ Manejar origenCausaId
+        origenCausaId: initialValues.origenCausaId ? parseSelectValue(initialValues.origenCausaId.toString()) : undefined,
         // ✅ Convertir IDs a números para el formulario
         abogado: initialValues.abogado ? parseSelectValue(initialValues.abogado.toString()) : undefined,
         analista: initialValues.analista ? parseSelectValue(initialValues.analista.toString()) : undefined,
@@ -180,14 +188,78 @@ const CausaForm: React.FC<CausaFormProps> = ({
             {/* Sección de Switches */}
             <div className="space-y-4 rounded-lg bg-muted/50 p-4">
               <h3 className="mb-4 font-medium">Configuración inicial</h3>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-                <SwitchField form={form} name="causaEcoh" label="Causa ECOH" />
-                <SwitchField form={form} name="causaSacfi" label="Causa SACFI" />
-                <SwitchField
-                  form={form}
-                  name="causaLegada"
-                  label="Causa Legada"
-                />
+              
+              {/* NUEVO: Selector de Origen de Causa */}
+              <div className="mb-6">
+                <FormField form={form} name="origenCausaId" label="Origen de Causa">
+                  <OrigenCausaSelector
+                    value={form.watch('origenCausaId')?.toString() || ''}
+                    onChange={(value) => {
+                      const numericValue = value ? parseInt(value) : undefined;
+                      form.setValue('origenCausaId', numericValue, {
+                        shouldValidate: true,
+                        shouldDirty: true
+                      });
+                      
+                      // LÓGICA DE COMPATIBILIDAD: Actualizar switches antiguos basados en la selección
+                      if (numericValue) {
+                        // Resetear todos los switches primero
+                        form.setValue('causaEcoh', false);
+                        form.setValue('causaSacfi', false);
+                        form.setValue('causaLegada', false);
+                        
+                        // Activar el switch correspondiente basado en el ID
+                        // Nota: Esta lógica se basa en los IDs de tu base de datos
+                        // Asumiendo: 1=ECOH, 2=SACFI, 3=LEGADA (ajustar según tu BD)
+                        if (numericValue === 1) {
+                          form.setValue('causaEcoh', true);
+                        } else if (numericValue === 2) {
+                          form.setValue('causaSacfi', true);
+                        } else if (numericValue === 3) {
+                          form.setValue('causaLegada', true);
+                        }
+                      }
+                    }}
+                    error={form.formState.errors.origenCausaId?.message}
+                    includeEmpty
+                    emptyLabel="Sin origen específico"
+                  />
+                </FormField>
+              </div>
+              
+              {/* DEPRECATED: Switches antiguos - mantener para compatibilidad */}
+              <div className="rounded border border-orange-200 bg-orange-50 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm text-orange-700">
+                  <TriangleAlert className="h-4 w-4" />
+                  <span className="font-medium">Método anterior (deprecated)</span>
+                </div>
+                <p className="mb-3 text-xs text-orange-600">
+                  Estos switches serán removidos en futuras versiones. Use "Origen de Causa" arriba.
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <SwitchField 
+                    form={form} 
+                    name="causaEcoh" 
+                    label="Causa ECOH" 
+                    disabled={!!form.watch('origenCausaId')} // Deshabilitar si se usa el nuevo selector
+                  />
+                  <SwitchField 
+                    form={form} 
+                    name="causaSacfi" 
+                    label="Causa SACFI" 
+                    disabled={!!form.watch('origenCausaId')}
+                  />
+                  <SwitchField
+                    form={form}
+                    name="causaLegada"
+                    label="Causa Legada"
+                    disabled={!!form.watch('origenCausaId')}
+                  />
+                </div>
+              </div>
+              
+              {/* Otros switches */}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <SwitchField
                   form={form}
                   name="constituyeSs"

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// ✅ Interface actualizada para incluir causaSacfi
+// ✅ Interface actualizada para incluir origenCausa
 interface WhereClause {
+  origenCausaId?: number; // Nuevo campo relacional
+  // DEPRECATED: Mantener para compatibilidad temporal
   causaEcoh?: boolean;
-  causaSacfi?: boolean; // ✅ Nuevo campo agregado
+  causaSacfi?: boolean;
   causaLegada?: boolean;
   homicidioConsumado?: boolean;
   esCrimenOrganizado?: boolean;
@@ -19,8 +21,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const count = searchParams.get('count');
     const causaEcoh = searchParams.get('causaEcoh');
-    const causaSacfi = searchParams.get('causaSacfi'); // ✅ Nuevo parámetro
+    const causaSacfi = searchParams.get('causaSacfi');
     const causaLegada = searchParams.get('causaLegada');
+    const origenCausaId = searchParams.get('origenCausaId'); // Nuevo parámetro
     const homicidioConsumado = searchParams.get('homicidioConsumado');
     const crimenorg = searchParams.get('esCrimenOrganizado');
     const yearParam = searchParams.get('year');
@@ -61,19 +64,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ count: totalCausas });
     }
 
-    // ✅ Construir whereClause incluyendo causaSacfi
+    // ✅ Construir whereClause incluyendo origenCausa
     const whereClause: WhereClause = {};
 
-    if (causaEcoh !== null) {
-      whereClause.causaEcoh = causaEcoh === 'true';
-    }
+    // Nuevo filtro por origen de causa (preferido)
+    if (origenCausaId !== null && origenCausaId !== undefined) {
+      whereClause.origenCausaId = parseInt(origenCausaId);
+    } else {
+      // DEPRECATED: Filtros antiguos para compatibilidad
+      if (causaEcoh !== null) {
+        whereClause.causaEcoh = causaEcoh === 'true';
+      }
 
-    if (causaSacfi !== null) { // ✅ Nuevo filtro
-      whereClause.causaSacfi = causaSacfi === 'true';
-    }
+      if (causaSacfi !== null) {
+        whereClause.causaSacfi = causaSacfi === 'true';
+      }
 
-    if (causaLegada !== null) {
-      whereClause.causaLegada = causaLegada === 'true';
+      if (causaLegada !== null) {
+        whereClause.causaLegada = causaLegada === 'true';
+      }
     }
 
     if (homicidioConsumado !== null) {
@@ -95,6 +104,14 @@ export async function GET(req: NextRequest) {
       const causas = await prisma.causa.findMany({
         where: whereClause,
         include: {
+          origenCausa: {
+            select: {
+              id: true,
+              nombre: true,
+              codigo: true,
+              color: true
+            }
+          },
           fiscal: {
             select: {
               id: true,
@@ -181,24 +198,82 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    console.log('Datos recibidos:', JSON.stringify(data, null, 2));
+    console.log('🔍 Datos recibidos en POST causas:', JSON.stringify(data, null, 2));
+    
+    // ✅ DEBUG: Verificar específicamente origenCausaId
+    console.log('🎯 origenCausaId recibido:', {
+      valor: data.origenCausaId,
+      tipo: typeof data.origenCausaId,
+      esNull: data.origenCausaId === null,
+      esUndefined: data.origenCausaId === undefined,
+      esString: typeof data.origenCausaId === 'string',
+      esNumber: typeof data.origenCausaId === 'number'
+    });
+    
+    // ✅ Procesar y validar origenCausaId
+    let origenCausaIdProcessed = null;
+    if (data.origenCausaId !== undefined && data.origenCausaId !== null && data.origenCausaId !== '') {
+      if (typeof data.origenCausaId === 'string') {
+        origenCausaIdProcessed = parseInt(data.origenCausaId, 10);
+        if (isNaN(origenCausaIdProcessed)) {
+          console.warn('⚠️ origenCausaId no se pudo convertir a número:', data.origenCausaId);
+          origenCausaIdProcessed = null;
+        }
+      } else if (typeof data.origenCausaId === 'number') {
+        origenCausaIdProcessed = data.origenCausaId;
+      }
+    }
+    
+    console.log('🎯 origenCausaId procesado:', origenCausaIdProcessed);
+    
+    // ✅ Verificar si el origen existe antes de crear la causa
+    if (origenCausaIdProcessed) {
+      const origenExists = await prisma.origenCausa.findUnique({
+        where: { id: origenCausaIdProcessed }
+      });
+      
+      if (!origenExists) {
+        console.error('❌ El origen de causa no existe:', origenCausaIdProcessed);
+        return NextResponse.json(
+          { error: `El origen de causa con ID ${origenCausaIdProcessed} no existe` },
+          { status: 400 }
+        );
+      }
+      
+      console.log('✅ Origen de causa validado:', origenExists);
+    }
     
     // ✅ Verificar específicamente causasCrimenOrg
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
     
-    // ✅ Crear causa con campos mínimos incluyendo causaSacfi
+    // ✅ Crear causa con relación de origen MEJORADA
+    const causaData = {
+      denominacionCausa: data.denominacionCausa || '',
+      // NUEVO: Campo procesado y validado
+      origenCausaId: origenCausaIdProcessed,
+      // DEPRECATED: Mantener campos antiguos para compatibilidad temporal
+      causaEcoh: data.causaEcoh === true ? true : false,
+      causaSacfi: data.causaSacfi === true ? true : false,
+      causaLegada: data.causaLegada === true ? true : false
+    };
+    
+    console.log('🏗️ Datos para crear causa:', causaData);
+    
     const newCausa = await prisma.causa.create({
-      data: {
-        denominacionCausa: data.denominacionCausa || '',
-        causaEcoh: data.causaEcoh === true ? true : false,
-        causaSacfi: data.causaSacfi === true ? true : false // ✅ Nuevo campo
-      }
+      data: causaData
     });
     
-    console.log('Causa creada con ID:', newCausa.id);
+    console.log('✅ Causa creada exitosamente:', {
+      id: newCausa.id,
+      origenCausaId: newCausa.origenCausaId,
+      denominacionCausa: newCausa.denominacionCausa
+    });
     
     // ✅ Actualizar cada campo individualmente
     try {
+      // ✅ REMOVIDO: No actualizar origenCausaId de nuevo, ya se creó correctamente
+      // Ya no necesitamos esta actualización porque lo creamos correctamente arriba
+      
       // ✅ Actualizar campos de texto
       if (data.ruc !== undefined) {
         await prisma.causa.update({
@@ -409,10 +484,35 @@ export async function POST(req: NextRequest) {
       console.error('Error al verificar relaciones creadas:', checkError);
     }
     
-    // ✅ Consultar causa completa
+    // ✅ Verificar que la causa se guardó con el origen correcto
+    const causaVerificacion = await prisma.causa.findUnique({
+      where: { id: newCausa.id },
+      select: {
+        id: true,
+        origenCausaId: true,
+        origenCausa: {
+          select: {
+            id: true,
+            nombre: true,
+            codigo: true
+          }
+        }
+      }
+    });
+    
+    console.log('🔍 Verificación final de la causa creada:', causaVerificacion);
+    
+    if (origenCausaIdProcessed && !causaVerificacion?.origenCausaId) {
+      console.error('❌ ERROR CRÍTICO: El origenCausaId no se guardó correctamente');
+    } else if (origenCausaIdProcessed && causaVerificacion?.origenCausaId) {
+      console.log('✅ origenCausaId guardado exitosamente');
+    }
+    
+    // ✅ Consultar causa completa con origen
     const causaCompleta = await prisma.causa.findUnique({
       where: { id: newCausa.id },
       include: {
+        origenCausa: true,
         delito: true,
         fiscal: true,
         abogado: true,

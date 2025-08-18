@@ -2,9 +2,19 @@
 import * as z from 'zod';
 
 export const causaSchema = z.object({
-  // Campos booleanos
+  // NUEVO: Campo para origen de causa
+  origenCausaId: z
+    .union([
+      z.number(),
+      z.string().transform((val) => parseInt(val, 10)),
+      z.null()
+    ])
+    .optional()
+    .nullable(),
+    
+  // DEPRECATED: Campos booleanos antiguos (mantener para compatibilidad)
   causaEcoh: z.boolean().default(false),
-  causaSacfi: z.boolean().default(false), // ✅ Nuevo campo agregado
+  causaSacfi: z.boolean().default(false),
   causaLegada: z.boolean().default(false),
   constituyeSs: z.boolean().default(false),
   homicidioConsumado: z.boolean().optional(),

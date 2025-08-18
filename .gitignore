@@ -33,6 +33,10 @@ yarn.lock
 .env.dev.old
 .env.prod.old
 .env.test.old
+.env.backup
+.env.development.local
+.env.production.local
+
 
 
 

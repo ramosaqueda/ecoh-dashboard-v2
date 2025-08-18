@@ -37,6 +37,23 @@ model TimelineHito {
   @@index([causaId], map: "idx_timelinehito_causaid")
 }
 
+model OrigenCausa {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique @db.VarChar(50)
+  descripcion String? @db.VarChar(200)
+  codigo      String  @unique @db.VarChar(10) // 'ECOH', 'SACFI', 'LEGADA'
+  activo      Boolean @default(true)
+  orden       Int?    // Para ordenamiento en UI
+  color       String? @db.VarChar(7) // Hex color para UI
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relación con causas
+  causas      Causa[]
+  
+  @@map("origenes_causa")
+}
+
 model Causa {
   id                        Int                  @id @default(autoincrement())
   denominacionCausa         String
@@ -49,9 +66,17 @@ model Causa {
   numeroPpp                 String?
   observacion               String?
   foliobw                   String?
+  
+  // NUEVO: Relación con OrigenCausa
+  origenCausaId             Int?
+  origenCausa               OrigenCausa?         @relation(fields: [origenCausaId], references: [id])
+  
+  // DEPRECATED: Mantener temporalmente para migración
+  // TODO: Eliminar después de migrar datos
   causaEcoh                 Boolean
   causaSacfi                Boolean                 @default(false)
   causaLegada               Boolean?
+  
   coordenadasSs             String?
   homicidioConsumado        Boolean?
   constituyeSs              Boolean?
@@ -88,6 +113,7 @@ model Causa {
   telefonos                 TelefonoCausa[]
 
   @@index([atvtId], map: "fki_fk_causa_atvt")
+  @@index([origenCausaId], map: "idx_causa_origen_causa")
 }
 
 model CausaOrganizacion {

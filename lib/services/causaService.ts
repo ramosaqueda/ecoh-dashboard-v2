@@ -170,10 +170,14 @@ export const causaService = {
   transformFormData(data: CausaFormData): Record<string, any> {
     // Log para depuración
     console.log('🔍 DEBUG transformFormData - Datos originales del formulario:', data);
+    console.log('🔍 DEBUG transformFormData - origenCausaId original:', data.origenCausaId);
     console.log('🔍 DEBUG transformFormData - atvt original:', data.atvt);
 
     const transformedData: Record<string, any> = {
-      // Campos booleanos
+      // NUEVO: Campo de origen de causa
+      origenCausaId: data.origenCausaId ? parseInt(data.origenCausaId.toString()) : null,
+      
+      // Campos booleanos (DEPRECATED pero mantenidos para compatibilidad)
       causaEcoh: data.causaEcoh,
       causaSacfi: data.causaSacfi,
       causaLegada: data.causaLegada,
@@ -242,6 +246,7 @@ export const causaService = {
 
     // ✅ FIX PRINCIPAL: Lista de campos que SIEMPRE deben incluirse, incluso si son null
     const alwaysIncludeFields = [
+      'origenCausaId', // NUEVO: Campo de origen de causa
       'atvtId', 
       'abogadoId', 
       'analistaId', 
@@ -264,6 +269,7 @@ export const causaService = {
 
     // Log para depuración
     console.log('🔍 DEBUG transformFormData - Datos finales para enviar al API:', cleanedData);
+    console.log('🔍 DEBUG transformFormData - origenCausaId final:', cleanedData.origenCausaId);
     console.log('🔍 DEBUG transformFormData - atvtId final:', cleanedData.atvtId);
     console.log('🔍 DEBUG transformFormData - causasCrimenOrg en datos transformados:', cleanedData.causasCrimenOrg);
 
@@ -291,6 +297,9 @@ export const causaService = {
 
     const transformedData = {
       id: data.id,
+      // NUEVO: Campo de origen de causa
+      origenCausaId: data.origenCausaId || null,
+      // DEPRECATED: Campos booleanos antiguos (mantener para compatibilidad)
       causaEcoh: data.causaEcoh || false,
       causaSacfi: data.causaSacfi || false,
       causaLegada: data.causaLegada || false,

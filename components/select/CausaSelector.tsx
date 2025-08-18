@@ -16,6 +16,16 @@ interface Causa {
   id: number;
   ruc: string;
   denominacionCausa: string;
+  origenCausa?: {
+    id: number;
+    nombre: string;
+    codigo: string;
+    color?: string;
+  };
+  // DEPRECATED: campos antiguos para compatibilidad
+  causaEcoh?: boolean;
+  causaSacfi?: boolean;
+  causaLegada?: boolean;
 }
 
 interface CausaSelectorProps {
@@ -36,6 +46,31 @@ export default function CausaSelector({
   const [causas, setCausas] = useState<Causa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+  // Función para obtener el color del origen (con fallback a lógica antigua)
+  const getOrigenInfo = (causa: Causa) => {
+    // Nuevo sistema: usar origenCausa si está disponible
+    if (causa.origenCausa) {
+      return {
+        codigo: causa.origenCausa.codigo,
+        color: causa.origenCausa.color || '#6b7280',
+        nombre: causa.origenCausa.nombre
+      };
+    }
+    
+    // Fallback: lógica antigua para compatibilidad
+    if (causa.causaEcoh) {
+      return { codigo: 'ECOH', color: '#ef4444', nombre: 'ECOH' };
+    }
+    if (causa.causaSacfi) {
+      return { codigo: 'SACFI', color: '#3b82f6', nombre: 'SACFI' };
+    }
+    if (causa.causaLegada) {
+      return { codigo: 'LEGADA', color: '#f59e0b', nombre: 'LEGADA' };
+    }
+    
+    return { codigo: 'N/A', color: '#9ca3af', nombre: 'Sin origen' };
+  };
 
   useEffect(() => {
     const fetchCausas = async () => {
@@ -130,34 +165,56 @@ export default function CausaSelector({
                   No se encontraron resultados
                 </div>
               ) : (
-                filteredCausas.map((causa) => (
-                  <div
-                    key={causa.id}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-2 p-2 hover:bg-muted',
-                      value === causa.id.toString() && 'bg-muted'
-                    )}
-                    onClick={() => {
-                      onChange(causa.id.toString());
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
+                filteredCausas.map((causa) => {
+                  const origenInfo = getOrigenInfo(causa);
+                  
+                  return (
+                    <div
+                      key={causa.id}
                       className={cn(
-                        'h-4 w-4 shrink-0',
-                        value === causa.id.toString()
-                          ? 'opacity-100'
-                          : 'opacity-0'
+                        'flex cursor-pointer items-start gap-2 p-2 hover:bg-muted',
+                        value === causa.id.toString() && 'bg-muted'
                       )}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{causa.ruc}</span>
-                      <span className="line-clamp-2 text-sm text-muted-foreground">
-                        {causa.denominacionCausa}
-                      </span>
+                      onClick={() => {
+                        onChange(causa.id.toString());
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          'h-4 w-4 shrink-0 mt-0.5',
+                          value === causa.id.toString()
+                            ? 'opacity-100'
+                            : 'opacity-0'
+                        )}
+                      />
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{causa.ruc}</span>
+                          <div className="flex items-center gap-1">
+                            <div 
+                              className="w-2 h-2 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: origenInfo.color }}
+                            />
+                            <span 
+                              className="text-xs font-medium px-1.5 py-0.5 rounded-md border"
+                              style={{ 
+                                borderColor: origenInfo.color + '40',
+                                color: origenInfo.color,
+                                backgroundColor: origenInfo.color + '10'
+                              }}
+                            >
+                              {origenInfo.codigo}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="line-clamp-2 text-sm text-muted-foreground">
+                          {causa.denominacionCausa}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
