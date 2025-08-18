@@ -198,25 +198,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    console.log('🔍 Datos recibidos en POST causas:', JSON.stringify(data, null, 2));
     
-    // ✅ DEBUG: Verificar específicamente origenCausaId
-    console.log('🎯 origenCausaId recibido:', {
-      valor: data.origenCausaId,
-      tipo: typeof data.origenCausaId,
-      esNull: data.origenCausaId === null,
-      esUndefined: data.origenCausaId === undefined,
-      esString: typeof data.origenCausaId === 'string',
-      esNumber: typeof data.origenCausaId === 'number'
-    });
-    
-    // ✅ Procesar y validar origenCausaId
+    // Procesar y validar origenCausaId
     let origenCausaIdProcessed = null;
     if (data.origenCausaId !== undefined && data.origenCausaId !== null && data.origenCausaId !== '') {
       if (typeof data.origenCausaId === 'string') {
         origenCausaIdProcessed = parseInt(data.origenCausaId, 10);
         if (isNaN(origenCausaIdProcessed)) {
-          console.warn('⚠️ origenCausaId no se pudo convertir a número:', data.origenCausaId);
           origenCausaIdProcessed = null;
         }
       } else if (typeof data.origenCausaId === 'number') {
@@ -224,29 +212,22 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    console.log('🎯 origenCausaId procesado:', origenCausaIdProcessed);
-    
-    // ✅ Verificar si el origen existe antes de crear la causa
+    // Verificar si el origen existe antes de crear la causa
     if (origenCausaIdProcessed) {
       const origenExists = await prisma.origenCausa.findUnique({
         where: { id: origenCausaIdProcessed }
       });
       
       if (!origenExists) {
-        console.error('❌ El origen de causa no existe:', origenCausaIdProcessed);
+        console.error('El origen de causa no existe:', origenCausaIdProcessed);
         return NextResponse.json(
           { error: `El origen de causa con ID ${origenCausaIdProcessed} no existe` },
           { status: 400 }
         );
       }
-      
-      console.log('✅ Origen de causa validado:', origenExists);
     }
     
-    // ✅ Verificar específicamente causasCrimenOrg
-    console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
-    
-    // ✅ Crear causa con relación de origen MEJORADA
+    // Crear causa con datos validados
     const causaData = {
       denominacionCausa: data.denominacionCausa || '',
       // NUEVO: Campo procesado y validado

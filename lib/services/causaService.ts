@@ -168,11 +168,6 @@ export const causaService = {
    * Transforma los datos del formulario para enviar al servidor
    */
   transformFormData(data: CausaFormData): Record<string, any> {
-    // Log para depuración
-    console.log('🔍 DEBUG transformFormData - Datos originales del formulario:', data);
-    console.log('🔍 DEBUG transformFormData - origenCausaId original:', data.origenCausaId);
-    console.log('🔍 DEBUG transformFormData - atvt original:', data.atvt);
-
     const transformedData: Record<string, any> = {
       // NUEVO: Campo de origen de causa
       origenCausaId: data.origenCausaId ? parseInt(data.origenCausaId.toString()) : null,
@@ -267,12 +262,6 @@ export const causaService = {
       }
     });
 
-    // Log para depuración
-    console.log('🔍 DEBUG transformFormData - Datos finales para enviar al API:', cleanedData);
-    console.log('🔍 DEBUG transformFormData - origenCausaId final:', cleanedData.origenCausaId);
-    console.log('🔍 DEBUG transformFormData - atvtId final:', cleanedData.atvtId);
-    console.log('🔍 DEBUG transformFormData - causasCrimenOrg en datos transformados:', cleanedData.causasCrimenOrg);
-
     return cleanedData;
   },
 
@@ -282,9 +271,6 @@ export const causaService = {
   transformInitialData(data: any): Record<string, any> {
     if (!data) return {};
 
-    console.log('🔍 DEBUG transformInitialData - Datos recibidos para inicializar formulario:', data);
-    console.log('🔍 DEBUG transformInitialData - atvtId recibido:', data.atvtId);
-
     // Extraer los IDs de los parámetros de crimen organizado si existen
     let causasCrimenOrg: number[] = [];
     if (data.causasCrimenOrg && Array.isArray(data.causasCrimenOrg)) {
@@ -292,8 +278,6 @@ export const causaService = {
         item.parametroId ? item.parametroId : parseInt(item.toString())
       );
     }
-
-    console.log('🔍 DEBUG transformInitialData - causasCrimenOrg extraídos:', causasCrimenOrg);
 
     const transformedData = {
       id: data.id,
@@ -335,7 +319,6 @@ export const causaService = {
       fiscalACargo: data.fiscalId || null,
       abogado: data.abogadoId || null,
       analista: data.analistaId || null,
-      // ✅ FIX: Mejorar el mapeo de atvt
       atvt: data.atvtId || null,
 
       // Añadir causasCrimenOrg
@@ -349,9 +332,6 @@ export const causaService = {
           ? false
           : null
     };
-
-    console.log('🔍 DEBUG transformInitialData - atvt final mapeado:', transformedData.atvt);
-    console.log('🔍 DEBUG transformInitialData - datos transformados finales:', transformedData);
 
     return transformedData;
   },

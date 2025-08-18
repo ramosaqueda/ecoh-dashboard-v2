@@ -89,15 +89,6 @@ const CausaForm: React.FC<CausaFormProps> = ({
   }, [causaEcohValue, causaSacfiValue, origenCausaIdValue, form]);
 
   const handleSubmit = async (data: CausaFormData) => {
-    console.log('📋 Formulario antes de enviar:', data);
-    console.log('🎯 origenCausaId específico:', {
-      valor: data.origenCausaId,
-      tipo: typeof data.origenCausaId,
-      esNull: data.origenCausaId === null,
-      esUndefined: data.origenCausaId === undefined
-    });
-    console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
-  
     // Asegurar que causasCrimenOrg sea un array de números
     if (!data.causasCrimenOrg || !Array.isArray(data.causasCrimenOrg)) {
       data.causasCrimenOrg = [];
@@ -114,8 +105,6 @@ const CausaForm: React.FC<CausaFormProps> = ({
         return 0; // valor por defecto para tipos no esperados
       });
     }
-    
-    console.log('causasCrimenOrg después de procesamiento:', data.causasCrimenOrg);
   
     try {
       await onSubmit(data);

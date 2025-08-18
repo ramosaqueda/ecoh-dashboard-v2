@@ -100,15 +100,6 @@ const CauseFormContainer: React.FC<CauseFormContainerProps> = ({
   };
 
   const handleSubmit = async (data: CausaFormData) => {
-    console.log('📝 DEBUG CauseFormContainer - Datos recibidos del formulario:', JSON.stringify(data, null, 2));
-    console.log('🔍 DEBUG CauseFormContainer - origenCausaId en container:', {
-      valor: data.origenCausaId,
-      tipo: typeof data.origenCausaId,
-      existe: 'origenCausaId' in data,
-      esUndefined: data.origenCausaId === undefined,
-      esNull: data.origenCausaId === null
-    });
-    
     try {
       setIsSubmitting(true);
       setError(null);
