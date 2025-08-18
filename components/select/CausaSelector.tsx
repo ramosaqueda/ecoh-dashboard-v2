@@ -36,6 +36,7 @@ export default function CausaSelector({
   const [causas, setCausas] = useState<Causa[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
   useEffect(() => {
     const fetchCausas = async () => {
       try {
@@ -62,8 +63,8 @@ export default function CausaSelector({
     const query = searchQuery.toLowerCase();
     return causas.filter(
       (causa) =>
-        causa.ruc.toLowerCase().includes(query) ||
-        causa.denominacionCausa.toLowerCase().includes(query)
+        (causa.ruc?.toLowerCase()?.includes(query) ?? false) ||
+        (causa.denominacionCausa?.toLowerCase()?.includes(query) ?? false)
     );
   }, [causas, searchQuery]);
 
