@@ -1,0 +1,15 @@
+export { default as ActividadesPendientesTodo } from './ActividadesPendientesTodo';
+export { default as ActividadesAsignadasPorMi } from './ActividadesAsignadasPorMi';
+export { default as ActividadesMetrics } from './ActividadesMetrics';
+export { default as ResumenEjecutivoActividades } from './ResumenEjecutivoActividades';
+export { default as ActividadesCharts } from './ActividadesCharts';
+export { default as AccionesRapidasActividades } from './AccionesRapidasActividades';
+export { default as NotificacionesActividades } from './NotificacionesActividades';
+export { default as ConfiguracionAnalitica } from './ConfiguracionAnalitica';
+export { default as EstadisticasEnTiempoReal } from './EstadisticasEnTiempoReal';
+export { default as ListadoActividadesAsignadas } from './ListadoActividadesAsignadas';
+export { default as NotificacionesTiempoReal } from './NotificacionesTiempoReal';
+export { default as CentroControlActividades } from './CentroControlActividades';
+export { default as DetectorCambiosActividades } from './DetectorCambiosActividades';
+export { default as MonitorEstadosSistema } from './MonitorEstadosSistema';
+export { default as NotificacionesHeader } from './NotificacionesHeader';

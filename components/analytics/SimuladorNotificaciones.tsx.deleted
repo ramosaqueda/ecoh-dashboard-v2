@@ -1,0 +1,346 @@
+'use client';
+
+import { useState } from 'react';
+import { 
+  PlayCircle, 
+  PauseCircle, 
+  RotateCcw,
+  User,
+  Bell,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Zap
+} from 'lucide-react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNotificacionesTiempoReal } from '@/hooks/actividades';
+import { toast } from 'sonner';
+
+interface SimulacionEvento {
+  id: string;
+  tipo: 'asignacion' | 'cambio_estado' | 'completar' | 'vencimiento';
+  descripcion: string;
+  demora: number; // segundos
+  ejecutado: boolean;
+}
+
+const eventosSimulacion: SimulacionEvento[] = [
+  {
+    id: 'evento-1',
+    tipo: 'asignacion',
+    descripcion: 'Ana García te asigna "Revisión de Expediente"',
+    demora: 3,
+    ejecutado: false
+  },
+  {
+    id: 'evento-2',
+    tipo: 'cambio_estado',
+    descripcion: 'Carlos López cambia estado a "En Proceso"',
+    demora: 8,
+    ejecutado: false
+  },
+  {
+    id: 'evento-3',
+    tipo: 'completar',
+    descripcion: 'María Rodríguez completa su actividad',
+    demora: 15,
+    ejecutado: false
+  },
+  {
+    id: 'evento-4',
+    tipo: 'asignacion',
+    descripcion: 'Juan Pérez te asigna "Análisis de Evidencias"',
+    demora: 22,
+    ejecutado: false
+  },
+  {
+    id: 'evento-5',
+    tipo: 'vencimiento',
+    descripcion: 'Actividad "Informe Técnico" está vencida',
+    demora: 30,
+    ejecutado: false
+  }
+];
+
+export default function SimuladorNotificaciones() {
+  const { simularAsignacion, simularCambioEstado } = useNotificacionesTiempoReal();
+  const [simulacionActiva, setSimulacionActiva] = useState(false);
+  const [eventos, setEventos] = useState(eventosSimulacion);
+  const [tiempoTranscurrido, setTiempoTranscurrido] = useState(0);
+  const [velocidadSimulacion, setVelocidadSimulacion] = useState(1);
+
+  // Ejecutar simulación
+  const ejecutarSimulacion = () => {
+    if (simulacionActiva) {
+      setSimulacionActiva(false);
+      return;
+    }
+
+    setSimulacionActiva(true);
+    setTiempoTranscurrido(0);
+
+    const interval = setInterval(() => {
+      setTiempoTranscurrido(prev => {
+        const nuevoTiempo = prev + velocidadSimulacion;
+        
+        // Verificar eventos que deben ejecutarse
+        eventos.forEach(evento => {
+          if (!evento.ejecutado && nuevoTiempo >= evento.demora) {
+            ejecutarEvento(evento);
+            setEventos(prevEventos => 
+              prevEventos.map(e => 
+                e.id === evento.id ? { ...e, ejecutado: true } : e
+              )
+            );
+          }
+        });
+
+        // Detener simulación cuando se completen todos los eventos
+        const todosEjecutados = eventos.every(e => e.ejecutado || nuevoTiempo >= e.demora);
+        if (todosEjecutados) {
+          setSimulacionActiva(false);
+          clearInterval(interval);
+          toast.success('Simulación completada', {
+            description: 'Se han ejecutado todos los eventos de notificación'
+          });
+        }
+
+        return nuevoTiempo;
+      });
+    }, 1000);
+
+    // Limpiar interval si el componente se desmonta
+    return () => clearInterval(interval);
+  };
+
+  // Ejecutar evento específico
+  const ejecutarEvento = (evento: SimulacionEvento) => {
+    const usuariosEjemplo = [
+      { id: 101, nombre: 'Ana García', email: 'ana.garcia@fiscal.cl', rol: { id: 4, nombre: 'Manager' } },
+      { id: 102, nombre: 'Carlos López', email: 'carlos.lopez@fiscal.cl', rol: { id: 3, nombre: 'Analista' } },
+      { id: 103, nombre: 'María Rodríguez', email: 'maria.rodriguez@fiscal.cl', rol: { id: 3, nombre: 'Investigador' } },
+      { id: 104, nombre: 'Juan Pérez', email: 'juan.perez@fiscal.cl', rol: { id: 2, nombre: 'Asistente' } }
+    ];
+
+    const actividadId = Math.floor(Math.random() * 1000) + 1000;
+
+    switch (evento.tipo) {
+      case 'asignacion':
+        simularAsignacion(actividadId, usuariosEjemplo[Math.floor(Math.random() * usuariosEjemplo.length)]);
+        break;
+      case 'cambio_estado':
+        simularCambioEstado(actividadId, 'inicio', 'en_proceso', usuariosEjemplo[1]);
+        break;
+      case 'completar':
+        simularCambioEstado(actividadId, 'en_proceso', 'terminado', usuariosEjemplo[2]);
+        break;
+      case 'vencimiento':
+        // Simular notificación de vencimiento (se maneja en el hook principal)
+        toast.error('⚠️ Actividad Vencida', {
+          description: 'La actividad "Informe Técnico" está vencida y requiere atención',
+          duration: 10000
+        });
+        break;
+    }
+  };
+
+  // Resetear simulación
+  const resetearSimulacion = () => {
+    setSimulacionActiva(false);
+    setTiempoTranscurrido(0);
+    setEventos(eventosSimulacion.map(e => ({ ...e, ejecutado: false })));
+    toast.info('Simulación reiniciada');
+  };
+
+  // Ejecutar evento manual
+  const ejecutarEventoManual = (evento: SimulacionEvento) => {
+    ejecutarEvento(evento);
+    setEventos(prev => 
+      prev.map(e => 
+        e.id === evento.id ? { ...e, ejecutado: true } : e
+      )
+    );
+  };
+
+  const getIconoEvento = (tipo: string) => {
+    switch (tipo) {
+      case 'asignacion': return <User className="h-4 w-4 text-blue-600" />;
+      case 'cambio_estado': return <Activity className="h-4 w-4 text-orange-600" />;
+      case 'completar': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case 'vencimiento': return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      default: return <Bell className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5 text-orange-600" />
+          Simulador de Notificaciones
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Demuestra el funcionamiento del sistema de notificaciones en tiempo real
+        </p>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-6">
+          {/* Controles de simulación */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-medium">Control de Simulación</h4>
+              <div className="flex items-center gap-2">
+                <Badge variant={simulacionActiva ? 'default' : 'secondary'}>
+                  {simulacionActiva ? 'Ejecutándose' : 'Detenida'}
+                </Badge>
+                <Badge variant="outline">
+                  {Math.floor(tiempoTranscurrido)}s
+                </Badge>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 mb-4">
+              <Button
+                onClick={ejecutarSimulacion}
+                variant={simulacionActiva ? 'destructive' : 'default'}
+                size="sm"
+                className="flex-1"
+              >
+                {simulacionActiva ? (
+                  <>
+                    <PauseCircle className="h-4 w-4 mr-2" />
+                    Pausar Simulación
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Iniciar Simulación
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={resetearSimulacion}
+                variant="outline"
+                size="sm"
+                disabled={simulacionActiva}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Resetear
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="velocidad" className="text-xs">Velocidad</Label>
+                <Select 
+                  value={velocidadSimulacion.toString()} 
+                  onValueChange={(value) => setVelocidadSimulacion(Number(value))}
+                  disabled={simulacionActiva}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0.5">0.5x (Lenta)</SelectItem>
+                    <SelectItem value="1">1x (Normal)</SelectItem>
+                    <SelectItem value="2">2x (Rápida)</SelectItem>
+                    <SelectItem value="5">5x (Muy Rápida)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-end">
+                <div className="text-xs text-muted-foreground">
+                  Eventos: {eventos.filter(e => e.ejecutado).length}/{eventos.length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de eventos */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-600" />
+              Eventos Programados
+            </h4>
+            
+            <div className="space-y-2">
+              {eventos.map((evento) => (
+                <div
+                  key={evento.id}
+                  className={`flex items-center justify-between p-3 rounded-md border transition-all duration-200 ${
+                    evento.ejecutado 
+                      ? 'bg-green-50 border-green-200 opacity-75' 
+                      : tiempoTranscurrido >= evento.demora 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {getIconoEvento(evento.tipo)}
+                    <div>
+                      <div className="text-sm font-medium">{evento.descripcion}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {evento.ejecutado ? 'Ejecutado' : `En ${evento.demora}s`}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {evento.ejecutado ? (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Ejecutado
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => ejecutarEventoManual(evento)}
+                        disabled={simulacionActiva}
+                        className="text-xs"
+                      >
+                        <Zap className="h-3 w-3 mr-1" />
+                        Ejecutar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Información del sistema */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Cómo Funciona el Sistema
+            </h4>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• <strong>Asignación:</strong> Cuando se te asigna una actividad, recibes notificación inmediata</p>
+              <p>• <strong>Cambio de Estado:</strong> El designador recibe notificación cuando cambias el estado</p>
+              <p>• <strong>Completar:</strong> Se notifica al designador cuando completas una actividad</p>
+              <p>• <strong>Vencimiento:</strong> Alertas automáticas para actividades vencidas</p>
+              <p>• <strong>Tiempo Real:</strong> Monitoreo cada 30 segundos con polling automático</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

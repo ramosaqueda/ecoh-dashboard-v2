@@ -1,0 +1,78 @@
+# Archivos de Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Archivos de Next.js
+.next/
+out/
+build/
+
+# Variables de entorno (solo incluir las necesarias)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Archivos de desarrollo
+.git
+.gitignore
+README*.md
+*.md
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output
+
+# Archivos temporales
+*.tmp
+*.temp
+
+# Backups y archivos de desarrollo
+backup.sql
+*.backup
+*.old
+debug-*.js
+diagnose-*.js
+fix-*.js
+
+# Documentación de desarrollo
+CHECKLIST_*.md
+CLEANUP_*.md
+DIAGNOSTICO_*.md
+ENDPOINT_*.md
+FIX_*.md
+FUNCIONALIDADES_*.md
+MEJORAS_*.md
+NOTIFICACION_*.md
+SISTEMA_*.md
+SOLUCION_*.md
+
+# Scripts de desarrollo
+scriptsPowershell/
+cleanup_debug_files.bat
+
+# Archivos de configuración de desarrollo específicos
+.env.backup
+.env.original
+.env_desa.old
