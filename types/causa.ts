@@ -1,8 +1,30 @@
 // causa.ts
+
+// Nuevos tipos para Origen y Estado de Causa
+export interface OrigenCausa {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  activo: boolean;
+  color?: string | null;
+  codigo: string; // Campo virtual para compatibilidad con el componente
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EstadoCausa {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  codigo: string;
+  activo: boolean;
+  orden?: number | null;
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CausaFormData {
-  causaEcoh: boolean;
-  causaSacfi: boolean; // ✅ Nuevo campo agregado
-  causaLegada: boolean;
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;
@@ -23,6 +45,9 @@ export interface CausaFormData {
   analista: number;
   atvt: number;
   esCrimenOrganizado: boolean;
+  // Nuevos campos para origen y estado
+  origenCausaId?: number;
+  estadoCausaId?: number;
 
   numeroIta: string;
   causasCrimenOrg: number[];
@@ -37,9 +62,6 @@ export interface CausaFormData {
 // Definición de la interfaz Causa para representar el modelo de respuesta del servidor
 export interface Causa {
   id: number;
-  causaEcoh: boolean;
-  causaSacfi: boolean; // ✅ Nuevo campo agregado
-  causaLegada: boolean;
   constituyeSs: boolean;
   homicidioConsumado?: boolean;
   fechaHoraTomaConocimiento: string;
@@ -64,6 +86,8 @@ export interface Causa {
   abogadoId?: number;
   analistaId?: number;
   atvtId?: number;
+  origenCausaId?: number;
+  estadoCausaId?: number;
   
   // Relaciones
   delito?: {
@@ -93,6 +117,18 @@ export interface Causa {
   tribunal?: {
     id: number;
     nombre: string;
+  };
+  origenCausa?: {
+    id: number;
+    nombre: string;
+    codigo: string;
+    color?: string | null;
+  };
+  estadoCausa?: {
+    id: number;
+    nombre: string;
+    codigo: string;
+    color?: string | null;
   };
   
   // Relaciones muchos a muchos

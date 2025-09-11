@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// ✅ Interface actualizada para incluir causaSacfi
+// ✅ Interface actualizada para nuevos campos
 interface WhereClause {
-  causaEcoh?: boolean;
-  causaSacfi?: boolean; // ✅ Nuevo campo agregado
-  causaLegada?: boolean;
+  origenCausaId?: number | null;
+  estadoCausaId?: number | null;
   homicidioConsumado?: boolean;
   esCrimenOrganizado?: boolean;
   fechaDelHecho?: {
@@ -18,9 +17,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const count = searchParams.get('count');
-    const causaEcoh = searchParams.get('causaEcoh');
-    const causaSacfi = searchParams.get('causaSacfi'); // ✅ Nuevo parámetro
-    const causaLegada = searchParams.get('causaLegada');
+    const origenCausaId = searchParams.get('origenCausaId');
+    const estadoCausaId = searchParams.get('estadoCausaId');
     const homicidioConsumado = searchParams.get('homicidioConsumado');
     const crimenorg = searchParams.get('esCrimenOrganizado');
     const yearParam = searchParams.get('year');
@@ -61,19 +59,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ count: totalCausas });
     }
 
-    // ✅ Construir whereClause incluyendo causaSacfi
+    // ✅ Construir whereClause con nuevos campos
     const whereClause: WhereClause = {};
 
-    if (causaEcoh !== null) {
-      whereClause.causaEcoh = causaEcoh === 'true';
+    if (origenCausaId !== null && origenCausaId !== '') {
+      whereClause.origenCausaId = parseInt(origenCausaId);
     }
 
-    if (causaSacfi !== null) { // ✅ Nuevo filtro
-      whereClause.causaSacfi = causaSacfi === 'true';
-    }
-
-    if (causaLegada !== null) {
-      whereClause.causaLegada = causaLegada === 'true';
+    if (estadoCausaId !== null && estadoCausaId !== '') {
+      whereClause.estadoCausaId = parseInt(estadoCausaId);
     }
 
     if (homicidioConsumado !== null) {
@@ -123,6 +117,21 @@ export async function GET(req: NextRequest) {
             select: {
               id: true,
               nombre: true
+            }
+          },
+          origenCausa: {
+            select: {
+              id: true,
+              nombre: true,
+              color: true
+            }
+          },
+          estadoCausa: {
+            select: {
+              id: true,
+              nombre: true,
+              codigo: true,
+              color: true
             }
           },
           _count: {
@@ -186,12 +195,11 @@ export async function POST(req: NextRequest) {
     // ✅ Verificar específicamente causasCrimenOrg
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
     
-    // ✅ Crear causa con campos mínimos incluyendo causaSacfi
+    // ✅ Crear causa con campos mínimos con nuevos campos
     const newCausa = await prisma.causa.create({
       data: {
         denominacionCausa: data.denominacionCausa || '',
-        causaEcoh: data.causaEcoh === true ? true : false,
-        causaSacfi: data.causaSacfi === true ? true : false // ✅ Nuevo campo
+        constituyeSs: data.constituyeSs === true ? true : false
       }
     });
     
@@ -214,22 +222,7 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // ✅ Actualizar campos booleanos incluyendo causaSacfi
-      if (data.causaLegada !== undefined) {
-        await prisma.causa.update({
-          where: { id: newCausa.id },
-          data: { causaLegada: data.causaLegada === true ? true : false }
-        });
-      }
-
-      // ✅ Campo causaSacfi ya fue creado inicialmente, pero se puede actualizar si es necesario
-      if (data.causaSacfi !== undefined) {
-        await prisma.causa.update({
-          where: { id: newCausa.id },
-          data: { causaSacfi: data.causaSacfi === true ? true : false }
-        });
-      }
-      
+      // ✅ Actualizar campos booleanos
       if (data.constituyeSs !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
@@ -241,6 +234,21 @@ export async function POST(req: NextRequest) {
         await prisma.causa.update({
           where: { id: newCausa.id },
           data: { homicidioConsumado: data.homicidioConsumado === true ? true : false }
+        });
+      }
+      
+      // ✅ Actualizar nuevos campos de relación
+      if (data.origenCausaId !== undefined && data.origenCausaId !== null && data.origenCausaId !== '') {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { origenCausaId: Number(data.origenCausaId) }
+        });
+      }
+      
+      if (data.estadoCausaId !== undefined && data.estadoCausaId !== null && data.estadoCausaId !== '') {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { estadoCausaId: Number(data.estadoCausaId) }
         });
       }
       
@@ -417,7 +425,9 @@ export async function POST(req: NextRequest) {
         fiscal: true,
         abogado: true,
         analista: true,
-        atvt: true
+        atvt: true,
+        origenCausa: true,
+        estadoCausa: true
       }
     });
     

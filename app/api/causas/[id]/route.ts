@@ -29,7 +29,9 @@ export async function GET(
             }
           },
           atvt: true,
-          abogado: true
+          abogado: true,
+          origenCausa: true,
+          estadoCausa: true
         }
       });
       console.log('🔍 DEBUG GET - Causa básica obtenida exitosamente');
@@ -79,7 +81,10 @@ export async function GET(
       causasCrimenOrg: causasCrimenOrg
     };
     
-    console.log('🔍 DEBUG GET - Respuesta final construida. causaSacfi:', causa.causaSacfi);
+    console.log('🔍 DEBUG GET - Respuesta final construida. Nuevos campos:', {
+      origenCausaId: causa.origenCausaId,
+      estadoCausaId: causa.estadoCausaId
+    });
     
     return NextResponse.json(causaCompleta);
   } catch (error) {
@@ -103,7 +108,8 @@ export async function PUT(
     const causaId = parseInt(id);
 
     console.log('🔍 DEBUG PUT - Received data:', data);
-    console.log('🔍 DEBUG PUT - causaSacfi:', data.causaSacfi); // ✅ Log del nuevo campo
+    console.log('🔍 DEBUG PUT - origenCausaId:', data.origenCausaId);
+    console.log('🔍 DEBUG PUT - estadoCausaId:', data.estadoCausaId);
     console.log('🔍 DEBUG PUT - causasCrimenOrg:', data.causasCrimenOrg);
 
     // ✅ 1. Actualizar la causa principal incluyendo causaSacfi
@@ -123,9 +129,6 @@ export async function PUT(
     const updatedCausa = await prisma.causa.update({
       where: { id: causaId },
       data: {
-        causaEcoh: data.causaEcoh,
-        causaSacfi: data.causaSacfi, // ✅ Nuevo campo agregado
-        causaLegada: data.causaLegada,
         constituyeSs: data.constituyeSs,
         homicidioConsumado: data.homicidioConsumado ?? false,
         denominacionCausa: data.denominacionCausa,
@@ -147,11 +150,16 @@ export async function PUT(
         abogadoId: data.abogadoId,
         analistaId: data.analistaId,
         atvtId: data.atvtId,
+        origenCausaId: data.origenCausaId || null,
+        estadoCausaId: data.estadoCausaId || null,
         esCrimenOrganizado: esCrimenOrganizadoValue
       }
     });
 
-    console.log('Causa básica actualizada correctamente. causaSacfi:', updatedCausa.causaSacfi);
+    console.log('Causa básica actualizada correctamente. Nuevos campos:', {
+      origenCausaId: updatedCausa.origenCausaId,
+      estadoCausaId: updatedCausa.estadoCausaId
+    });
 
     // ✅ 2. Procesar parámetros de crimen organizado
     console.log('======= INICIO PROCESAMIENTO DE PARÁMETROS EN PUT =======');
@@ -253,6 +261,8 @@ export async function PUT(
           }
         },
         atvt: true,
+        origenCausa: true,
+        estadoCausa: true,
         _count: {
           select: {
             imputados: true
@@ -272,7 +282,10 @@ export async function PUT(
       causasCrimenOrg: causasCrimenOrg
     };
 
-    console.log('🔍 DEBUG PUT - Causa actualizada completamente. causaSacfi:', resultado.causaSacfi);
+    console.log('🔍 DEBUG PUT - Causa actualizada completamente. Nuevos campos:', {
+      origenCausaId: resultado.origenCausaId,
+      estadoCausaId: resultado.estadoCausaId
+    });
 
     return NextResponse.json(resultado);
   } catch (error) {

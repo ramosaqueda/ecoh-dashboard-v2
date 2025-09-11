@@ -111,10 +111,14 @@ export const causaService = {
     try {
       console.log('🔍 DEBUG causaService.update - Datos del formulario antes de transformar:', data);
       console.log('🔍 DEBUG causaService.update - Valor de atvt en el formulario:', data.atvt);
+      console.log('🔍 DEBUG causaService.update - origenCausaId:', data.origenCausaId);
+      console.log('🔍 DEBUG causaService.update - estadoCausaId:', data.estadoCausaId);
 
       const transformedData = this.transformFormData(data);
       console.log('🔍 DEBUG causaService.update - Datos transformados:', transformedData);
       console.log('🔍 DEBUG causaService.update - atvtId transformado:', transformedData.atvtId);
+      console.log('🔍 DEBUG causaService.update - origenCausaId transformado:', transformedData.origenCausaId);
+      console.log('🔍 DEBUG causaService.update - estadoCausaId transformado:', transformedData.estadoCausaId);
 
       const response = await fetch(`/api/causas/${id}`, {
         method: 'PUT',
@@ -168,15 +172,8 @@ export const causaService = {
    * Transforma los datos del formulario para enviar al servidor
    */
   transformFormData(data: CausaFormData): Record<string, any> {
-    // Log para depuración
-    console.log('🔍 DEBUG transformFormData - Datos originales del formulario:', data);
-    console.log('🔍 DEBUG transformFormData - atvt original:', data.atvt);
-
     const transformedData: Record<string, any> = {
-      // Campos booleanos
-      causaEcoh: data.causaEcoh,
-      causaSacfi: data.causaSacfi,
-      causaLegada: data.causaLegada,
+      // Campos booleanos    
       constituyeSs: data.constituyeSs,
       homicidioConsumado: data.homicidioConsumado,
 
@@ -213,6 +210,7 @@ export const causaService = {
         : null,
       abogadoId: data.abogado ? parseInt(data.abogado.toString()) : null,
       analistaId: data.analista ? parseInt(data.analista.toString()) : null,
+      
       // ✅ FIX: Mejor manejo de atvt
       atvtId: (() => {
         if (data.atvt === undefined || data.atvt === null || data.atvt === 0) {
@@ -222,7 +220,24 @@ export const causaService = {
         return isNaN(parsed) || parsed === 0 ? null : parsed;
       })(),
 
-      // AÑADIR causasCrimenOrg - Asegurarse de que sea un array
+      // ✅ NUEVOS CAMPOS: origenCausaId y estadoCausaId
+      origenCausaId: (() => {
+        if (data.origenCausaId === undefined || data.origenCausaId === null || data.origenCausaId === 0) {
+          return null;
+        }
+        const parsed = parseInt(data.origenCausaId.toString());
+        return isNaN(parsed) || parsed === 0 ? null : parsed;
+      })(),
+      
+      estadoCausaId: (() => {
+        if (data.estadoCausaId === undefined || data.estadoCausaId === null || data.estadoCausaId === 0) {
+          return null;
+        }
+        const parsed = parseInt(data.estadoCausaId.toString());
+        return isNaN(parsed) || parsed === 0 ? null : parsed;
+      })(),
+
+      // Parámetros de crimen organizado - Asegurarse de que sea un array
       causasCrimenOrg: Array.isArray(data.causasCrimenOrg)
         ? data.causasCrimenOrg.map((id) =>
             typeof id === 'string' ? parseInt(id) : id
@@ -239,6 +254,8 @@ export const causaService = {
     };
 
     console.log('🔍 DEBUG transformFormData - atvtId antes de limpiar:', transformedData.atvtId);
+    console.log('🔍 DEBUG transformFormData - origenCausaId antes de limpiar:', transformedData.origenCausaId);
+    console.log('🔍 DEBUG transformFormData - estadoCausaId antes de limpiar:', transformedData.estadoCausaId);
 
     // ✅ FIX PRINCIPAL: Lista de campos que SIEMPRE deben incluirse, incluso si son null
     const alwaysIncludeFields = [
@@ -247,7 +264,9 @@ export const causaService = {
       'analistaId', 
       'fiscalId', 
       'tribunalId', 
-      'focoId'
+      'focoId',
+      'origenCausaId',  // ✅ AGREGADO
+      'estadoCausaId'   // ✅ AGREGADO
     ];
 
     // ✅ FIX: Eliminar solo campos undefined, pero mantener null para relaciones importantes
@@ -265,6 +284,8 @@ export const causaService = {
     // Log para depuración
     console.log('🔍 DEBUG transformFormData - Datos finales para enviar al API:', cleanedData);
     console.log('🔍 DEBUG transformFormData - atvtId final:', cleanedData.atvtId);
+    console.log('🔍 DEBUG transformFormData - origenCausaId final:', cleanedData.origenCausaId);
+    console.log('🔍 DEBUG transformFormData - estadoCausaId final:', cleanedData.estadoCausaId);
     console.log('🔍 DEBUG transformFormData - causasCrimenOrg en datos transformados:', cleanedData.causasCrimenOrg);
 
     return cleanedData;
@@ -278,6 +299,8 @@ export const causaService = {
 
     console.log('🔍 DEBUG transformInitialData - Datos recibidos para inicializar formulario:', data);
     console.log('🔍 DEBUG transformInitialData - atvtId recibido:', data.atvtId);
+    console.log('🔍 DEBUG transformInitialData - origenCausaId recibido:', data.origenCausaId);
+    console.log('🔍 DEBUG transformInitialData - estadoCausaId recibido:', data.estadoCausaId);
 
     // Extraer los IDs de los parámetros de crimen organizado si existen
     let causasCrimenOrg: number[] = [];
@@ -291,9 +314,7 @@ export const causaService = {
 
     const transformedData = {
       id: data.id,
-      causaEcoh: data.causaEcoh || false,
-      causaSacfi: data.causaSacfi || false,
-      causaLegada: data.causaLegada || false,
+ 
       constituyeSs: data.constituyeSs || false,
       denominacionCausa: data.denominacionCausa || '',
       homicidioConsumado: data.homicidioConsumado || false,
@@ -326,10 +347,15 @@ export const causaService = {
       fiscalACargo: data.fiscalId || null,
       abogado: data.abogadoId || null,
       analista: data.analistaId || null,
+      
       // ✅ FIX: Mejorar el mapeo de atvt
       atvt: data.atvtId || null,
 
-      // Añadir causasCrimenOrg
+      // ✅ NUEVOS CAMPOS: origenCausaId y estadoCausaId
+      origenCausaId: data.origenCausaId || null,
+      estadoCausaId: data.estadoCausaId || null,
+
+      // Parámetros de crimen organizado
       causasCrimenOrg: causasCrimenOrg,
 
       // Estado de crimen organizado
@@ -340,9 +366,12 @@ export const causaService = {
           ? false
           : null
     };
-
-    console.log('🔍 DEBUG transformInitialData - atvt final mapeado:', transformedData.atvt);
-    console.log('🔍 DEBUG transformInitialData - datos transformados finales:', transformedData);
+ 
+    console.log('🔍 DEBUG transformInitialData - Datos transformados finales:', {
+      origenCausaId: transformedData.origenCausaId,
+      estadoCausaId: transformedData.estadoCausaId,
+      atvt: transformedData.atvt
+    });
 
     return transformedData;
   },
