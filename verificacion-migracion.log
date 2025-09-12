@@ -1,0 +1,13 @@
+2025-09-11 15:15:07 - [OK] Archivo existe: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\route.ts
+2025-09-11 15:15:07 - [OK] Contiene ORIGEN_IDS: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\route.ts
+2025-09-11 15:15:07 - [OK] Contiene origenCausa: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\route.ts
+2025-09-11 15:15:07 - [OK] Tiene compatibilidad temporal: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\route.ts
+2025-09-11 15:15:07 - [OK] Archivo existe: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\export\route.ts
+2025-09-11 15:15:07 - [OK] Contiene ORIGEN_IDS: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\export\route.ts
+2025-09-11 15:15:07 - [OK] Contiene origenCausa: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\export\route.ts
+2025-09-11 15:15:07 - [OK] Tiene compatibilidad temporal: E:\desa\ecoh\ecoh-dashboard\app\api\reportes\fiscales\export\route.ts
+2025-09-11 15:15:08 - [INFO] Script de pruebas creado: test-endpoints-migrados.ps1
+2025-09-11 15:15:08 - [INFO] Checklist creado: checklist-verificacion.md
+2025-09-11 15:15:08 - [INFO] Consultas SQL creadas: verificar-datos-migrados.sql
+2025-09-11 15:15:08 - [INFO] Script verificador de servidor creado: verificar-servidor.ps1
+2025-09-11 15:15:08 - [SUCCESS] Verificacion completada exitosamente
