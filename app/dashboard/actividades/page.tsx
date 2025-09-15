@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ActividadForm from '@/components/forms/actividad/ActividadForm';
 import { ActividadesTable } from '@/components/tables/actividades-tables/ActividadesTable';
 import { columns } from '@/components/tables/actividades-tables/columns';
@@ -13,7 +14,7 @@ import {
   SelectValue,
   SelectSeparator
 } from "@/components/ui/select";
-import { Plus, Filter, X } from 'lucide-react';
+import { Plus, Filter, X, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -34,12 +35,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Actividad {
   id: number;
   causa: {
     id: number;
     ruc: string;
+    denominacion?: string;
   };
   tipoActividad: {
     id: number;
@@ -169,6 +172,10 @@ const GroupedTipoActividadFilter = ({
 };
 
 export default function ActividadesPage() {
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const { addNotification } = useNotifications(); // ✅ Agregar hook de notificaciones
+  
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
   const [tiposAgrupados, setTiposAgrupados] = useState<TipoActividadGrouped[]>([]);
@@ -190,6 +197,11 @@ export default function ActividadesPage() {
   const [pageSize] = useState<number>(10);
   const [pageCount, setPageCount] = useState<number>(0);
   const [totalRecords, setTotalRecords] = useState<number>(0);
+  
+  // Estados para resaltado
+  const [highlightedActivity, setHighlightedActivity] = useState<Actividad | null>(null);
+  
+  const highlightRef = useRef<HTMLTableRowElement>(null);
 
   // Función para agrupar tipos de actividad por área
   const groupTiposByArea = useCallback((tipos: TipoActividad[]): TipoActividadGrouped[] => {
@@ -213,7 +225,6 @@ export default function ActividadesPage() {
       const response = await fetch('/api/usuarios/me');
       if (response.ok) {
         const userData = await response.json();
-        // Buscar el rol del usuario
         const userWithRole = await fetch('/api/usuarios/roles');
         if (userWithRole.ok) {
           const usersWithRoles = await userWithRole.json();
@@ -259,6 +270,26 @@ export default function ActividadesPage() {
     }
   };
 
+  // Función para buscar actividad específica para resaltar
+  const fetchHighlightedActivity = async (activityId: string) => {
+    try {
+      const response = await fetch(`/api/actividades/${activityId}`);
+      if (!response.ok) throw new Error('Actividad no encontrada');
+      const actividad = await response.json();
+      setHighlightedActivity(actividad);
+      
+      // Si la actividad no está en la lista actual, buscarla con filtros específicos
+      const isInCurrentList = actividades.some(a => a.id === parseInt(activityId));
+      if (!isInCurrentList && actividades.length > 0) {
+        // Buscar con el RUC de la actividad específica
+        await fetchActividades(undefined, undefined, undefined, 1);
+      }
+    } catch (error) {
+      console.error('Error fetching highlighted activity:', error);
+      toast.error('No se pudo encontrar la actividad especificada');
+    }
+  };
+
   const fetchActividades = async (
     tipoId?: string, 
     estado?: string, 
@@ -301,14 +332,37 @@ export default function ActividadesPage() {
     }
   };
 
+  // Auto-scroll a la actividad resaltada
+  useEffect(() => {
+    if (highlightedActivity && actividades.length > 0) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`actividad-row-${highlightedActivity.id}`);
+        if (element) {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          // Mostrar notificación de éxito
+          toast.success(`Actividad ${highlightedActivity.id} encontrada y resaltada`);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedActivity, actividades]);
+
   useEffect(() => {
     fetchCurrentUser();
     fetchTiposActividad();
     fetchUsuarios();
-    fetchActividades();
-  }, []);
+    
+    // Si hay highlightId, primero buscamos esa actividad específica
+    if (highlightId) {
+      fetchHighlightedActivity(highlightId);
+    } else {
+      fetchActividades();
+    }
+  }, [highlightId]);
 
-  // ✅ FIX 1: handleSubmit con limpieza diferida
   const handleSubmit = useCallback(async (data: ActividadFormData): Promise<void> => {
     if (isSubmitting || !dialogOpen) return;
 
@@ -332,6 +386,8 @@ export default function ActividadesPage() {
         throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
       }
 
+      const result = await response.json();
+      
       setPageIndex(1);
       await fetchActividades(tipoActividadFilter, estadoFilter, usuarioAsignadoFilter, 1);
       
@@ -342,7 +398,6 @@ export default function ActividadesPage() {
       toast.success(successMessage);
       setDialogOpen(false);
       
-      // ✅ CAMBIO: Limpiar con delay
       setTimeout(() => {
         setActividadEditing(undefined);
       }, 100);
@@ -360,37 +415,35 @@ export default function ActividadesPage() {
     setEstadoFilter('all');
     setUsuarioAsignadoFilter('all');
     setPageIndex(1);
+    setHighlightedActivity(null); // Limpiar resaltado
     fetchActividades(undefined, undefined, undefined, 1);
   };
 
   const applyFilters = (): void => {
     setPageIndex(1);
+    setHighlightedActivity(null); // Limpiar resaltado al aplicar filtros
     fetchActividades(tipoActividadFilter, estadoFilter, usuarioAsignadoFilter, 1);
   };
 
- const handleEdit = (actividad: Actividad): void => {
-  const editData: ActividadFormData = {
-    id: actividad.id,
-    causaId: actividad.causa.id.toString(),
-    tipoActividadId: actividad.tipoActividad.id.toString(),
-    fechaInicio: actividad.fechaInicio.split('T')[0],
-    fechaTermino: actividad.fechaTermino.split('T')[0],
-    estado: actividad.estado,
-    observacion: actividad.observacion || '', // ✅ Asegurar string vacío si es undefined
-    // ✅ CAMBIO PRINCIPAL: Manejar glosa_cierre condicionalmente
-    glosa_cierre: actividad.estado === 'terminado' ? (actividad.glosa_cierre || '') : '',
-    usuarioAsignadoId: actividad.usuarioAsignado?.id.toString() || '' // ✅ Manejar undefined
+  const handleEdit = (actividad: Actividad): void => {
+    const editData: ActividadFormData = {
+      id: actividad.id,
+      causaId: actividad.causa.id.toString(),
+      tipoActividadId: actividad.tipoActividad.id.toString(),
+      fechaInicio: actividad.fechaInicio.split('T')[0],
+      fechaTermino: actividad.fechaTermino.split('T')[0],
+      estado: actividad.estado,
+      observacion: actividad.observacion || '',
+      glosa_cierre: actividad.estado === 'terminado' ? (actividad.glosa_cierre || '') : '',
+      usuarioAsignadoId: actividad.usuarioAsignado?.id.toString() || ''
+    };
+    
+    setActividadEditing(editData);
+    
+    setTimeout(() => {
+      setDialogOpen(true);
+    }, 0);
   };
-  
-  console.log('📝 EditData preparado:', editData); // Para debug temporal
-  
-  setActividadEditing(editData);
-  
-  setTimeout(() => {
-    setDialogOpen(true);
-  }, 0);
-};
-
 
   const handleDelete = (id: number): void => {
     setDeleteId(id);
@@ -424,12 +477,14 @@ export default function ActividadesPage() {
 
   const handleViewTodos = (actividadId: number): void => {
     console.log('Ver tareas de la actividad:', actividadId);
-    // Aquí puedes implementar la lógica para abrir un modal o navegar a una página de tareas
-    // Ejemplo: router.push(`/actividades/${actividadId}/tareas`);
+  };
+
+  const handleViewDetail = (actividad: Actividad): void => {
+    toast.info(`Viendo detalles de actividad ${actividad.id}`);
   };
 
   // Verificar si hay filtros activos
-  const hasActiveFilters = tipoActividadFilter !== 'all' || estadoFilter !== 'all' || usuarioAsignadoFilter !== 'all';
+  const hasActiveFilters = tipoActividadFilter !== 'all' || estadoFilter !== 'all' || usuarioAsignadoFilter !== 'all' || highlightedActivity;
 
   // Mostrar filtro de asignado solo para rol 4
   const canViewAssignedFilter = currentUser?.rol?.id === 4;
@@ -444,14 +499,23 @@ export default function ActividadesPage() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Gestión de Actividades</h1>
-        {/* ✅ FIX 3: Dialog con onOpenChange mejorado y DialogDescription agregada */}
+        <div>
+          <h1 className="text-3xl font-bold">Gestión de Actividades</h1>
+          {highlightedActivity && (
+            <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+              <Eye className="h-4 w-4" />
+              <span>
+                Mostrando actividad #{highlightedActivity.id} - RUC: {highlightedActivity.causa.ruc}
+              </span>
+            </div>
+          )}
+        </div>
+        
         <Dialog
           open={dialogOpen}
           onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) {
-              // ✅ CAMBIO: Delay la limpieza para evitar race conditions
               setTimeout(() => {
                 setActividadEditing(undefined);
               }, 150);
@@ -469,7 +533,6 @@ export default function ActividadesPage() {
               <DialogTitle>
                 {actividadEditing ? 'Editar Actividad' : 'Nueva Actividad'}
               </DialogTitle>
-              {/* ✅ FIX 4: Agregar DialogDescription para solucionar el warning */}
               <DialogDescription>
                 {actividadEditing 
                   ? 'Modifica los campos necesarios y guarda los cambios.'
@@ -564,6 +627,11 @@ export default function ActividadesPage() {
                 Asignado: {usuarios.find(u => u.id.toString() === usuarioAsignadoFilter)?.nombre}
               </Badge>
             )}
+            {highlightedActivity && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                Resaltado: #{highlightedActivity.id}
+              </Badge>
+            )}
           </div>
         )}
       </div>
@@ -598,11 +666,13 @@ export default function ActividadesPage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onViewTodos={handleViewTodos}
+          onView={handleViewDetail}
           pageSize={pageSize}
           pageIndex={pageIndex}
           pageCount={pageCount}
           totalRecords={totalRecords}
           onPageChange={handlePageChange}
+          highlightId={highlightedActivity?.id}
         />
       )}
     </div>

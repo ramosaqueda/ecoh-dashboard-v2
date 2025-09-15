@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
+import { NotificationProvider } from '@/components/providers/NotificationProvider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -32,14 +33,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools
-          initialIsOpen={false}
-          position={"bottom-right" as any}
-          buttonPosition={"bottom-right" as any}
-        />
-      )}
+      <NotificationProvider>
+        {children}
+        {process.env.NODE_ENV === 'development' && (
+          <ReactQueryDevtools
+            initialIsOpen={false}
+            position={"bottom-right" as any}
+            buttonPosition={"bottom-right" as any}
+          />
+        )}
+      </NotificationProvider>
     </QueryClientProvider>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -36,18 +37,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import TodoList from '@/components/TodoList';
+import { cn } from '@/lib/utils';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onEdit?: (record: TData) => void;
   onDelete?: (id: number) => void;
-  onViewTodos?: (id: number) => void; // Nueva prop para manejar todos
+  onViewTodos?: (id: number) => void;
+  onView?: (record: TData) => void; // Nueva prop para ver detalles
   pageSize: number;
   pageIndex: number;
   pageCount: number;
   totalRecords: number;
   onPageChange: (page: number) => void;
+  highlightId?: number; // Nueva prop para resaltar una fila específica
 }
 
 export function ActividadesTable<TData, TValue>({
@@ -56,11 +60,13 @@ export function ActividadesTable<TData, TValue>({
   onEdit,
   onDelete,
   onViewTodos,
+  onView,
   pageSize,
   pageIndex,
   pageCount,
   totalRecords,
-  onPageChange
+  onPageChange,
+  highlightId
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -76,6 +82,11 @@ export function ActividadesTable<TData, TValue>({
     setTodoDialogOpen(true);
     // También llamar al callback si está disponible
     onViewTodos?.(actividadId);
+  };
+
+  // Función para verificar si una fila debe ser resaltada
+  const isHighlighted = (rowData: any) => {
+    return highlightId && rowData.id === highlightId;
   };
 
   const table = useReactTable({
@@ -96,7 +107,9 @@ export function ActividadesTable<TData, TValue>({
     meta: {
       onEdit,
       onDelete,
-      onViewTodos: handleOpenTodos // Agregar a meta para usar en columnas
+      onViewTodos: handleOpenTodos,
+      onView, // Agregar onView a meta
+      highlightId // Agregar highlightId a meta para usar en columnas
     }
   });
 
@@ -110,33 +123,41 @@ export function ActividadesTable<TData, TValue>({
             onChange={(event) => setGlobalFilter(String(event.target.value))}
             className="max-w-sm"
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Settings2 className="mr-2 h-4 w-4" />
-                Columnas
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            {/* Mostrar indicador de resaltado si hay una actividad resaltada */}
+            {highlightId && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                Resaltando: #{highlightId}
+              </Badge>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Columnas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => {
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(!!value)
+                        }
+                      >
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         
         <div className="rounded-md border">
@@ -160,7 +181,14 @@ export function ActividadesTable<TData, TValue>({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow 
+                    key={row.id}
+                    id={`actividad-row-${(row.original as any).id}`}
+                    className={cn(
+                      "hover:bg-gray-50 transition-colors",
+                      isHighlighted(row.original) && "bg-blue-50 border-l-4 border-l-blue-500 animate-pulse"
+                    )}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(
@@ -189,6 +217,11 @@ export function ActividadesTable<TData, TValue>({
           <div className="flex-1 text-sm text-muted-foreground">
             Mostrando {pageSize * (pageIndex - 1) + 1} a{" "}
             {Math.min(pageSize * pageIndex, totalRecords)} de {totalRecords} registros
+            {highlightId && (
+              <span className="ml-2 text-blue-600 font-medium">
+                • Actividad #{highlightId} resaltada
+              </span>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <div className="text-sm text-muted-foreground">

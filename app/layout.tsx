@@ -1,5 +1,6 @@
 // app/layout.tsx
 import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
 import '@uploadthing/react/styles.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
@@ -10,6 +11,7 @@ import { ClerkProvider, SignedIn, SignedOut } from '@clerk/nextjs';
 import { Providers } from '@/app/providers/providers';
 import { ThemeProvider } from '@/components/theme-provider';
 import Header from '@/components/layout/header';
+import { NotificationChecker } from '@/components/notifications/NotificationChecker';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -54,10 +56,18 @@ export default function RootLayout({
                 </SignedOut>
 
                 <SignedIn>
+                  <NotificationChecker />
                   <div className="flex h-screen pt-16">{children}</div>
                 </SignedIn>
 
                 <Toaster />
+                <SonnerToaster
+                  position="top-right"
+                  expand={false}
+                  richColors
+                  closeButton
+                  duration={Infinity}
+                />
               </div>
             </Providers>
           </ClerkProvider>

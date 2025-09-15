@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const includeAssigned = searchParams.get('include_assigned') === 'true';
 
     const includeConfig: any = {
-      causa: true, // Solo necesitamos datos básicos de la causa
+      causa: true,
       tipoActividad: {
         include: {
           area: {
@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
           id: true,
           nombre: true,
           email: true,
+          clerk_id: true,
           rol: {
             select: {
               id: true,
@@ -166,7 +167,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 🔥 FORZAR TIPADO - Solución rápida
+    // Simple: Solo crear la actividad
     const actividad = await (prisma.actividad as any).create({
       data: {
         causa_id: parseInt(data.causaId),
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
         glosa_cierre: data.glosa_cierre || null
       },
       include: {
-        causa: true, // Solo necesitamos datos básicos de la causa
+        causa: true,
         tipoActividad: {
           include: {
             area: {
@@ -203,6 +204,7 @@ export async function POST(req: NextRequest) {
             id: true,
             nombre: true,
             email: true,
+            clerk_id: true,
             rol: {
               select: {
                 id: true,
@@ -213,6 +215,10 @@ export async function POST(req: NextRequest) {
         }
       },
     });
+
+    // Log simple para debug
+    const isAssignedToDifferentUser = finalUsuarioAsignadoId !== usuario.id;
+    console.log(`📝 Actividad ${actividad.id} creada. Asignada a otro usuario: ${isAssignedToDifferentUser}`);
 
     return NextResponse.json(actividad, { status: 201 });
 
@@ -290,12 +296,11 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    // 🔥 FORZAR TIPADO - Solución rápida
     const actividad = await (prisma.actividad as any).update({
       where: { id: Number(id) },
       data: updateData,
       include: {
-        causa: true, // Solo necesitamos datos básicos de la causa
+        causa: true,
         tipoActividad: {
           include: {
             area: {
@@ -318,6 +323,7 @@ export async function PUT(req: NextRequest) {
             id: true,
             nombre: true,
             email: true,
+            clerk_id: true,
             rol: {
               select: {
                 id: true,

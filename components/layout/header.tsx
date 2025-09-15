@@ -5,6 +5,8 @@ import { MobileSidebar } from './mobile-sidebar';
 import { UserNav } from './user-nav';
 import Logo from '@/components/ui/logo';
 import { SignInButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import NotificationBell from '@/components/notifications/NotificationBell';
+ 
 
 export default function Header() {
   return (
@@ -61,6 +63,13 @@ export default function Header() {
             </SignedOut>
             
             <SignedIn>
+              
+              
+              {/* Centro de notificaciones */}
+              <div className="rounded-lg p-1 backdrop-blur-sm bg-white/40 dark:bg-gray-800/40 border border-white/20 dark:border-gray-700/30">
+                <NotificationBell />
+              </div>
+              
               <div className="rounded-lg p-1 backdrop-blur-sm bg-white/40 dark:bg-gray-800/40 border border-white/20 dark:border-gray-700/30">
                 <UserNav />
               </div>
