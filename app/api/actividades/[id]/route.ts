@@ -27,7 +27,7 @@ export async function GET(
           select: {
             id: true,
             ruc: true,
-            denominacion: true
+            denominacionCausa: true
           }
         },
         tipoActividad: {

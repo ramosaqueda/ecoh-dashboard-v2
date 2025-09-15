@@ -246,6 +246,24 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // 🔔 Obtener actividad actual ANTES de la actualización
+    const actividadAnterior = await prisma.actividad.findUnique({
+      where: { id: Number(id) },
+      include: {
+        usuario: { select: { clerk_id: true, nombre: true } }, // Usuario que creó la actividad
+        usuarioAsignado: { select: { clerk_id: true, nombre: true } }, // Usuario asignado
+        causa: { select: { ruc: true } },
+        tipoActividad: { select: { nombre: true } }
+      }
+    });
+
+    if (!actividadAnterior) {
+      return NextResponse.json(
+        { message: 'Actividad no encontrada' },
+        { status: 404 }
+      );
+    }
+
     const data = await req.json();
     
     const updateData: any = {};
@@ -262,8 +280,17 @@ export async function PUT(req: NextRequest) {
       updateData.fechaTermino = new Date(data.fechaTermino);
     }
     
-    if (data.estado) {
+    // 🔔 Detectar cambio de estado
+    let estadoCambio = false;
+    let estadoAnterior = '';
+    let estadoNuevo = '';
+    
+    if (data.estado && data.estado !== actividadAnterior.estado) {
+      estadoCambio = true;
+      estadoAnterior = actividadAnterior.estado;
+      estadoNuevo = data.estado;
       updateData.estado = data.estado as EstadoActividad;
+      console.log(`🔔 Cambio de estado detectado: ${estadoAnterior} → ${estadoNuevo}`);
     }
     
     if (data.observacion !== undefined) {
@@ -315,7 +342,8 @@ export async function PUT(req: NextRequest) {
           select: {
             id: true,
             nombre: true,
-            email: true
+            email: true,
+            clerk_id: true
           }
         },
         usuarioAsignado: {
@@ -335,7 +363,37 @@ export async function PUT(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(actividad);
+    // 🔔 Si hubo cambio de estado, preparar notificación para el creador original
+    const shouldNotifyCreator = estadoCambio && 
+                               actividad.usuario.clerk_id !== actividad.usuarioAsignado?.clerk_id; // No notificar si es la misma persona
+
+    let notificationData = null;
+    if (shouldNotifyCreator) {
+      // Mapear estados a mensajes legibles
+      const estadosMap: Record<string, string> = {
+        'inicio': 'Iniciada',
+        'en_proceso': 'En Proceso', 
+        'terminado': 'Terminada'
+      };
+
+      notificationData = {
+        shouldTrigger: true,
+        actividadId: actividad.id,
+        causaRuc: actividad.causa.ruc,
+        tipoActividad: actividad.tipoActividad.nombre,
+        estadoAnterior: estadosMap[estadoAnterior] || estadoAnterior,
+        estadoNuevo: estadosMap[estadoNuevo] || estadoNuevo,
+        usuarioQueActualizo: actividad.usuarioAsignado?.nombre || 'Usuario',
+        targetUserClerkId: actividad.usuario.clerk_id // Usuario que creó la actividad (quien recibirá la notificación)
+      };
+      
+      console.log(`🔔 Preparando notificación de cambio de estado para: ${actividad.usuario.nombre}`);
+    }
+
+    return NextResponse.json({
+      ...actividad,
+      _statusNotification: notificationData
+    });
 
   } catch (error) {
     console.error('Error en PUT /api/actividades:', error);

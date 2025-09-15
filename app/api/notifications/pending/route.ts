@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             ruc: true,
-            nombre: true
+            denominacionCausa: true
           }
         },
         tipoActividad: {
