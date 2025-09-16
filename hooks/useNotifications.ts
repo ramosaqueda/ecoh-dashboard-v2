@@ -30,7 +30,7 @@ export function useNotifications() {
     const unsubscribeToast = eventManager.on('notification:toast', 
       (notification: Notification) => {
         // 🔧 SOLUCIÓN DRÁSTICA: Usar ID directamente como toast ID para deduplicación
-        const toastKey = `actividad-${notification.actividadId || notification.id}`;
+        const toastKey = `actividad-${notification.actividadId}`;
         
         // Reproducir sonido solo una vez
         audioManager.playNotificationSound();
@@ -43,7 +43,7 @@ export function useNotifications() {
           action: {
             label: 'Ver',
             onClick: () => {
-              if ('actionUrl' in notification && notification.actionUrl) {
+              if (notification.actionUrl) {
                 window.location.href = notification.actionUrl;
               }
             }
@@ -97,11 +97,9 @@ export function useNotifications() {
     setState(prev => ({ ...prev, isOpen }));
   };
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read' | 'dismissed' | 'persistent'>) => {
-    // 🔧 Generar ID más único usando actividadId si está disponible
-    const uniqueId = 'actividadId' in notification 
-      ? `${notification.type}-${notification.actividadId}-${Date.now()}`
-      : `${notification.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read' | 'dismissed' | 'persistent' | 'autoHide'>) => {
+    // ✅ Generar ID único usando actividadId (ya sabemos que siempre existe)
+    const uniqueId = `${notification.type}-${notification.actividadId}-${Date.now()}`;
     
     const fullNotification: Notification = {
       ...notification,
@@ -110,7 +108,8 @@ export function useNotifications() {
       read: false,
       dismissed: false,
       persistent: true,
-      autoHide: false
+      autoHide: false,
+      priority: notification.priority || 'medio' // ✅ Asegurar valor por defecto
     };
     
     console.log(`📝 Agregando notificación con ID: ${uniqueId}`);

@@ -34,12 +34,7 @@ export default function NotificationItem({
     switch (notification.type) {
       case 'actividad_nueva':
       case 'actividad_actualizada':
-        return <Calendar className="h-4 w-4" />;
-      case 'causa_nueva':
-      case 'causa_actualizada':
-        return <FileText className="h-4 w-4" />;
-      case 'sistema':
-        return <AlertCircle className="h-4 w-4" />;
+        return <Calendar className="h-4 w-4" />;       
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
@@ -51,12 +46,7 @@ export default function NotificationItem({
         return 'bg-green-100 text-green-800 border-green-200';
       case 'actividad_actualizada':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'causa_nueva':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'causa_actualizada':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'sistema':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+     
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -68,12 +58,7 @@ export default function NotificationItem({
         return 'Nueva Actividad';
       case 'actividad_actualizada':
         return 'Actividad Actualizada';
-      case 'causa_nueva':
-        return 'Nueva Causa';
-      case 'causa_actualizada':
-        return 'Causa Actualizada';
-      case 'sistema':
-        return 'Sistema';
+      
       default:
         return 'Notificación';
     }

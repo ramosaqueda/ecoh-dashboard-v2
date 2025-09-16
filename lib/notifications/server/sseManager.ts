@@ -32,7 +32,7 @@ export function sendNotificationToUser(userId: string, notification: any): boole
 // Función para enviar notificaciones a todos los usuarios conectados
 export function broadcastNotification(notification: any): number {
   let sent = 0;
-  for (const [userId, controller] of connections.entries()) {
+  for (const [userId, controller] of Array.from(connections.entries())) {
     if (sendNotificationToUser(userId, notification)) {
       sent++;
     }
@@ -74,7 +74,7 @@ export function getConnectionStats() {
 // Limpiar conexiones cerradas cada minuto
 setInterval(() => {
   const activeConnections = connections.size;
-  for (const [userId, controller] of connections.entries()) {
+  for (const [userId, controller] of Array.from(connections.entries())) {
     try {
       // Intentar enviar un ping para verificar si la conexión está activa
       controller.enqueue(`data: ${JSON.stringify({

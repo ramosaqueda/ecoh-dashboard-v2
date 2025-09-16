@@ -1,10 +1,8 @@
-// app/api/reportes/fiscales/export/route.ts - MIGRADO A NUEVO ESQUEMA
+// app/api/reportes/fiscales/export/route.ts - OPTIMIZADO PARA NUEVO ESQUEMA
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma'; // Usar la instancia singleton
 import * as XLSX from 'xlsx';
 import { ReporteFiltros } from '@/types/reporte';
-
-const prisma = new PrismaClient();
 
 // ✅ CONSTANTES DE ORIGEN - Sincronizadas con endpoint principal
 const ORIGEN_IDS = {
@@ -18,72 +16,97 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Extraer parámetros
+    // Extraer parámetros de forma optimizada
     const formato = searchParams.get('formato') as 'xlsx' | 'csv';
-    
-    // ✅ MIGRADO: Filtros actualizados para nuevo esquema
-    const filtros: ReporteFiltros = {
-      fechaInicio: searchParams.get('fechaInicio') || undefined,
-      fechaFin: searchParams.get('fechaFin') || undefined,
-      fiscalId: searchParams.get('fiscalId') ? parseInt(searchParams.get('fiscalId')!) : undefined,
-      
-      // ✅ NUEVOS CAMPOS - Reemplazan campos obsoletos
-      origenCausaId: searchParams.get('origenCausaId') ? parseInt(searchParams.get('origenCausaId')!) : undefined,
-      estadoCausaId: searchParams.get('estadoCausaId') ? parseInt(searchParams.get('estadoCausaId')!) : undefined,
-      
-      // ✅ COMPATIBILIDAD TEMPORAL - Convertir campos obsoletos a nuevos IDs
-      ...(searchParams.get('causaEcoh') === 'true' && { origenCausaId: ORIGEN_IDS.ECOH_ELQUI }),
-      ...(searchParams.get('causaSacfi') === 'true' && { origenCausaId: ORIGEN_IDS.SACFI }),
-      ...(searchParams.get('causaLegada') === 'true' && { origenCausaId: ORIGEN_IDS.OTRAS_FISCALIAS }),
-      
-      esCrimenOrganizado: searchParams.get('esCrimenOrganizado') ? 
-          (searchParams.get('esCrimenOrganizado') === 'true') : undefined,
-    };
+    const fechaInicio = searchParams.get('fechaInicio');
+    const fechaFin = searchParams.get('fechaFin');
+    const fiscalId = searchParams.get('fiscalId');
+    const origenCausaId = searchParams.get('origenCausaId');
+    const estadoCausaId = searchParams.get('estadoCausaId');
+    const esCrimenOrganizado = searchParams.get('esCrimenOrganizado');
+    const causaEcoh = searchParams.get('causaEcoh');
+    const causaSacfi = searchParams.get('causaSacfi');
+    const causaLegada = searchParams.get('causaLegada');
 
     if (!formato || !['xlsx', 'csv'].includes(formato)) {
       return NextResponse.json({ error: 'Formato no válido' }, { status: 400 });
     }
 
-    // ✅ MIGRADO: whereConditions actualizadas
+    // ✅ Filtros optimizados
+    const filtros: ReporteFiltros = {
+      fechaInicio: fechaInicio || undefined,
+      fechaFin: fechaFin || undefined,
+      fiscalId: fiscalId ? parseInt(fiscalId) : undefined,
+      origenCausaId: origenCausaId ? parseInt(origenCausaId) : undefined,
+      estadoCausaId: estadoCausaId ? parseInt(estadoCausaId) : undefined,
+      esCrimenOrganizado: esCrimenOrganizado ? esCrimenOrganizado === 'true' : undefined,
+      
+      // ✅ Compatibilidad con filtros legacy
+      ...(causaEcoh === 'true' && { origenCausaId: ORIGEN_IDS.ECOH_ELQUI }),
+      ...(causaSacfi === 'true' && { origenCausaId: ORIGEN_IDS.SACFI }),
+      ...(causaLegada === 'true' && { origenCausaId: ORIGEN_IDS.OTRAS_FISCALIAS }),
+    };
+
+    // ✅ Construcción optimizada de condiciones WHERE
     const whereConditions: any = {};
     
-    if (filtros.fechaInicio || filtros.fechaFin) {
+    // Filtro por rango de fechas
+    if (fechaInicio || fechaFin) {
       whereConditions.fechaDelHecho = {};
-      if (filtros.fechaInicio) {
-        whereConditions.fechaDelHecho.gte = new Date(filtros.fechaInicio);
+      if (fechaInicio) {
+        whereConditions.fechaDelHecho.gte = new Date(fechaInicio);
       }
-      if (filtros.fechaFin) {
-        whereConditions.fechaDelHecho.lte = new Date(filtros.fechaFin);
+      if (fechaFin) {
+        whereConditions.fechaDelHecho.lte = new Date(fechaFin);
       }
     }
     
-    if (filtros.fiscalId) {
-      whereConditions.fiscalId = filtros.fiscalId;
-    }
-    
-    // ✅ NUEVO: Filtros por origen y estado
-    if (filtros.origenCausaId !== undefined) {
-      whereConditions.origenCausaId = filtros.origenCausaId;
-    }
-    
-    if (filtros.estadoCausaId !== undefined) {
-      whereConditions.estadoCausaId = filtros.estadoCausaId;
-    }
-    
-    if (filtros.esCrimenOrganizado !== undefined) {
-      whereConditions.esCrimenOrganizado = filtros.esCrimenOrganizado;
-    }
+    // Filtros directos
+    if (filtros.fiscalId) whereConditions.fiscalId = filtros.fiscalId;
+    if (filtros.origenCausaId !== undefined) whereConditions.origenCausaId = filtros.origenCausaId;
+    if (filtros.estadoCausaId !== undefined) whereConditions.estadoCausaId = filtros.estadoCausaId;
+    if (filtros.esCrimenOrganizado !== undefined) whereConditions.esCrimenOrganizado = filtros.esCrimenOrganizado;
 
-    // ✅ MIGRADO: Consulta con nuevas relaciones
+    // ✅ Consulta optimizada con selects específicos
     const [causas, todosFiscales] = await Promise.all([
       prisma.causa.findMany({
         where: whereConditions,
-        include: {
-          fiscal: true,
-          delito: true,
-          foco: true,
-          tribunal: true,
-          // ✅ NUEVAS RELACIONES
+        select: {
+          id: true,
+          denominacionCausa: true,
+          ruc: true,
+          fechaDelHecho: true,
+          fechaHoraTomaConocimiento: true,
+          rit: true,
+          observacion: true,
+          constituyeSs: true,
+          homicidioConsumado: true,
+          esCrimenOrganizado: true,
+          fiscalId: true,
+          fiscal: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          },
+          delito: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          },
+          foco: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          },
+          tribunal: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          },
           origenCausa: {
             select: {
               id: true,
@@ -112,11 +135,15 @@ export async function GET(request: NextRequest) {
         ]
       }),
       prisma.fiscal.findMany({
+        select: {
+          id: true,
+          nombre: true
+        },
         orderBy: { nombre: 'asc' }
       })
     ]);
 
-    // ✅ MIGRADO: Estadísticas por fiscal actualizadas
+    // ✅ Inicializar estadísticas de forma más eficiente
     const estadisticasPorFiscal = new Map<number | null, {
       fiscal: { id: number; nombre: string } | null;
       causas: typeof causas;
@@ -147,7 +174,7 @@ export async function GET(request: NextRequest) {
       totales: { total: 0, ecoh: 0, sacfi: 0, legadas: 0, conSS: 0, homicidio: 0, crimenOrg: 0 }
     });
 
-    // ✅ MIGRADO: Procesamiento con nuevo esquema
+    // ✅ Procesamiento optimizado de causas
     causas.forEach(causa => {
       const fiscalId = causa.fiscalId;
       const stats = estadisticasPorFiscal.get(fiscalId);
@@ -156,110 +183,127 @@ export async function GET(request: NextRequest) {
         stats.causas.push(causa);
         stats.totales.total++;
         
-        // ✅ NUEVO: Conteo basado en origenCausaId
-        if (causa.origenCausaId === ORIGEN_IDS.ECOH_ELQUI || causa.origenCausaId === ORIGEN_IDS.ECOH_LIMARI) {
+        // Conteo por origen
+        if (causa.origenCausa?.id === ORIGEN_IDS.ECOH_ELQUI || causa.origenCausa?.id === ORIGEN_IDS.ECOH_LIMARI) {
           stats.totales.ecoh++;
         }
-        if (causa.origenCausaId === ORIGEN_IDS.SACFI) {
+        if (causa.origenCausa?.id === ORIGEN_IDS.SACFI) {
           stats.totales.sacfi++;
         }
-        if (causa.origenCausaId === ORIGEN_IDS.OTRAS_FISCALIAS) {
+        if (causa.origenCausa?.id === ORIGEN_IDS.OTRAS_FISCALIAS) {
           stats.totales.legadas++;
         }
         
         if (causa.constituyeSs) stats.totales.conSS++;
         if (causa.homicidioConsumado) stats.totales.homicidio++;
-        if (causa.esCrimenOrganizado === true) stats.totales.crimenOrg++;
+        if (causa.esCrimenOrganizado) stats.totales.crimenOrg++;
       }
     });
 
-    // ✅ MIGRADO: Datos para exportación con nuevos campos
+    // ✅ Datos para exportación optimizados
     // 1. Hoja de Resumen por Fiscal
     const resumenData = Array.from(estadisticasPorFiscal.entries())
+      .filter(([_, stats]) => stats.totales.total > 0)
       .map(([fiscalId, stats]) => ({
         'ID Fiscal': fiscalId || 'N/A',
         'Nombre Fiscal': stats.fiscal?.nombre || 'Sin Fiscal Asignado',
         'Total Causas': stats.totales.total,
         'Causas ECOH': stats.totales.ecoh,
-        'Causas SACFI': stats.totales.sacfi, // ✅ NUEVO: Campo separado para SACFI
+        'Causas SACFI': stats.totales.sacfi,
         'Causas Legadas': stats.totales.legadas,
         'Causas con SS': stats.totales.conSS,
         'Homicidios': stats.totales.homicidio,
         'Crimen Organizado': stats.totales.crimenOrg,
-        'Porcentaje del Total': causas.length > 0 ? ((stats.totales.total / causas.length) * 100).toFixed(2) + '%' : '0%'
+        'Porcentaje del Total': causas.length > 0 ? 
+          ((stats.totales.total / causas.length) * 100).toFixed(2) + '%' : '0%'
       }))
-      .filter(item => item['Total Causas'] > 0)
       .sort((a, b) => b['Total Causas'] - a['Total Causas']);
 
-    // ✅ MIGRADO: Detalle de causas con nuevos campos
+    // ✅ Detalle de causas optimizado
     const detalleData = causas.map(causa => ({
       'ID': causa.id,
       'RUC': causa.ruc || 'N/A',
       'Denominación': causa.denominacionCausa,
       'Fiscal': causa.fiscal?.nombre || 'Sin Asignar',
-      'Fecha del Hecho': causa.fechaDelHecho ? causa.fechaDelHecho.toISOString().split('T')[0] : 'N/A',
-      'Fecha Toma Conocimiento': causa.fechaHoraTomaConocimiento ? causa.fechaHoraTomaConocimiento.toISOString().split('T')[0] : 'N/A',
+      'Fecha del Hecho': causa.fechaDelHecho ? 
+        causa.fechaDelHecho.toISOString().split('T')[0] : 'N/A',
+      'Fecha Toma Conocimiento': causa.fechaHoraTomaConocimiento ? 
+        causa.fechaHoraTomaConocimiento.toISOString().split('T')[0] : 'N/A',
       'RIT': causa.rit || 'N/A',
       'Delito': causa.delito?.nombre || 'N/A',
       'Foco': causa.foco?.nombre || 'N/A',
       'Tribunal': causa.tribunal?.nombre || 'N/A',
       
-      // ✅ MIGRADO: Campos derivados de origenCausa
+      // Campos de origen
       'Origen': causa.origenCausa?.nombre || 'Sin Origen',
-      'Es ECOH': (causa.origenCausaId === ORIGEN_IDS.ECOH_ELQUI || causa.origenCausaId === ORIGEN_IDS.ECOH_LIMARI) ? 'Sí' : 'No',
-      'Es SACFI': causa.origenCausaId === ORIGEN_IDS.SACFI ? 'Sí' : 'No',
-      'Es Legada': causa.origenCausaId === ORIGEN_IDS.OTRAS_FISCALIAS ? 'Sí' : 'No',
+      'Es ECOH': (causa.origenCausa?.id === ORIGEN_IDS.ECOH_ELQUI || 
+                 causa.origenCausa?.id === ORIGEN_IDS.ECOH_LIMARI) ? 'Sí' : 'No',
+      'Es SACFI': causa.origenCausa?.id === ORIGEN_IDS.SACFI ? 'Sí' : 'No',
+      'Es Legada': causa.origenCausa?.id === ORIGEN_IDS.OTRAS_FISCALIAS ? 'Sí' : 'No',
       
-      // ✅ NUEVO: Estado de causa
+      // Estado de causa
       'Estado Causa': causa.estadoCausa?.nombre || 'Sin Estado',
       'Código Estado': causa.estadoCausa?.codigo || 'N/A',
       
-      'Constituye SS': causa.constituyeSs ? 'Sí' : (causa.constituyeSs === false ? 'No' : 'N/A'),
-      'Homicidio Consumado': causa.homicidioConsumado ? 'Sí' : (causa.homicidioConsumado === false ? 'No' : 'N/A'),
-      'Crimen Organizado': causa.esCrimenOrganizado === true ? 'Sí' : 
-                          (causa.esCrimenOrganizado === false ? 'No' : 'Desconocido'),
+      'Constituye SS': causa.constituyeSs ? 'Sí' : 'No',
+      'Homicidio Consumado': causa.homicidioConsumado ? 'Sí' : 'No',
+      'Crimen Organizado': causa.esCrimenOrganizado ? 'Sí' : 'No',
       'Cant. Imputados': causa._count.imputados,
       'Cant. Víctimas': causa._count.victimas,
       'Observación': causa.observacion || ''
     }));
 
     if (formato === 'csv') {
-      // Exportar como CSV (solo el detalle)
-      const csvContent = [
-        // Headers
-        Object.keys(detalleData[0] || {}).join(','),
-        // Data rows
+      // ✅ Exportar como CSV optimizado
+      if (detalleData.length === 0) {
+        return new NextResponse('No hay datos para exportar', {
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="reporte-fiscales-vacio.csv"`,
+          },
+        });
+      }
+
+      const headers = Object.keys(detalleData[0]);
+      const csvRows = [
+        headers.join(','),
         ...detalleData.map(row => 
-          Object.values(row).map(value => 
-            typeof value === 'string' && value.includes(',') 
-              ? `"${value.replace(/"/g, '""')}"` 
-              : value
-          ).join(',')
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            if (typeof value === 'string' && value.includes(',')) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+          }).join(',')
         )
       ].join('\n');
 
-      return new NextResponse(csvContent, {
+      return new NextResponse(csvRows, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="reporte-fiscales-migrado-${new Date().toISOString().split('T')[0]}.csv"`,
+          'Content-Disposition': `attachment; filename="reporte-fiscales-${new Date().toISOString().split('T')[0]}.csv"`,
         },
       });
 
     } else if (formato === 'xlsx') {
-      // ✅ MIGRADO: Excel con información actualizada
+      // ✅ Excel optimizado
       const workbook = XLSX.utils.book_new();
 
       // Hoja 1: Resumen por Fiscal
-      const wsResumen = XLSX.utils.json_to_sheet(resumenData);
-      XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen por Fiscal');
+      if (resumenData.length > 0) {
+        const wsResumen = XLSX.utils.json_to_sheet(resumenData);
+        XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen por Fiscal');
+      }
 
       // Hoja 2: Detalle de Causas
-      const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
-      XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle de Causas');
+      if (detalleData.length > 0) {
+        const wsDetalle = XLSX.utils.json_to_sheet(detalleData);
+        XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle de Causas');
+      }
 
-      // ✅ MIGRADO: Información del reporte actualizada
+      // ✅ Información del reporte optimizada
       const infoReporte = [
-        { Campo: 'Fecha de Generación', Valor: new Date().toLocaleString() },
+        { Campo: 'Fecha de Generación', Valor: new Date().toLocaleString('es-CL') },
         { Campo: 'Total de Causas', Valor: causas.length },
         { Campo: 'Fiscales con Causas', Valor: resumenData.length },
         { Campo: '', Valor: '' },
@@ -270,14 +314,9 @@ export async function GET(request: NextRequest) {
         { Campo: 'Origen Causa', Valor: filtros.origenCausaId ? getOrigenName(filtros.origenCausaId) : 'Todos' },
         { Campo: 'Estado Causa', Valor: filtros.estadoCausaId ? `ID: ${filtros.estadoCausaId}` : 'Todos' },
         { Campo: 'Crimen Organizado', Valor: filtros.esCrimenOrganizado !== undefined ? 
-          (filtros.esCrimenOrganizado ? 'Sí' : 'No') : 'Todos' },
-        { Campo: '', Valor: '' },
-        { Campo: '=== DISTRIBUCIÓN POR ORIGEN ===', Valor: '' },
-        { Campo: 'ECOH Total', Valor: causas.filter(c => c.origenCausaId === ORIGEN_IDS.ECOH_ELQUI || c.origenCausaId === ORIGEN_IDS.ECOH_LIMARI).length },
-        { Campo: 'SACFI', Valor: causas.filter(c => c.origenCausaId === ORIGEN_IDS.SACFI).length },
-        { Campo: 'Otras Fiscalías', Valor: causas.filter(c => c.origenCausaId === ORIGEN_IDS.OTRAS_FISCALIAS).length },
-        { Campo: 'Sin Origen', Valor: causas.filter(c => c.origenCausaId === null).length }
+          (filtros.esCrimenOrganizado ? 'Sí' : 'No') : 'Todos' }
       ];
+
       const wsInfo = XLSX.utils.json_to_sheet(infoReporte);
       XLSX.utils.book_append_sheet(workbook, wsInfo, 'Info del Reporte');
 
@@ -287,7 +326,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(excelBuffer, {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="reporte-fiscales-migrado-${new Date().toISOString().split('T')[0]}.xlsx"`,
+          'Content-Disposition': `attachment; filename="reporte-fiscales-${new Date().toISOString().split('T')[0]}.xlsx"`,
         },  
       });
     }
@@ -295,21 +334,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Formato no soportado' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error en exportación migrada:', error);
+    console.error('Error en exportación de reporte:', error);
     return NextResponse.json(
-      { error: 'Error al exportar el reporte', details: error instanceof Error ? error.message : 'Error desconocido' },
+      { 
+        error: 'Error al exportar el reporte', 
+        details: error instanceof Error ? error.message : 'Error desconocido' 
+      },
       { status: 500 }
     );
   }
 }
 
-// ✅ HELPER FUNCTIONS - Sincronizadas con endpoint principal
-function getOrigenName(origenId: number | null): string {
-  switch (origenId) {
-    case ORIGEN_IDS.SACFI: return 'SACFI';
-    case ORIGEN_IDS.ECOH_ELQUI: return 'ECOH Elqui';
-    case ORIGEN_IDS.ECOH_LIMARI: return 'ECOH Limarí';
-    case ORIGEN_IDS.OTRAS_FISCALIAS: return 'Otras Fiscalías';
-    default: return 'Sin Origen';
-  }
+// ✅ Helper function optimizada
+function getOrigenName(origenId: number): string {
+  const origenes = {
+    [ORIGEN_IDS.SACFI]: 'SACFI',
+    [ORIGEN_IDS.ECOH_ELQUI]: 'ECOH Elqui',
+    [ORIGEN_IDS.ECOH_LIMARI]: 'ECOH Limarí',
+    [ORIGEN_IDS.OTRAS_FISCALIAS]: 'Otras Fiscalías'
+  };
+
+  return origenes[origenId as keyof typeof origenes] || 'Sin Origen';
 }

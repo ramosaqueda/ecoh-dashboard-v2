@@ -13,7 +13,7 @@ export function NotificationChecker() {
   useEffect(() => {
     if (!user?.id) return;
 
-    let intervalId: NodeJS.Timeout;
+     
 
     const checkForNotifications = async () => {
       try {
@@ -49,7 +49,8 @@ export function NotificationChecker() {
                   actividadId: notification.actividadId,
                   causaRuc: notification.causaRuc,
                   tipoActividad: notification.tipoActividad,
-                  actionUrl: notification.actionUrl
+                  actionUrl: notification.actionUrl,
+                  priority: notification.priority || 'medio' // ✅ Agregar priority requerida
                 });
                 
                 console.log(`📬 Notificación agregada: ${notification.title} (ID: ${notification.actividadId})`);
@@ -68,7 +69,7 @@ export function NotificationChecker() {
     const initialTimeout = setTimeout(checkForNotifications, 2000);
 
     // Check cada 10 segundos
-    intervalId = setInterval(checkForNotifications, 10000);
+    const intervalId = setInterval(checkForNotifications, 10000);
 
     console.log(`🔔 Iniciado checker de notificaciones para ${user.firstName || user.emailAddresses[0]?.emailAddress}`);
 

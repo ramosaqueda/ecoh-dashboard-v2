@@ -352,6 +352,40 @@ model TelefonoCausa {
   @@map("telefonos_causa")
 }
 
+model Notification {
+  id          String               @id // VARCHAR(255) en BD
+  type        NotificationType
+  title       String               @db.VarChar(255)
+  message     String               @db.Text
+  priority    NotificationPriority
+  userId      Int
+  userEmail   String               @db.VarChar(255)
+  read        Boolean              @default(false)
+  dismissed   Boolean              @default(false)  // Campo nuevo a agregar en BD
+  actividadId Int?                                   // Campo nuevo a agregar en BD
+  metadata    Json?                @db.JsonB
+  createdAt   DateTime             @default(now()) @db.Timestamp(3)
+  expiresAt   DateTime?            @db.Timestamp(3)
+  
+  // Relaciones
+  usuario     Usuario              @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  actividad   Actividad?           @relation(fields: [actividadId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  
+  // Índices (reflejan los existentes en tu BD)
+  @@index([createdAt], name: "notifications_createdAt_idx")
+  @@index([expiresAt], name: "notifications_expiresAt_idx")
+  @@index([priority], name: "notifications_priority_idx") 
+  @@index([read], name: "notifications_read_idx")
+  @@index([type], name: "notifications_type_idx")
+  @@index([userEmail], name: "notifications_userEmail_idx")
+  @@index([userId], name: "notifications_userId_idx")
+  @@index([userId, read, createdAt(sort: Desc)], name: "notifications_userId_read_createdAt_idx")
+  @@index([actividadId], name: "notifications_actividadId_idx")    // Nuevo índice
+  @@index([dismissed], name: "notifications_dismissed_idx")        // Nuevo índice
+  
+  @@map("notifications")
+}
+
 model Usuario {
   id                   Int                        @id @default(autoincrement())
   clerk_id             String                     @unique
@@ -363,11 +397,14 @@ model Usuario {
   updatedAt            DateTime                   @updatedAt
   actividadesCreadas   Actividad[]                @relation("ActividadCreador")
   actividadesAsignadas Actividad[]                @relation("ActividadAsignado")
+  notificaciones       Notification[]             // NUEVA RELACIÓN
+
   correlativos         CorrelativoTipoActividad[]
   rol                  Rol                        @relation(fields: [rolId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_rol")
 
   @@map("usuarios")
 }
+
 
 model Rol {
   id          Int       @id @default(autoincrement())
@@ -379,6 +416,8 @@ model Rol {
 
   @@map("roles")
 }
+
+
 
 model Area {
   id             Int             @id @default(autoincrement())
@@ -437,6 +476,7 @@ model Actividad {
   tipoActividad       TipoActividad   @relation(fields: [tipo_actividad_id], references: [id])
   usuario             Usuario         @relation("ActividadCreador", fields: [usuario_id], references: [id])
   usuarioAsignado     Usuario?        @relation("ActividadAsignado", fields: [usuario_asignado_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_actividad_usuario_asignado")
+  notificaciones      Notification[]  // NUEVA RELACIÓN
 
   @@index([causa_id])
   @@index([tipo_actividad_id])
@@ -492,4 +532,16 @@ enum estadoactividad {
   inicio
   en_proceso
   terminado
+}
+
+enum NotificationType {
+  actividad_nueva
+  actividad_actualizada
+}
+
+enum NotificationPriority {
+  bajo
+  medio
+  alta
+  critica
 }

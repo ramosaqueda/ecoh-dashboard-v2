@@ -34,7 +34,7 @@ export async function generarNotificacionNuevaActividad(actividadId: number) {
           select: {
             id: true,
             ruc: true,
-            nombre: true
+            denominacionCausa: true            
           }
         },
         tipoActividad: {
@@ -78,7 +78,7 @@ export async function generarNotificacionNuevaActividad(actividadId: number) {
       persistent: true,
       autoHide: false,
       actividadId: actividad.id,
-      causaRuc: actividad.causa.ruc,
+      causaRuc: actividad.causa.ruc ?? '',
       tipoActividad: actividad.tipoActividad.nombre,
       actionUrl: `/dashboard/actividades?highlight=${actividad.id}`
     };
@@ -105,7 +105,7 @@ export async function generarNotificacionActividadActualizada(actividadId: numbe
           select: {
             id: true,
             ruc: true,
-            nombre: true
+            denominacionCausa: true // Asegúrate de que este campo existe en tu modelo
           }
         },
         tipoActividad: {
@@ -151,7 +151,7 @@ export async function generarNotificacionActividadActualizada(actividadId: numbe
       persistent: true,
       autoHide: false,
       actividadId: actividad.id,
-      causaRuc: actividad.causa.ruc,
+      causaRuc: actividad.causa.ruc ?? '',
       tipoActividad: actividad.tipoActividad.nombre,
       actionUrl: `/dashboard/actividades?highlight=${actividad.id}`
     };

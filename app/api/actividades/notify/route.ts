@@ -52,14 +52,14 @@ export async function POST(req: NextRequest) {
       actionUrl: `/dashboard/actividades?highlight=${actividadId}`
     };
 
-    console.log(`📬 Preparando notificación para usuario: ${actividad.usuarioAsignado.nombre}`);
+    console.log(`📬 Preparando notificación para usuario: ${actividad.usuarioAsignado?.nombre ?? ''}`);
 
     return NextResponse.json({
       success: true,
       notification,
       targetUser: {
         clerkId: usuarioAsignadoClerkId,
-        nombre: actividad.usuarioAsignado.nombre
+        nombre: actividad.usuarioAsignado?.nombre ?? ''
       }
     });
 

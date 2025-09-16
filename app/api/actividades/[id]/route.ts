@@ -1,4 +1,3 @@
-// /app/api/actividades/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -6,9 +5,11 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // Cambio importante aquí
 ) {
   try {
+    // Desestructura el Promise
+    const params = await context.params;
     const actividadId = parseInt(params.id);
 
     if (isNaN(actividadId)) {

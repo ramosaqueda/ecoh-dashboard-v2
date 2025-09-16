@@ -53,6 +53,9 @@ export interface ReporteFiltros {
   causaEcoh?: boolean;
   causaLegada?: boolean;
   esCrimenOrganizado?: boolean;
+  estadoCausaId?: number;
+  origenCausaId?: number;
+ 
 }
 
 // Respuesta completa del API de reporte

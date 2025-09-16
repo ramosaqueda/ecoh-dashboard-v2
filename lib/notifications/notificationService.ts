@@ -103,11 +103,9 @@ class NotificationService {
   }
 
   addNotification(notification: Notification) {
-    // Verificar si ya existe una notificación similar
+    // Verificar si ya existe una notificación similar (por actividadId)
     const existingIndex = this.notifications.findIndex(
-      n => n.type === notification.type && 
-           'actividadId' in n && 'actividadId' in notification &&
-           n.actividadId === notification.actividadId
+      n => n.actividadId === notification.actividadId
     );
 
     if (existingIndex >= 0) {
