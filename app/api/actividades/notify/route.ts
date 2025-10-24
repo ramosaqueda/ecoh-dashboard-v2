@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       actividadId: parseInt(actividadId),
       causaRuc: actividad.causa.ruc,
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: `/dashboard/actividades?highlight=${actividadId}`
+      actionUrl: ` /dashboard/todo?highlight=${actividadId}`
     };
 
     console.log(`📬 Preparando notificación para usuario: ${actividad.usuarioAsignado?.nombre ?? ''}`);

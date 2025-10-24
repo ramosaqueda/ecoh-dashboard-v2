@@ -77,7 +77,8 @@ export async function GET(req: NextRequest) {
               },
               tipoActividad: {
                 select: { nombre: true }
-              }
+              },
+               
             }
           }
         },

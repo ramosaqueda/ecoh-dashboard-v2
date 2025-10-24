@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@clerk/nextjs/server';
 
 const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // Cambio importante aquí
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ AGREGADA: Verificación de autenticación
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'No autorizado - sesión requerida' },
+        { status: 401 }
+      );
+    }
+
     // Desestructura el Promise
     const params = await context.params;
     const actividadId = parseInt(params.id);
@@ -39,7 +50,22 @@ export async function GET(
         },
         usuario: {
           select: {
-            email: true
+            id: true,
+            email: true,
+            nombre: true
+          }
+        },
+        usuarioAsignado: {
+          select: {
+            id: true,
+            email: true,
+            nombre: true,
+            rol: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
           }
         }
       }
@@ -57,7 +83,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching actividad:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { error: 'Error interno del servidor', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     );
   } finally {

@@ -1,12 +1,11 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Edit2, Trash2, CheckSquare, Eye } from 'lucide-react';
+import { ArrowUpDown, Edit2, Trash2, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 export type Actividad = {
   id: number;
@@ -43,8 +42,6 @@ interface ActividadTableMeta {
   onEdit?: (actividad: Actividad) => void;
   onDelete?: (id: number) => void;
   onViewTodos?: (id: number) => void;
-  onView?: (actividad: Actividad) => void;
-  highlightId?: number;
 }
 
 const estadoBadgeColors = {
@@ -61,34 +58,6 @@ const estadoTexto = {
 
 export const columns: ColumnDef<Actividad>[] = [
   {
-    accessorKey: 'id',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        ID
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row, table }) => {
-      const actividad = row.original;
-      const { highlightId } = (table.options.meta as ActividadTableMeta) || {};
-      const isHighlighted = highlightId === actividad.id;
-      
-      return (
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{actividad.id}</span>
-          {isHighlighted && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-              Destacado
-            </Badge>
-          )}
-        </div>
-      );
-    }
-  },
-  {
     accessorKey: 'causa.ruc',
     header: ({ column }) => (
       <Button
@@ -98,21 +67,11 @@ export const columns: ColumnDef<Actividad>[] = [
         RUC
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="font-mono text-sm">
-        {row.getValue('causa.ruc')}
-      </div>
     )
   },
   {
     accessorKey: 'tipoActividad.nombre',
-    header: 'Tipo de Actividad',
-    cell: ({ row }) => (
-      <div className="max-w-[200px]">
-        {row.getValue('tipoActividad.nombre')}
-      </div>
-    )
+    header: 'Tipo de Actividad'
   },
   {
     accessorKey: 'fechaInicio',
@@ -145,11 +104,7 @@ export const columns: ColumnDef<Actividad>[] = [
     header: 'Asignado por',
     cell: ({ row }) => {
       const actividad = row.original;
-      return (
-        <div className="text-sm">
-          {actividad.usuario?.nombre || 'No asignado'}
-        </div>
-      );
+      return actividad.usuario?.nombre || 'No asignado';
     }
   },
   {
@@ -157,11 +112,7 @@ export const columns: ColumnDef<Actividad>[] = [
     header: 'Asignado',
     cell: ({ row }) => {
       const actividad = row.original;
-      return (
-        <div className="text-sm">
-          {actividad.usuarioAsignado?.nombre || 'No asignado'}
-        </div>
-      );
+      return actividad.usuarioAsignado?.nombre || 'No asignado';
     }
   },
   {
@@ -183,50 +134,31 @@ export const columns: ColumnDef<Actividad>[] = [
     header: 'Acciones',
     cell: ({ row, table }) => {
       const actividad = row.original;
-      const { onEdit, onDelete, onViewTodos, onView } = (table.options.meta as ActividadTableMeta) || {};
+      const { onEdit, onDelete, onViewTodos } = (table.options.meta as ActividadTableMeta) || {};
 
       return (
-        <div className="flex justify-end gap-1">
-          {/* Botón Ver detalles */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onView?.(actividad)}
-            title="Ver detalles"
-            className="h-8 w-8"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          
-          {/* Botón Ver tareas */}
+        <div className="flex justify-end gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onViewTodos?.(actividad.id)}
             title="Ver tareas"
-            className="h-8 w-8"
           >
             <CheckSquare className="h-4 w-4" />
           </Button>
-          
-          {/* Botón Editar */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onEdit?.(actividad)}
             title="Editar actividad"
-            className="h-8 w-8"
           >
             <Edit2 className="h-4 w-4" />
           </Button>
-          
-          {/* Botón Eliminar */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onDelete?.(actividad.id)}
             title="Eliminar actividad"
-            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

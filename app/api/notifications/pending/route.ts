@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
       actividadId: actividad.id,
       causaRuc: actividad.causa.ruc,
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: `/dashboard/actividades?highlight=${actividad.id}`
+      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
     }));
 
     console.log(`📡 Polling check para usuario ${usuario.nombre}: ${notifications.length} notificaciones nuevas`);

@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
         actividadId: actividad.id,
         causaRuc: actividad.causa.ruc,
         tipoActividad: actividad.tipoActividad.nombre,
-        actionUrl: `/dashboard/actividades?highlight=${actividad.id}`,
+        actionUrl: ` /dashboard/todo?highlight=${actividad.id}`,
         timestamp: actividad.createdAt.toISOString()
       });
     });
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
         actividadId: actividad.id,
         causaRuc: actividad.causa.ruc,
         tipoActividad: actividad.tipoActividad.nombre,
-        actionUrl: `/dashboard/actividades?highlight=${actividad.id}`,
+        actionUrl: ` /dashboard/todo?highlight=${actividad.id}`,
         timestamp: actividad.updatedAt.toISOString()
       });
     });

@@ -9,7 +9,8 @@ import {
   X,
   Bell,
   BellOff,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import NotificationItem from './NotificationItem';
 import { useRouter } from 'next/navigation';
@@ -26,7 +27,9 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
     markAsRead, 
     markAllAsRead,
     dismissNotification,
-    dismissAll
+    dismissAll,
+    refreshNotifications,
+    isLoading
   } = useNotifications();
   
   const router = useRouter();
@@ -34,6 +37,11 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
   const handleAction = (url: string) => {
     router.push(url);
     onClose();
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Forzando actualización de notificaciones...');
+    await refreshNotifications();
   };
 
   const handleDismissNotification = (id: string) => {
@@ -65,6 +73,18 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
         </div>
         
         <div className="flex items-center gap-1">
+          {/* Botón de recarga */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            title="Actualizar notificaciones"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          
           {/* Marcar todas como leídas */}
           {unreadCount > 0 && (
             <Button

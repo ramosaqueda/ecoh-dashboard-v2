@@ -18,25 +18,70 @@ import EcohSacfiComparisonCard from '@/components/cards/EcohSacfiComparisonCard'
 import { EsclarecimientoCard } from '@/components/cards/EsclarecimientoCard';
 import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
 import NationalityDistribution from '@/components/charts/NationalityDistribution';
+import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
+import { SSEDebugPanel } from '@/components/debug/SSEDebugPanel'; 
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
-  const { user, isLoaded } = useUser();
+  // ✅ SOLUCIÓN: Agregar verificación de auth
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const { user, isLoaded: userLoaded } = useUser();
   const [userName, setUserName] = useState('Usuario');
 
   useEffect(() => {
-    if (isLoaded && user) {
-      // Actualizar el nombre cuando los datos del usuario estén cargados
+    if (userLoaded && user) {
       setUserName(user.firstName || 'Usuario');
     }
-  }, [user, isLoaded]);
+  }, [user, userLoaded]);
 
+  // ✅ CRÍTICO: Mostrar loading mientras Clerk se inicializa
+  if (!authLoaded || !userLoaded) {
+    return (
+      <YearProvider>
+        <PageContainer scrollable={true}>
+          <div className="space-y-4 p-4 md:p-8">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full max-w-md" />
+              <div className="grid gap-4 md:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-32" />
+                ))}
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-64" />
+                <Skeleton className="h-64" />
+              </div>
+            </div>
+          </div>
+        </PageContainer>
+      </YearProvider>
+    );
+  }
+
+  // ✅ Verificar autenticación
+  if (!isSignedIn) {
+    return (
+      <YearProvider>
+        <PageContainer scrollable={true}>
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-600">Por favor, inicia sesión para ver el dashboard.</p>
+          </div>
+        </PageContainer>
+      </YearProvider>
+    );
+  }
+
+  // ✅ TODO LISTO - Renderizar dashboard
   return (
     <YearProvider>
       <PageContainer scrollable={true}>
         <div className="space-y-4 p-4 md:p-8">
-          {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">
               Hola, {userName} de vuelta por aqui? 👋
@@ -49,65 +94,52 @@ export default function DashboardPage() {
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
               <TabsTrigger value="overview">Estadísticas</TabsTrigger>
-              <TabsTrigger value="analytics" disabled>
-                Analítica
+              <TabsTrigger value="analytics">
+                Analítica de actividades
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
-              {/* ✅ NUEVO: Layout mejorado con diferenciación ECOH/SACFI */}
               <div className="grid gap-4 md:grid-cols-4">
-                {/* Causas generales */}
                 <CausasCard />
                 
-                {/* Causas especializadas */}
-                <CausasEcohCard />
-                <CausasSacfiCard />
-                
-                {/* Causas legadas */}
-                <CausasLegadaCard />
               </div>
 
-              {/* ✅ NUEVO: Segunda fila con cards de análisis */}
               <div className="grid gap-4 md:grid-cols-3">
-                {/* Comparativa ECOH vs SACFI */}
-                <EcohSacfiComparisonCard />
-                
-                {/* Crimen Organizado */}
-                <CrimenOrganizadoCard />
-                
-                {/* Esclarecimiento */}
-                <EsclarecimientoCard />
+                 
               </div>
 
-              {/* Línea de tiempo destacada */}
               <div className="w-full">
-                <CauseTimeline />
+                 
               </div>
 
-              {/* Gráficos principales - Primera fila */}
               <div className="grid gap-4 md:grid-cols-2">
-                <CaseTimelineChart />
-                <DelitosDistribution />
+                 
               </div>
 
-              {/* Gráficos secundarios - Segunda fila */}
               <div className="grid gap-4 md:grid-cols-3">
-                <ImputadosFlow />
-                <AbogadoAnalistaChart />
-                <NationalityDistribution />
+                
               </div>
 
               <div className="grid gap-6">
-                <FormalizationChart />  
+                 
               </div>
 
-              {/* Mapa de calor - Ancho completo */}
               <div className="w-full">
-                <CasesHeatmap />
+                
               </div>
             </TabsContent>
+            
+            <TabsContent value="analytics" className="space-y-6">
+              <AnalyticsDashboard />
+            </TabsContent>
           </Tabs>
+          
+          {process.env.NODE_ENV === 'development' && (
+            <div className="fixed bottom-4 right-4 z-50">
+              <SSEDebugPanel />
+            </div>
+          )}
         </div>
       </PageContainer>
     </YearProvider>

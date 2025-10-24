@@ -85,7 +85,7 @@ class NotificationService {
     // Construir URL de acción si hay actividad relacionada
     let actionUrl = '';
     if (dbNotification.actividadId) {
-      actionUrl = `/dashboard/actividades?highlight=${dbNotification.actividadId}`;
+      actionUrl = ` /dashboard/todo?highlight=${dbNotification.actividadId}`;
     }
 
     // Crear notificación según el tipo

@@ -80,7 +80,7 @@ export async function generarNotificacionNuevaActividad(actividadId: number) {
       actividadId: actividad.id,
       causaRuc: actividad.causa.ruc ?? '',
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: `/dashboard/actividades?highlight=${actividad.id}`
+      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
     };
 
     return {
@@ -153,7 +153,7 @@ export async function generarNotificacionActividadActualizada(actividadId: numbe
       actividadId: actividad.id,
       causaRuc: actividad.causa.ruc ?? '',
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: `/dashboard/actividades?highlight=${actividad.id}`
+      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
     };
 
     return {

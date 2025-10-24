@@ -3,8 +3,20 @@ import { prisma } from '@/lib/prisma';
 import { EstadoActividad } from '@prisma/client';
 import { auth } from '@clerk/nextjs/server';
 
+// 🔧 Helper para timeout en peticiones
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 10000): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]);
+}
+
 export async function GET(req: NextRequest) {
+  const startTime = Date.now();
+  
   try {
+    console.log('🔍 [API] GET /api/actividades - Iniciando...');
+    
     const searchParams = req.nextUrl.searchParams;
     const id = searchParams.get('id');
     const ruc = searchParams.get('ruc');
@@ -18,9 +30,25 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     
     const includeAssigned = searchParams.get('include_assigned') === 'true';
+    const creadasPorMi = searchParams.get('creadas_por_mi') === 'true';
+    const asignadasAMi = searchParams.get('asignadas_a_mi') === 'true';
 
+    console.log('📋 [API] Parámetros:', { 
+      creadasPorMi, 
+      asignadasAMi, 
+      includeAssigned, 
+      limit 
+    });
+
+    // 🔧 Configuración de includes
     const includeConfig: any = {
-      causa: true,
+      causa: {
+        select: {
+          id: true,
+          ruc: true,
+          denominacionCausa: true
+        }
+      },
       tipoActividad: {
         include: {
           area: {
@@ -57,11 +85,17 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    // 🔧 CASO 1: Buscar por ID específico
     if (id) {
-      const actividad = await prisma.actividad.findUnique({
-        where: { id: Number(id) },
-        include: includeConfig,
-      });
+      console.log('🔍 [API] Buscando actividad por ID:', id);
+      
+      const actividad = await withTimeout(
+        prisma.actividad.findUnique({
+          where: { id: Number(id) },
+          include: includeConfig,
+        }),
+        5000 // 5 segundos timeout
+      );
 
       if (!actividad) {
         return NextResponse.json(
@@ -70,10 +104,59 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      console.log(`✅ [API] Actividad encontrada en ${Date.now() - startTime}ms`);
       return NextResponse.json(actividad);
     }
 
-    const whereConditions = [];
+    // 🔧 CASO 2: Listado con filtros
+    let currentUser = null;
+    
+    // Solo buscar usuario si es necesario
+    if (creadasPorMi || asignadasAMi) {
+      try {
+        console.log('🔐 [API] Obteniendo autenticación...');
+        
+        // 🔧 Agregar timeout a auth()
+        const authResult = await withTimeout(auth(), 3000);
+        const { userId } = authResult;
+        
+        console.log('🔐 [API] Auth result:', { 
+          hasUserId: !!userId, 
+          userId: userId ? `${userId.substring(0, 12)}...` : 'null' 
+        });
+
+        if (userId) {
+          console.log('👤 [API] Buscando usuario en BD...');
+          currentUser = await withTimeout(
+            prisma.usuario.findUnique({
+              where: { clerk_id: userId },
+              select: {
+                id: true,
+                nombre: true,
+                clerk_id: true
+              }
+            }),
+            3000
+          );
+          console.log('👤 [API] Usuario encontrado:', currentUser?.nombre || 'No encontrado');
+        } else {
+          console.warn('⚠️ [API] No hay userId en auth()');
+        }
+      } catch (authError) {
+        console.error('❌ [API] Error en autenticación:', authError);
+        // Si falla auth, retornar error apropiado
+        return NextResponse.json(
+          { 
+            message: 'Error de autenticación', 
+            details: authError instanceof Error ? authError.message : 'Unknown error'
+          },
+          { status: 401 }
+        );
+      }
+    }
+
+    // 🔧 Construir condiciones WHERE
+    const whereConditions: any[] = [];
 
     if (ruc) {
       whereConditions.push({ causa: { ruc } });
@@ -99,19 +182,66 @@ export async function GET(req: NextRequest) {
       whereConditions.push({ fechaTermino: { lte: new Date(fechaHasta) } });
     }
 
+    // 🔧 Filtros específicos del dashboard
+    if (creadasPorMi) {
+      if (!currentUser) {
+        console.warn('⚠️ [API] creadas_por_mi=true pero no hay usuario autenticado');
+        return NextResponse.json({
+          data: [],
+          metadata: {
+            total: 0,
+            page,
+            limit,
+            hasMore: false
+          }
+        });
+      }
+      console.log(`🔍 [API] Filtrando por usuario_id: ${currentUser.id}`);
+      whereConditions.push({ usuario_id: currentUser.id });
+    }
+
+    if (asignadasAMi) {
+      if (!currentUser) {
+        console.warn('⚠️ [API] asignadas_a_mi=true pero no hay usuario autenticado');
+        return NextResponse.json({
+          data: [],
+          metadata: {
+            total: 0,
+            page,
+            limit,
+            hasMore: false
+          }
+        });
+      }
+      console.log(`🔍 [API] Filtrando por usuario_asignado_id: ${currentUser.id}`);
+      whereConditions.push({ usuario_asignado_id: currentUser.id });
+    }
+
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    const total = await prisma.actividad.count({ where });
+    console.log('🔍 [API] Ejecutando consultas a BD...');
+    console.log('🔍 [API] Where conditions:', JSON.stringify(where, null, 2));
 
-    const actividades = await prisma.actividad.findMany({
-      where,
-      include: includeConfig,
-      orderBy: {
-        fechaInicio: 'desc',
-      },
-      skip,
-      take: limit,
-    });
+    // 🔧 Ejecutar count y findMany en paralelo con timeout
+    const [total, actividades] = await withTimeout(
+      Promise.all([
+        prisma.actividad.count({ where }),
+        prisma.actividad.findMany({
+          where,
+          include: includeConfig,
+          orderBy: {
+            fechaInicio: 'desc',
+          },
+          skip,
+          take: limit,
+        })
+      ]),
+      8000 // 8 segundos timeout total para ambas queries
+    );
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ [API] Consulta completada en ${duration}ms`);
+    console.log(`📊 [API] Resultados: ${actividades.length} de ${total} total`);
 
     return NextResponse.json({
       data: actividades,
@@ -119,13 +249,37 @@ export async function GET(req: NextRequest) {
         total,
         page,
         limit,
-        hasMore: skip + actividades.length < total
+        hasMore: skip + actividades.length < total,
+        duration
       }
     });
+
   } catch (error) {
-    console.error('Error en GET /api/actividades:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [API] Error en GET /api/actividades (${duration}ms):`, error);
+    
+    // Mejor manejo de errores
+    if (error instanceof Error) {
+      console.error('❌ [API] Error name:', error.name);
+      console.error('❌ [API] Error message:', error.message);
+      
+      if (error.message.includes('timeout')) {
+        return NextResponse.json(
+          { 
+            message: 'Request timeout - La consulta tardó demasiado',
+            duration
+          },
+          { status: 504 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { message: 'Error interno del servidor' },
+      { 
+        message: 'Error interno del servidor',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration
+      },
       { status: 500 }
     );
   }
@@ -167,7 +321,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Simple: Solo crear la actividad
+    // Crear la actividad
     const actividad = await (prisma.actividad as any).create({
       data: {
         causa_id: parseInt(data.causaId),
@@ -181,7 +335,13 @@ export async function POST(req: NextRequest) {
         glosa_cierre: data.glosa_cierre || null
       },
       include: {
-        causa: true,
+        causa: {
+          select: {
+            id: true,
+            ruc: true,
+            denominacionCausa: true
+          }
+        },
         tipoActividad: {
           include: {
             area: {
@@ -216,9 +376,39 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Log simple para debug
+    // 🔔 CREAR NOTIFICACIÓN si se asigna a otro usuario
     const isAssignedToDifferentUser = finalUsuarioAsignadoId !== usuario.id;
-    console.log(`📝 Actividad ${actividad.id} creada. Asignada a otro usuario: ${isAssignedToDifferentUser}`);
+    
+    if (isAssignedToDifferentUser && actividad.usuarioAsignado) {
+      try {
+        console.log(`🔔 Creando notificación para usuario ${actividad.usuarioAsignado.nombre}`);
+
+        const notificationId = `actividad-nueva-${actividad.id}-${Date.now()}`;
+
+        await prisma.notification.create({
+          data: {
+            id: notificationId,
+            type: 'actividad_nueva',
+            title: 'Nueva Actividad Asignada',
+            message: `${usuario.nombre} te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+            priority: 'medio',
+            userId: actividad.usuarioAsignado.id,
+            userEmail: actividad.usuarioAsignado.email,
+            actividadId: actividad.id,
+            metadata: {
+              causaRuc: actividad.causa.ruc,
+              tipoActividad: actividad.tipoActividad.nombre,
+              actionUrl: `/dashboard/todo?highlight=${actividad.id}`,
+              asignadoPor: usuario.nombre
+            }
+          }
+        });
+
+        console.log(`✅ Notificación creada exitosamente`);
+      } catch (notificationError) {
+        console.error('❌ Error creando notificación:', notificationError);
+      }
+    }
 
     return NextResponse.json(actividad, { status: 201 });
 
@@ -246,12 +436,11 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // 🔔 Obtener actividad actual ANTES de la actualización
     const actividadAnterior = await prisma.actividad.findUnique({
       where: { id: Number(id) },
       include: {
-        usuario: { select: { clerk_id: true, nombre: true } }, // Usuario que creó la actividad
-        usuarioAsignado: { select: { clerk_id: true, nombre: true } }, // Usuario asignado
+        usuario: { select: { clerk_id: true, nombre: true } },
+        usuarioAsignado: { select: { clerk_id: true, nombre: true } },
         causa: { select: { ruc: true } },
         tipoActividad: { select: { nombre: true } }
       }
@@ -265,7 +454,6 @@ export async function PUT(req: NextRequest) {
     }
 
     const data = await req.json();
-    
     const updateData: any = {};
 
     if (data.tipoActividadId) {
@@ -280,7 +468,6 @@ export async function PUT(req: NextRequest) {
       updateData.fechaTermino = new Date(data.fechaTermino);
     }
     
-    // 🔔 Detectar cambio de estado
     let estadoCambio = false;
     let estadoAnterior = '';
     let estadoNuevo = '';
@@ -290,7 +477,6 @@ export async function PUT(req: NextRequest) {
       estadoAnterior = actividadAnterior.estado;
       estadoNuevo = data.estado;
       updateData.estado = data.estado as EstadoActividad;
-      console.log(`🔔 Cambio de estado detectado: ${estadoAnterior} → ${estadoNuevo}`);
     }
     
     if (data.observacion !== undefined) {
@@ -327,7 +513,13 @@ export async function PUT(req: NextRequest) {
       where: { id: Number(id) },
       data: updateData,
       include: {
-        causa: true,
+        causa: {
+          select: {
+            id: true,
+            ruc: true,
+            denominacionCausa: true
+          }
+        },
         tipoActividad: {
           include: {
             area: {
@@ -363,13 +555,11 @@ export async function PUT(req: NextRequest) {
       },
     });
 
-    // 🔔 Si hubo cambio de estado, preparar notificación para el creador original
     const shouldNotifyCreator = estadoCambio && 
-                               actividad.usuario.clerk_id !== actividad.usuarioAsignado?.clerk_id; // No notificar si es la misma persona
+                               actividad.usuario.clerk_id !== actividad.usuarioAsignado?.clerk_id;
 
     let notificationData = null;
     if (shouldNotifyCreator) {
-      // Mapear estados a mensajes legibles
       const estadosMap: Record<string, string> = {
         'inicio': 'Iniciada',
         'en_proceso': 'En Proceso', 
@@ -384,10 +574,8 @@ export async function PUT(req: NextRequest) {
         estadoAnterior: estadosMap[estadoAnterior] || estadoAnterior,
         estadoNuevo: estadosMap[estadoNuevo] || estadoNuevo,
         usuarioQueActualizo: actividad.usuarioAsignado?.nombre || 'Usuario',
-        targetUserClerkId: actividad.usuario.clerk_id // Usuario que creó la actividad (quien recibirá la notificación)
+        targetUserClerkId: actividad.usuario.clerk_id
       };
-      
-      console.log(`🔔 Preparando notificación de cambio de estado para: ${actividad.usuario.nombre}`);
     }
 
     return NextResponse.json({

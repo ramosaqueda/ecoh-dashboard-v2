@@ -1,120 +1,118 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import { useYearContext } from '@/components/YearSelector';
+
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, AlertCircle } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider
-} from '@/components/ui/tooltip';
 
-interface CausasCountResponse {
-  count: number;
-  previousCount?: number; // Para comparación con período anterior
-}
-
-const CausasCard: React.FC = () => {
-  const { selectedYear } = useYearContext();
-  const [data, setData] = useState<CausasCountResponse | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+export default function CausasCard() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const [totalCausas, setTotalCausas] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCausasCount = async () => {
+    // ✅ Esperar a que Clerk esté listo
+    if (!isLoaded) {
+      console.log('⏳ [CausasCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [CausasCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
+    const fetchCausas = async () => {
       try {
-        setLoading(true);
+        console.log('📊 [CausasCard] Cargando datos de causas...');
         
-        // Construir URL para la API
+        // ✅ CORRECCIÓN: Mantener la construcción original de URL
         const url = new URL('/api/causas', window.location.origin);
         url.searchParams.append('count', 'true');
         
-        // Solo añadir year si no es "todos"
-        if (selectedYear !== 'todos') {
-          url.searchParams.append('year', selectedYear);
-        }
+        console.log('📊 [CausasCard] URL:', url.toString());
         
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+          credentials: 'include' // ✅ Agregar credentials
+        });
+
+        console.log('📊 [CausasCard] Response status:', response.status);
         
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          const errorText = await response.text();
+          console.error('❌ [CausasCard] Error response:', errorText);
+          throw new Error(`HTTP ${response.status}`);
         }
-        const responseData: CausasCountResponse = await response.json();
-        setData(responseData);
-      } catch (err) {
-        setError('Error al obtener el conteo de causas');
-        console.error('Error:', err);
+
+        const data = await response.json();
+        console.log('📊 [CausasCard] Data received:', data);
+        
+        setTotalCausas(data.total || data.count || 0);
+        setError(null);
+        console.log('✅ [CausasCard] Datos cargados:', data.total || data.count);
+        
+      } catch (error) {
+        console.error('❌ [CausasCard] Error:', error);
+        setError('Error al cargar datos');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchCausasCount();
-  }, [selectedYear]); // Dependencia en selectedYear
+    fetchCausas();
+    
+  }, [isLoaded, isSignedIn]);
 
-  // Calcular el porcentaje de cambio (supongamos que tenemos previousCount en la respuesta)
-  const percentageChange = data && data.previousCount 
-    ? ((data.count - data.previousCount) / data.previousCount * 100).toFixed(1) 
-    : null;
-
-  return (
-    <TooltipProvider>
-      <Card className="h-full">
+  // Loading mientras Clerk carga
+  if (!isLoaded || isLoading) {
+    return (
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm font-medium">TOTAL INGRESOS</CardTitle>
-            <Tooltip>
-              <TooltipTrigger>
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Total de causas ingresadas</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <div className="h-8 w-8 rounded-full bg-blue-100 p-1.5 flex items-center justify-center">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-          </div>
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-4 rounded-full" />
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="w-full h-24 flex items-center justify-center">
-              <div className="animate-pulse h-10 w-24 bg-slate-200 rounded-md"></div>
-            </div>
-          ) : error ? (
-            <div className="w-full h-24 flex flex-col items-center justify-center text-red-500">
-              <AlertCircle className="h-8 w-8 mb-2" />
-              <p className="text-xs">{error}</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-4xl font-bold">{data?.count?.toLocaleString() || 'N/A'}</p>
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-muted-foreground">
-                  Causas Ingresadas a ECOH
-                </p>
-                {percentageChange && (
-                  <div className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    parseFloat(percentageChange) >= 0 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {parseFloat(percentageChange) >= 0 ? '+' : ''}{percentageChange}%
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <Skeleton className="h-8 w-16 mb-2" />
+          <Skeleton className="h-3 w-32" />
         </CardContent>
       </Card>
-    </TooltipProvider>
-  );
-};
+    );
+  }
 
-export default CausasCard;
+  // Error o no autenticado
+  if (!isSignedIn || error) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Causas</CardTitle>
+          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-xs text-muted-foreground">
+            {!isSignedIn ? 'No autenticado' : error}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Render normal con datos
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Total Causas</CardTitle>
+        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{totalCausas.toLocaleString()}</div>
+        <p className="text-xs text-muted-foreground">
+          Causas registradas en el sistema
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

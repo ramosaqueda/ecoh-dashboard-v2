@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       actividadId: actividadId || 1,
       causaRuc: 'TEST-001',
       tipoActividad: 'Actividad de Prueba',
-      actionUrl: `/dashboard/actividades?highlight=${actividadId || 1}`
+      actionUrl: ` /dashboard/todo?highlight=${actividadId || 1}`
     };
 
     // Intentar enviar vía SSE
