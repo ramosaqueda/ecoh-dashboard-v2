@@ -1,5 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+
 import {
   Card,
   CardContent,
@@ -7,7 +9,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { useYearContext } from '@/components/YearSelector';
-import { TrendingUp, Scale, Shield, BarChart3 } from 'lucide-react';
+import { Scale, Shield, BarChart3 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface ComparisonData {
@@ -16,58 +18,88 @@ interface ComparisonData {
   totalCount: number;
 }
 
+// ✅ IDs EXACTOS de tu base de datos
+const ORIGEN_IDS = {
+  SACFI: 1,          // ID 1: SACFI
+  ECOH_ELQUI: 2,     // ID 2: ECOH Elqui
+  ECOH_LIMARI: 3,    // ID 3: ECOH Limarí
+  OTRAS: 4           // ID 4: Otras Fiscalías
+};
+
 const EcohSacfiComparisonCard: React.FC = () => {
+  const { isLoaded, isSignedIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const { selectedYear } = useYearContext();
   const [data, setData] = useState<ComparisonData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isLoaded) {
+      console.log('⏳ [CausasCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [CausasCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
     const fetchComparisonData = async () => {
       try {
-        setLoading(true);
+        setIsLoading(true);
         
-        // Hacer las tres consultas en paralelo
         const baseUrl = new URL('/api/causas', window.location.origin);
+        const yearParam = selectedYear !== 'todos' ? `&year=${selectedYear}` : '';
         
+        // ✅ Consultas usando origenCausaId con IDs correctos
         const promises = [
-          // ECOH
-          fetch(`${baseUrl}?count=true&causaEcoh=true${selectedYear !== 'todos' ? `&year=${selectedYear}` : ''}`),
-          // SACFI
-          fetch(`${baseUrl}?count=true&causaSacfi=true${selectedYear !== 'todos' ? `&year=${selectedYear}` : ''}`),
+          // ECOH Elqui (ID 2)
+          fetch(`${baseUrl}?count=true&origenCausaId=${ORIGEN_IDS.ECOH_ELQUI}${yearParam}`),
+          // ECOH Limarí (ID 3)
+          fetch(`${baseUrl}?count=true&origenCausaId=${ORIGEN_IDS.ECOH_LIMARI}${yearParam}`),
+          // SACFI (ID 1)
+          fetch(`${baseUrl}?count=true&origenCausaId=${ORIGEN_IDS.SACFI}${yearParam}`),
           // Total
-          fetch(`${baseUrl}?count=true${selectedYear !== 'todos' ? `&year=${selectedYear}` : ''}`)
+          fetch(`${baseUrl}?count=true${yearParam}`)
         ];
         
-        const [ecohResponse, sacfiResponse, totalResponse] = await Promise.all(promises);
+        const [ecohElquiResponse, ecohLimariResponse, sacfiResponse, totalResponse] = await Promise.all(promises);
         
-        if (!ecohResponse.ok || !sacfiResponse.ok || !totalResponse.ok) {
+        if (!ecohElquiResponse.ok || !ecohLimariResponse.ok || !sacfiResponse.ok || !totalResponse.ok) {
           throw new Error('Error en una o más consultas');
         }
         
-        const [ecohData, sacfiData, totalData] = await Promise.all([
-          ecohResponse.json(),
+        const [ecohElquiData, ecohLimariData, sacfiData, totalData] = await Promise.all([
+          ecohElquiResponse.json(),
+          ecohLimariResponse.json(),
           sacfiResponse.json(),
           totalResponse.json()
         ]);
         
+        // ✅ Sumar ECOH Elqui + ECOH Limarí = Total ECOH
+        const totalEcohCount = (ecohElquiData.count || 0) + (ecohLimariData.count || 0);
+        
         setData({
-          ecohCount: ecohData.count,
-          sacfiCount: sacfiData.count,
-          totalCount: totalData.count
+          ecohCount: totalEcohCount,
+          sacfiCount: sacfiData.count || 0,
+          totalCount: totalData.count || 0
         });
+        
+        setError(null);
       } catch (err) {
         setError('Error al obtener datos comparativos');
         console.error('Error:', err);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchComparisonData();
-  }, [selectedYear]);
+  }, [selectedYear, isLoaded, isSignedIn]);
 
-  if (loading) {
+  if (!isLoaded || isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -112,14 +144,14 @@ const EcohSacfiComparisonCard: React.FC = () => {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <BarChart3 className="h-4 w-4" />
-           Distribución causas en unidad SACFI/ECOH
+          Distribución causas en unidad SACFI/ECOH
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {selectedYear === 'todos' ? 'Todos los años' : selectedYear}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* ECOH */}
+        {/* ECOH (Suma de Elqui + Limarí) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -163,11 +195,11 @@ const EcohSacfiComparisonCard: React.FC = () => {
           />
         </div>
 
-        {/* Otras */}
+        {/* Otras Fiscalías */}
         {otherPercentage > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">Otras</span>
+              <span className="text-sm font-medium text-gray-600">Otras Fiscalías</span>
               <div className="text-right">
                 <p className="text-sm font-bold text-gray-600">
                   {(data.totalCount - data.ecohCount - data.sacfiCount).toLocaleString()}

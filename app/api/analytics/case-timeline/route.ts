@@ -24,13 +24,13 @@ export async function GET(req: Request) {
     const year = parseInt(
       searchParams.get('year') || new Date().getFullYear().toString()
     );
-    const type = searchParams.get('type') || 'all';
+    const origenCausaId = searchParams.get('origenCausaId'); // ✅ Nuevo parámetro
     const delitoId = searchParams.get('delito_id');
 
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31);
 
-    // Construir las condiciones where
+    // ✅ Construir las condiciones where
     const whereCondition: any = {
       fechaDelHecho: {
         gte: startDate,
@@ -38,12 +38,12 @@ export async function GET(req: Request) {
       }
     };
 
-    // Añadir condición para causas ECOH si se especifica
-    if (type === 'ecoh') {
-      whereCondition.causaEcoh = true;
+    // ✅ Filtro por origen de causa (reemplaza el filtro de causaEcoh)
+    if (origenCausaId && origenCausaId !== 'todos') {
+      whereCondition.origenCausaId = parseInt(origenCausaId);
     }
 
-    // Añadir filtro de tipo de delito si se proporciona
+    // ✅ Filtro de tipo de delito
     if (delitoId) {
       whereCondition.delitoId = parseInt(delitoId);
     }

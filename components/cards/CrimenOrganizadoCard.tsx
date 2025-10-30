@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -37,52 +39,93 @@ interface TipoDelito {
 }
 
 export function CrimenOrganizadoCard() {
+  const { isLoaded, isSignedIn } = useAuth();
   const { selectedYear } = useYearContext();
   const [data, setData] = useState<CrimenOrganizadoData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tiposDelito, setTiposDelito] = useState<TipoDelito[]>([]);
   const [selectedTipoDelito, setSelectedTipoDelito] = useState('todos');
 
   useEffect(() => {
+    // ✅ Esperar a que Clerk esté listo
+    if (!isLoaded) {
+      console.log('⏳ [CrimenOrganizadoCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [CrimenOrganizadoCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
     const fetchTiposDelito = async () => {
       try {
-        const response = await fetch('/api/delito');
+        console.log('📊 [CrimenOrganizadoCard] Cargando tipos de delito...');
+        const response = await fetch('/api/delito', {
+          credentials: 'include'
+        });
         if (!response.ok) throw new Error('Error al cargar tipos de delito');
         const data = await response.json();
         setTiposDelito(data);
+        console.log('✅ [CrimenOrganizadoCard] Tipos de delito cargados:', data.length);
       } catch (error) {
-        console.error('Error al cargar tipos de delito:', error);
+        console.error('❌ [CrimenOrganizadoCard] Error al cargar tipos de delito:', error);
         setTiposDelito([]);
       }
     };
 
     fetchTiposDelito();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
+    // ✅ Esperar a que Clerk esté listo
+    if (!isLoaded) {
+      console.log('⏳ [CrimenOrganizadoCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [CrimenOrganizadoCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        console.log('📊 [CrimenOrganizadoCard] Cargando datos...', { selectedYear, selectedTipoDelito });
         const params = new URLSearchParams({
           ...(selectedYear !== 'todos' && { year: selectedYear }),
           ...(selectedTipoDelito !== 'todos' && { tipoDelito: selectedTipoDelito })
         });
 
         const url = `/api/analytics/crimen-organizado?${params.toString()}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          credentials: 'include'
+        });
+        
+        console.log('📊 [CrimenOrganizadoCard] Response status:', response.status);
+        
         if (!response.ok) throw new Error('Error al cargar datos de crimen organizado');
         const data = await response.json();
         setData(data);
+        setError(null);
+        console.log('✅ [CrimenOrganizadoCard] Datos cargados:', data);
       } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ [CrimenOrganizadoCard] Error:', error);
         setData(null);
+        setError('Error al cargar datos');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedYear, selectedTipoDelito]);
+  }, [isLoaded, isSignedIn, selectedYear, selectedTipoDelito]);
 
   const getColorByPercentage = (percentage: number) => {
     if (percentage >= 30) return 'bg-red-500';
@@ -90,22 +133,37 @@ export function CrimenOrganizadoCard() {
     return 'bg-blue-500';
   };
 
-  if (isLoading) {
+  // Loading mientras Clerk carga o datos cargan
+  if (!isLoaded || isLoading) {
     return (
       <Card className="h-full">
-        <CardContent className="flex items-center justify-center h-full py-10">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <CardHeader className="space-y-3 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-md" />
+              <Skeleton className="h-6 w-40" />
+            </div>
+            <Skeleton className="h-5 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-8 w-full" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-32 w-full" />
         </CardContent>
       </Card>
     );
   }
 
-  if (!data) {
+  // Error o no autenticado
+  if (!isSignedIn || error || !data) {
     return (
-      <Card className="h-full">
+      <Card className="h-full border-l-4 border-l-red-500">
         <CardContent className="flex flex-col items-center justify-center gap-2 h-full py-10">
           <AlertCircle className="h-8 w-8 text-red-500" />
-          <p className="text-sm text-muted-foreground">Error al cargar datos</p>
+          <p className="text-sm text-muted-foreground">
+            {!isSignedIn ? 'No autenticado' : error || 'Error al cargar datos'}
+          </p>
         </CardContent>
       </Card>
     );

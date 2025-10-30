@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { YearProvider, YearSelector } from '@/components/YearSelector';
 import CaseTimelineChart from '@/components/charts/CaseTimelineChart';
 import PageContainer from '@/components/layout/page-container';
@@ -19,127 +21,200 @@ import { EsclarecimientoCard } from '@/components/cards/EsclarecimientoCard';
 import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
 import NationalityDistribution from '@/components/charts/NationalityDistribution';
 import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
-import { SSEDebugPanel } from '@/components/debug/SSEDebugPanel'; 
-import { useEffect, useState } from 'react';
-import { useAuth, useUser } from '@clerk/nextjs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  // ✅ SOLUCIÓN: Agregar verificación de auth
+  // 🔐 VERIFICACIÓN CENTRALIZADA DE AUTENTICACIÓN
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { user, isLoaded: userLoaded } = useUser();
+  const [isReady, setIsReady] = useState(false);
   const [userName, setUserName] = useState('Usuario');
 
+  // ⏳ Esperar a que Clerk esté completamente cargado
   useEffect(() => {
-    if (userLoaded && user) {
-      setUserName(user.firstName || 'Usuario');
+    if (!authLoaded || !userLoaded) {
+      console.log('⏳ [Dashboard] Esperando a que Clerk se cargue...');
+      return;
     }
-  }, [user, userLoaded]);
 
-  // ✅ CRÍTICO: Mostrar loading mientras Clerk se inicializa
-  if (!authLoaded || !userLoaded) {
+    if (!isSignedIn) {
+      console.log('❌ [Dashboard] Usuario no autenticado');
+      return;
+    }
+
+    // Obtener nombre del usuario
+    if (user) {
+      const name = user.firstName || user.username || 'Usuario';
+      setUserName(name);
+      console.log(`✅ [Dashboard] Usuario autenticado: ${name}`);
+    }
+
+    // Todo listo, mostrar dashboard
+    setIsReady(true);
+  }, [authLoaded, userLoaded, isSignedIn, user]);
+
+  // 🔄 LOADING STATE - Mientras Clerk se inicializa
+  if (!authLoaded || !userLoaded || !isReady) {
     return (
       <YearProvider>
         <PageContainer scrollable={true}>
           <div className="space-y-4 p-4 md:p-8">
+            {/* Header skeleton */}
             <div className="flex items-center justify-between">
               <Skeleton className="h-8 w-64" />
               <Skeleton className="h-10 w-32" />
             </div>
+            
+            {/* Tabs skeleton */}
             <div className="space-y-4">
               <Skeleton className="h-10 w-full max-w-md" />
+              
+              {/* Cards row 1 skeleton */}
               <div className="grid gap-4 md:grid-cols-4">
                 {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-32" />
+                  <Skeleton key={`card-${i}`} className="h-32" />
                 ))}
               </div>
+              
+              {/* Cards row 2 skeleton */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={`card2-${i}`} className="h-32" />
+                ))}
+              </div>
+              
+              {/* Charts skeleton */}
               <div className="grid gap-4 md:grid-cols-2">
                 <Skeleton className="h-64" />
                 <Skeleton className="h-64" />
               </div>
             </div>
+
+            {/* Loading indicator */}
+            <div className="fixed bottom-8 right-8 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Cargando dashboard...</span>
+            </div>
           </div>
         </PageContainer>
       </YearProvider>
     );
   }
 
-  // ✅ Verificar autenticación
+  // ❌ NO AUTENTICADO
   if (!isSignedIn) {
     return (
       <YearProvider>
         <PageContainer scrollable={true}>
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-600">Por favor, inicia sesión para ver el dashboard.</p>
+          <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-gray-900">Acceso Restringido</h2>
+              <p className="text-gray-600">
+                Por favor, inicia sesión para acceder al dashboard de ECOH.
+              </p>
+            </div>
           </div>
         </PageContainer>
       </YearProvider>
     );
   }
 
-  // ✅ TODO LISTO - Renderizar dashboard
+  // ✅ DASHBOARD COMPLETO - Usuario autenticado y sistema listo
   return (
     <YearProvider>
       <PageContainer scrollable={true}>
         <div className="space-y-4 p-4 md:p-8">
+          {/* ========================================
+              HEADER - Bienvenida y selector de año
+              ======================================== */}
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight">
-              Hola, {userName} de vuelta por aqui? 👋
+              Hola, {userName} de vuelta por aquí? 👋
             </h2>
             <div className="hidden items-center space-x-2 md:flex">
               <YearSelector />
             </div>
           </div>
 
+          {/* ========================================
+              TABS - Navegación principal
+              ======================================== */}
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
               <TabsTrigger value="overview">Estadísticas</TabsTrigger>
-              <TabsTrigger value="analytics">
-                Analítica de actividades
-              </TabsTrigger>
+              <TabsTrigger value="analytics">Actividades</TabsTrigger>
             </TabsList>
             
+            {/* ========================================
+                TAB: OVERVIEW - Estadísticas principales
+                ======================================== */}
             <TabsContent value="overview" className="space-y-6">
+              
+              {/* SECCIÓN 1: Cards de Causas */}
               <div className="grid gap-4 md:grid-cols-4">
+                {/* Card general de todas las causas */}
                 <CausasCard />
                 
+                {/* Cards especializadas por tipo */}
+                <CausasEcohCard />
+                <CausasSacfiCard />
+                <CausasLegadaCard />
               </div>
 
+              {/* SECCIÓN 2: Cards de Análisis */}
               <div className="grid gap-4 md:grid-cols-3">
-                 
+                {/* Comparativa ECOH vs SACFI */}
+                <EcohSacfiComparisonCard />
+                
+                {/* Crimen Organizado */}
+                <CrimenOrganizadoCard />
+                
+                {/* Tasa de Esclarecimiento */}
+                <EsclarecimientoCard />
               </div>
 
+              {/* SECCIÓN 3: Línea de Tiempo de Causas */}
               <div className="w-full">
-                 
+                <CauseTimeline />
               </div>
 
+              {/* SECCIÓN 4: Gráficos Principales - Primera fila */}
               <div className="grid gap-4 md:grid-cols-2">
-                 
+                {/* Evolución temporal de casos */}
+                <CaseTimelineChart />
+                
+                {/* Distribución de delitos */}
+                <DelitosDistribution />
               </div>
 
+              {/* SECCIÓN 5: Gráficos Secundarios - Segunda fila */}
               <div className="grid gap-4 md:grid-cols-3">
+                {/* Flujo de imputados */}
+                <ImputadosFlow />
                 
+                {/* Distribución de abogados/analistas */}
+                <AbogadoAnalistaChart />
+                
+                {/* Distribución de nacionalidades */}
+                <NationalityDistribution />
               </div>
 
+              {/* SECCIÓN 6: Gráfico de Formalización */}
               <div className="grid gap-6">
-                 
+                <FormalizationChart />
               </div>
 
+              {/* SECCIÓN 7: Mapa de Calor - Ancho completo */}
               <div className="w-full">
-                
+                <CasesHeatmap />
               </div>
             </TabsContent>
-            
-            <TabsContent value="analytics" className="space-y-6">
+ 
+            <TabsContent value="analytics" className="space-y-4">
               <AnalyticsDashboard />
             </TabsContent>
           </Tabs>
-          
-          {process.env.NODE_ENV === 'development' && (
-            <div className="fixed bottom-4 right-4 z-50">
-              <SSEDebugPanel />
-            </div>
-          )}
         </div>
       </PageContainer>
     </YearProvider>

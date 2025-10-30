@@ -1,0 +1,61 @@
+# docker-compose.yml CORREGIDO - Solo aplicación Next.js
+# Base de datos PostgreSQL local en la máquina
+
+services:
+  # Solo la aplicación Next.js
+  app:
+    build: .
+    container_name: ecoh-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Variables de aplicación
+      - NODE_ENV=production
+      
+      # Base de datos (PostgreSQL local)
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@host.docker.internal:${DB_PORT}/${DB_NAME}?schema=public
+      
+      # URLs de la aplicación
+      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      
+      # Variables de Clerk
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
+      - NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
+      - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL}
+      - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL}
+    
+    # VOLÚMENES CORREGIDOS para persistencia
+    volumes:
+      # Datos generales de la aplicación
+      - app_data:/app/data
+      
+      # 🔥 UPLOADS - CORREGIDO: mapear public/uploads (coincide con tu código)
+      - ./uploads:/app/public/uploads
+      
+      # Opcional: Logs persistentes
+      - ./logs:/app/logs
+    
+    networks:
+      - app_network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Redes
+networks:
+  app_network:
+    driver: bridge
+
+# Volúmenes nombrados (FALTABA ESTA SECCIÓN)
+volumes:
+  app_data:
+    driver: local
+    name: actividades_app_data

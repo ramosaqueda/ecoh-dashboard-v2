@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -12,7 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from '@/components/ui/progress';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -37,55 +39,127 @@ interface TipoDelito {
   nombre: string;
 }
 
+interface OrigenCausa {
+  id: number;
+  nombre: string;
+  color: string | null;
+}
+
 export function EsclarecimientoCard() {
+  const { isLoaded, isSignedIn } = useAuth();
   const { selectedYear } = useYearContext();
   const [data, setData] = useState<EsclarecimientoData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tiposDelito, setTiposDelito] = useState<TipoDelito[]>([]);
+  const [origenes, setOrigenes] = useState<OrigenCausa[]>([]); // ✨ NUEVO
   const [selectedTipoDelito, setSelectedTipoDelito] = useState('todos');
+  const [selectedOrigen, setSelectedOrigen] = useState('todos'); // ✨ NUEVO
   const [soloHomicidiosConsumados, setSoloHomicidiosConsumados] = useState(false);
 
   useEffect(() => {
+    if (!isLoaded) {
+      console.log('⏳ [EsclarecimientoCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [EsclarecimientoCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
     const fetchTiposDelito = async () => {
       try {
-        const response = await fetch('/api/delito');
+        console.log('📊 [EsclarecimientoCard] Cargando tipos de delito...');
+        const response = await fetch('/api/delito', {
+          credentials: 'include'
+        });
         if (!response.ok) throw new Error('Error al cargar tipos de delito');
         const data = await response.json();
         setTiposDelito(data);
+        console.log('✅ [EsclarecimientoCard] Tipos de delito cargados:', data.length);
       } catch (error) {
-        console.error('Error al cargar tipos de delito:', error);
+        console.error('❌ [EsclarecimientoCard] Error al cargar tipos de delito:', error);
         setTiposDelito([]);
       }
     };
 
+    // ✨ NUEVO: Cargar orígenes de causa
+    const fetchOrigenes = async () => {
+      try {
+        console.log('📊 [EsclarecimientoCard] Cargando orígenes de causa...');
+        const response = await fetch('/api/origenes-causa', {
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Error al cargar orígenes');
+        const data = await response.json();
+        setOrigenes(data);
+        console.log('✅ [EsclarecimientoCard] Orígenes cargados:', data.length);
+      } catch (error) {
+        console.error('❌ [EsclarecimientoCard] Error al cargar orígenes:', error);
+        setOrigenes([]);
+      }
+    };
+
     fetchTiposDelito();
-  }, []);
+    fetchOrigenes();
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
+    if (!isLoaded) {
+      console.log('⏳ [EsclarecimientoCard] Esperando a que Clerk se cargue...');
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('❌ [EsclarecimientoCard] Usuario no autenticado');
+      setIsLoading(false);
+      setError('No autenticado');
+      return;
+    }
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        console.log('📊 [EsclarecimientoCard] Cargando datos...', { 
+          selectedYear, 
+          selectedTipoDelito, 
+          selectedOrigen, // ✨ NUEVO
+          soloHomicidiosConsumados 
+        });
+        
         const params = new URLSearchParams({
           ...(selectedYear !== 'todos' && { year: selectedYear }),
           ...(selectedTipoDelito !== 'todos' && { tipoDelito: selectedTipoDelito }),
+          ...(selectedOrigen !== 'todos' && { origenCausaId: selectedOrigen }), // ✨ NUEVO
           ...(soloHomicidiosConsumados && { homicidioConsumado: 'true' })
         });
 
         const url = `/api/analytics/tasa-esclarecimiento?${params.toString()}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          credentials: 'include'
+        });
+        
+        console.log('📊 [EsclarecimientoCard] Response status:', response.status);
+        
         if (!response.ok) throw new Error('Error al cargar datos de esclarecimiento');
         const data = await response.json();
         setData(data);
+        setError(null);
+        console.log('✅ [EsclarecimientoCard] Datos cargados:', data);
       } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ [EsclarecimientoCard] Error:', error);
         setData(null);
+        setError('Error al cargar datos');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedYear, selectedTipoDelito, soloHomicidiosConsumados]);
+  }, [isLoaded, isSignedIn, selectedYear, selectedTipoDelito, selectedOrigen, soloHomicidiosConsumados]); // ✨ Agregado selectedOrigen
 
   const getColorByPercentage = (percentage: number) => {
     if (percentage >= 70) return 'bg-green-500';
@@ -93,22 +167,40 @@ export function EsclarecimientoCard() {
     return 'bg-red-500';
   };
 
-  if (isLoading) {
+  if (!isLoaded || isLoading) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <CardHeader className="space-y-3 pb-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-6 w-48" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-16 w-full" />
+          <div className="grid grid-cols-3 gap-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!data) {
+  if (!isSignedIn || error || !data) {
     return (
-      <Card>
+      <Card className="border-l-4 border-l-red-500">
         <CardContent className="flex flex-col items-center justify-center gap-2 py-10">
           <AlertCircle className="h-8 w-8 text-red-500" />
-          <p className="text-sm text-muted-foreground">Error al cargar datos</p>
+          <p className="text-sm text-muted-foreground">
+            {!isSignedIn ? 'No autenticado' : error || 'Error al cargar datos'}
+          </p>
         </CardContent>
       </Card>
     );
@@ -137,6 +229,22 @@ export function EsclarecimientoCard() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
+              {/* ✨ NUEVO: Selector de origen */}
+              <Select value={selectedOrigen} onValueChange={setSelectedOrigen}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Origen de causa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los orígenes</SelectItem>
+                  {origenes.map((origen) => (
+                    <SelectItem key={origen.id} value={origen.id.toString()}>
+                      {origen.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Selector de tipo de delito (existente) */}
               <Select value={selectedTipoDelito} onValueChange={setSelectedTipoDelito}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Tipo de delito" />
@@ -151,6 +259,8 @@ export function EsclarecimientoCard() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Switch de homicidios consumados (existente) */}
             <div className="flex items-center space-x-2">
               <Switch
                 id="homicidio-consumado"

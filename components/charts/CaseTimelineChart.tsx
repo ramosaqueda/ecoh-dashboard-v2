@@ -11,13 +11,11 @@ import {
   Label
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label as UILabel } from '@/components/ui/label';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { useYearContext } from '@/components/YearSelector';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Importamos el componente corregido
 import ChartDelitoSelect from '@/components/select/ChartDelitoSelect';
 
 interface MonthlyData {
@@ -36,22 +34,46 @@ interface TooltipProps {
   label?: string;
 }
 
+interface OrigenCausa {
+  id: number;
+  nombre: string;
+  color: string | null;
+}
+
 export default function CaseTimelineChart() {
   const { selectedYear } = useYearContext();
   const [localYear, setLocalYear] = useState<string>(new Date().getFullYear().toString());
   const [data, setData] = useState<MonthlyData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [caseType, setCaseType] = useState<'all' | 'ecoh'>('all');
   const [showComparison, setShowComparison] = useState<boolean>(true);
   
-  // Estado para el filtro de delito ("all" para "todos")
+  // ✅ Estados para filtros
   const [tipoDelitoFilter, setTipoDelitoFilter] = useState<string>('all');
+  const [origenCausaId, setOrigenCausaId] = useState<string>('todos'); // ✨ Nuevo
+  const [origenes, setOrigenes] = useState<OrigenCausa[]>([]); // ✨ Nuevo
 
   // Generar array de años desde 2024 hasta el año actual
   const years = Array.from(
     { length: new Date().getFullYear() - 2023 },
     (_, i) => (2024 + i).toString()
   );
+
+  // ✨ Cargar orígenes de causa
+  useEffect(() => {
+    const fetchOrigenes = async () => {
+      try {
+        const response = await fetch('/api/origenes-causa');
+        if (!response.ok) throw new Error('Error al cargar orígenes');
+        const data = await response.json();
+        setOrigenes(data);
+      } catch (error) {
+        console.error('Error al cargar orígenes:', error);
+        setOrigenes([]);
+      }
+    };
+
+    fetchOrigenes();
+  }, []);
 
   // Actualizar el año local cuando cambia el año global, siempre que no sea "todos"
   useEffect(() => {
@@ -60,15 +82,22 @@ export default function CaseTimelineChart() {
     }
   }, [selectedYear]);
 
-  // Memoizamos esta función para evitar recreaciones innecesarias
-  const fetchDataForYear = useCallback(async (year: string, type: string, tipoDelitoId: string): Promise<MonthlyData[]> => {
+  // ✅ Función para obtener datos de un año específico
+  const fetchDataForYear = useCallback(async (
+    year: string, 
+    origenId: string, 
+    tipoDelitoId: string
+  ): Promise<MonthlyData[]> => {
     try {
-      // Construir URL para la API
       const url = new URL('/api/analytics/case-timeline', window.location.origin);
-      url.searchParams.append('type', type);
       url.searchParams.append('year', year);
       
-      // Añadir filtro de tipo de delito solo si no es "all" (todos)
+      // ✅ Agregar filtro de origen
+      if (origenId && origenId !== 'todos') {
+        url.searchParams.append('origenCausaId', origenId);
+      }
+      
+      // ✅ Agregar filtro de tipo de delito
       if (tipoDelitoId && tipoDelitoId !== 'all') {
         url.searchParams.append('delito_id', tipoDelitoId);
       }
@@ -83,16 +112,20 @@ export default function CaseTimelineChart() {
     }
   }, []);
 
-  // Memoizamos esta función para evitar recreaciones innecesarias
-  const fetchData = useCallback(async (year: string, type: 'all' | 'ecoh', tipoDelitoId: string): Promise<void> => {
+  // ✅ Función principal para obtener y combinar datos
+  const fetchData = useCallback(async (
+    year: string, 
+    origenId: string, 
+    tipoDelitoId: string
+  ): Promise<void> => {
     setIsLoading(true);
     try {
       // Obtener datos del año seleccionado
-      const currentYearData = await fetchDataForYear(year, type, tipoDelitoId);
+      const currentYearData = await fetchDataForYear(year, origenId, tipoDelitoId);
       
       // Obtener datos del año anterior para comparación
       const prevYear = (parseInt(year) - 1).toString();
-      const prevYearData = await fetchDataForYear(prevYear, type, tipoDelitoId);
+      const prevYearData = await fetchDataForYear(prevYear, origenId, tipoDelitoId);
       
       // Combinar datos para la visualización
       const combinedData = currentYearData.map((item: MonthlyData) => {
@@ -113,14 +146,19 @@ export default function CaseTimelineChart() {
     }
   }, [fetchDataForYear]);
 
-  // Controlamos las dependencias del efecto para evitar llamadas innecesarias
+  // ✅ Effect para cargar datos cuando cambian los filtros
   useEffect(() => {
-    fetchData(localYear, caseType, tipoDelitoFilter);
-  }, [localYear, caseType, tipoDelitoFilter, fetchData]);
+    fetchData(localYear, origenCausaId, tipoDelitoFilter);
+  }, [localYear, origenCausaId, tipoDelitoFilter, fetchData]);
 
   // Handler para cambios en el filtro de delito
   const handleDelitoChange = useCallback((value: string) => {
     setTipoDelitoFilter(value);
+  }, []);
+
+  // ✨ Handler para cambios en el filtro de origen
+  const handleOrigenChange = useCallback((value: string) => {
+    setOrigenCausaId(value);
   }, []);
 
   const CustomTooltip: React.FC<TooltipProps> = ({ active, payload, label }) => {
@@ -142,7 +180,14 @@ export default function CaseTimelineChart() {
     return null;
   };
 
-  // Función para obtener la etiqueta del delito para el título del gráfico
+  // ✅ Función para obtener el nombre del origen seleccionado
+  const getOrigenLabel = (): string => {
+    if (origenCausaId === 'todos') return 'Todos los orígenes';
+    const origen = origenes.find(o => o.id.toString() === origenCausaId);
+    return origen ? origen.nombre : 'Origen seleccionado';
+  };
+
+  // Función para obtener la etiqueta del delito
   const getDelitoLabel = (): string => {
     return tipoDelitoFilter !== 'all' ? 'Delito seleccionado' : 'Todos los delitos';
   };
@@ -179,24 +224,25 @@ export default function CaseTimelineChart() {
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
-              <RadioGroup
-                defaultValue="all"
-                value={caseType}
-                onValueChange={(value: 'all' | 'ecoh') => setCaseType(value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all" />
-                  <UILabel htmlFor="all">Todas las causas</UILabel>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ecoh" id="ecoh" />
-                  <UILabel htmlFor="ecoh">Solo causas ECOH</UILabel>
-                </div>
-              </RadioGroup>
+              {/* ✨ Selector de Origen (reemplaza el RadioGroup) */}
+              <div className="w-[180px]">
+                <Select value={origenCausaId} onValueChange={handleOrigenChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Origen de causa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los orígenes</SelectItem>
+                    {origenes.map((origen) => (
+                      <SelectItem key={origen.id} value={origen.id.toString()}>
+                        {origen.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
+              {/* Selector de Delito (existente) */}
               <div className="w-[200px]">
-                {/* Usar el componente corregido */}
                 <ChartDelitoSelect
                   value={tipoDelitoFilter}
                   onValueChange={handleDelitoChange}
@@ -204,6 +250,7 @@ export default function CaseTimelineChart() {
                 />
               </div>
               
+              {/* Switch de comparación (existente) */}
               <div className="flex items-center space-x-2 ml-auto">
                 <Switch
                   id="compare-years"
@@ -254,7 +301,7 @@ export default function CaseTimelineChart() {
                 <Line
                   type="monotone"
                   dataKey="count"
-                  name={`${caseType === 'all' ? 'Todos los casos' : 'Casos ECOH'} - ${getDelitoLabel()} (${localYear})`}
+                  name={`${getOrigenLabel()} - ${getDelitoLabel()} (${localYear})`}
                   stroke="#8884d8"
                   strokeWidth={2}
                   dot={{ r: 4 }}
@@ -264,7 +311,7 @@ export default function CaseTimelineChart() {
                   <Line
                     type="monotone"
                     dataKey="countPrevYear"
-                    name={`${caseType === 'all' ? 'Todos los casos' : 'Casos ECOH'} - ${getDelitoLabel()} (${parseInt(localYear) - 1})`}
+                    name={`${getOrigenLabel()} - ${getDelitoLabel()} (${parseInt(localYear) - 1})`}
                     stroke="#82ca9d"
                     strokeWidth={2}
                     strokeDasharray="5 5"

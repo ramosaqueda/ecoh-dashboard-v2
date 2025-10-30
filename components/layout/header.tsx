@@ -33,7 +33,7 @@ export default function Header() {
               <div className="flex items-center transition-transform duration-300 group-hover:scale-105">
                 <div>
                   <span className="bg-gradient-to-r from-blue-900 via-blue-700 to-blue-500 bg-clip-text text-4xl    font-bold tracking-tight text-transparent dark:from-blue-300 dark:via-blue-200 dark:to-blue-100">
-                    F-Insight
+                    EcohTools
                   </span>
                   <div className="h-0.5 w-0 bg-gradient-to-r from-blue-700 to-blue-400 transition-all duration-300 group-hover:w-full" />
                 </div>

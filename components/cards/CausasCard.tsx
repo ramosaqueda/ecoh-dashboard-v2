@@ -1,117 +1,121 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@clerk/nextjs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, Loader2 } from 'lucide-react';
+
+interface CausasStats {
+  total: number;
+  activas: number;
+  cerradas: number;
+}
 
 export default function CausasCard() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const [totalCausas, setTotalCausas] = useState<number>(0);
+  const [data, setData] = useState<CausasStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // ✅ Esperar a que Clerk esté listo
-    if (!isLoaded) {
-      console.log('⏳ [CausasCard] Esperando a que Clerk se cargue...');
-      return;
-    }
+    // ✅ Ya no verificamos autenticación aquí
+    // El componente padre (dashboard/page.tsx) ya lo hizo
+    fetchCausasData();
+  }, []);
 
-    if (!isSignedIn) {
-      console.log('❌ [CausasCard] Usuario no autenticado');
-      setIsLoading(false);
-      setError('No autenticado');
-      return;
-    }
-
-    const fetchCausas = async () => {
-      try {
-        console.log('📊 [CausasCard] Cargando datos de causas...');
-        
-        // ✅ CORRECCIÓN: Mantener la construcción original de URL
-        const url = new URL('/api/causas', window.location.origin);
-        url.searchParams.append('count', 'true');
-        
-        console.log('📊 [CausasCard] URL:', url.toString());
-        
-        const response = await fetch(url.toString(), {
-          credentials: 'include' // ✅ Agregar credentials
-        });
-
-        console.log('📊 [CausasCard] Response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ [CausasCard] Error response:', errorText);
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('📊 [CausasCard] Data received:', data);
-        
-        setTotalCausas(data.total || data.count || 0);
-        setError(null);
-        console.log('✅ [CausasCard] Datos cargados:', data.total || data.count);
-        
-      } catch (error) {
-        console.error('❌ [CausasCard] Error:', error);
-        setError('Error al cargar datos');
-      } finally {
-        setIsLoading(false);
+  const fetchCausasData = async () => {
+    try {
+      console.log('📊 [CausasCard] Cargando datos de causas...');
+      
+      const response = await fetch('/api/causas/stats');
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-    };
+      
+      const result = await response.json();
+      setData(result);
+      console.log('✅ [CausasCard] Datos cargados correctamente');
+      
+    } catch (err) {
+      console.error('❌ [CausasCard] Error al cargar datos:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchCausas();
-    
-  }, [isLoaded, isSignedIn]);
-
-  // Loading mientras Clerk carga
-  if (!isLoaded || isLoading) {
+  // Estado de carga
+  if (isLoading) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-4 rounded-full" />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Causas
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-8 w-16 mb-2" />
-          <Skeleton className="h-3 w-32" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error o no autenticado
-  if (!isSignedIn || error) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Causas</CardTitle>
-          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-xs text-muted-foreground">
-            {!isSignedIn ? 'No autenticado' : error}
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Render normal con datos
+  // Estado de error
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Causas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-sm text-destructive">{error}</p>
+            <button 
+              onClick={fetchCausasData}
+              className="mt-4 text-sm text-primary hover:underline"
+            >
+              Reintentar
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Renderizar datos
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Total Causas</CardTitle>
-        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Causas
+        </CardTitle>
+        <CardDescription>Resumen de causas en el sistema</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{totalCausas.toLocaleString()}</div>
-        <p className="text-xs text-muted-foreground">
-          Causas registradas en el sistema
-        </p>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Total</span>
+            <span className="text-2xl font-bold">{data?.total || 0}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Activas</span>
+            <span className="text-xl font-semibold text-green-600">
+              {data?.activas || 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Cerradas</span>
+            <span className="text-xl font-semibold text-gray-600">
+              {data?.cerradas || 0}
+            </span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

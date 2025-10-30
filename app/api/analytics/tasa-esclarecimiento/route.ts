@@ -7,11 +7,12 @@ export async function GET(req: NextRequest) {
     const yearParam = req.nextUrl.searchParams.get('year');
     const tipoDelito = req.nextUrl.searchParams.get('tipoDelito');
     const homicidioConsumado = req.nextUrl.searchParams.get('homicidioConsumado') === 'true';
+    const origenCausaId = req.nextUrl.searchParams.get('origenCausaId'); // ✨ NUEVO: Filtro opcional por origen
 
-    // Definir las condiciones base de la consulta
+    // ✅ Definir las condiciones base de la consulta
     const whereConditions: any = {};
 
-    // Filtrar por año si no es "todos"
+    // ✅ Filtrar por año si no es "todos"
     if (yearParam && yearParam !== 'todos') {
       const year = parseInt(yearParam);
       
@@ -31,23 +32,28 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // Aplicar otros filtros
-    whereConditions.causaEcoh = true;
+    // ✨ NUEVO: Filtro opcional por origen de causa
+    // Si no se especifica, calcula para TODAS las causas
+    if (origenCausaId && origenCausaId !== 'todos') {
+      whereConditions.origenCausaId = parseInt(origenCausaId);
+    }
     
+    // ✅ Filtrar por tipo de delito si se especifica
     if (tipoDelito && tipoDelito !== 'todos') {
       whereConditions.delitoId = parseInt(tipoDelito);
     }
     
+    // ✅ Filtrar solo homicidios consumados si se activa el switch
     if (homicidioConsumado) {
       whereConditions.homicidioConsumado = true;
     }
 
-    // Contar total de causas con estos filtros
+    // ✅ Contar total de causas con estos filtros
     const totalCausas = await prisma.causa.count({
       where: whereConditions
     });
 
-    // Obtener causas con imputados
+    // ✅ Obtener causas con imputados para análisis de esclarecimiento
     const causasImputados = await prisma.causa.findMany({
       where: whereConditions,
       include: {
@@ -56,11 +62,17 @@ export async function GET(req: NextRequest) {
             cautelar: true,
             imputado: true
           }
+        },
+        origenCausa: { // ✨ Incluir origen para información adicional
+          select: {
+            id: true,
+            nombre: true
+          }
         }
       }
     });
 
-    // Analizar los datos para el esclarecimiento
+    // ✅ Analizar los datos para el esclarecimiento
     const causasFormalizadasSet = new Set();
     const causasConCautelarSet = new Set();
     const causasAmbasSituacionesSet = new Set();
@@ -82,14 +94,24 @@ export async function GET(req: NextRequest) {
         causasAmbasSituacionesSet.add(causa.id);
       }
 
+      // ✅ Causa esclarecida: tiene formalizados O tiene cautelares
       if (tieneFormalizados || tieneCautelar) {
         causasEsclarecidasSet.add(causa.id);
       }
     });
 
+    // ✅ Calcular porcentaje
     const porcentaje = totalCausas > 0 
       ? (causasEsclarecidasSet.size / totalCausas) * 100 
       : 0;
+
+    // ✨ NUEVO: Información de origen aplicado (si hay)
+    const filtroAplicado: any = {
+      year: yearParam || 'todos',
+      tipoDelito: tipoDelito || 'todos',
+      homicidioConsumado,
+      origenCausa: origenCausaId || 'todos'
+    };
 
     return NextResponse.json({
       totalCausas,
@@ -99,7 +121,8 @@ export async function GET(req: NextRequest) {
         causasFormalizadas: causasFormalizadasSet.size,
         causasConCautelar: causasConCautelarSet.size,
         causasAmbasSituaciones: causasAmbasSituacionesSet.size
-      }
+      },
+      filtros: filtroAplicado // ✨ Información de qué filtros se aplicaron
     });
   } catch (error) {
     console.error('Error fetching tasa esclarecimiento:', error);

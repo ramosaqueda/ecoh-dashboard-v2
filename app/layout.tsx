@@ -34,7 +34,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ClerkProvider forceRedirectUrl="/dashboard">
+          <ClerkProvider>
             <Providers>
               <div className="min-h-screen">
                 <Header />

@@ -1,10 +1,11 @@
-# Dockerfile optimizado para docker-compose
+# Dockerfile - Versión que FUNCIONA (aunque genera imagen más grande)
+# Usar este si hay problemas de red con la versión optimizada
 FROM node:18-alpine AS base
 
 # Instalar dependencias del sistema
 RUN apk add --no-cache libc6-compat curl openssl
 
-# Crear usuario y grupo temprano
+# Crear usuario y grupo
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -17,7 +18,7 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package.json package-lock.json* ./
 
-# Instalar dependencias
+# Instalar dependencias (todas, incluidas dev)
 RUN npm ci --legacy-peer-deps
 
 # ====================================
@@ -56,7 +57,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 
-# Cambiar ownership SOLO después de copiar todo
+# Cambiar ownership
 RUN chown -R nextjs:nodejs /app
 
 USER nextjs
