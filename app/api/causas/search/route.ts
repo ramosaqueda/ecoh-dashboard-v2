@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url);
-    const searchTerm = url.searchParams.get('term') || '';
+    const searchTerm = url.searchParams.get('term') || url.searchParams.get('ruc') || '';
 
     // Si no hay término de búsqueda, devolver un array vacío
     if (!searchTerm.trim()) {
@@ -42,15 +42,28 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      take: 10 // Limitar resultados
+      take: 10, // Limitar resultados
+      orderBy: {
+        fechaDelHecho: 'desc' // Ordenar por fecha más reciente
+      }
     });
 
-    return NextResponse.json(causas);
+    // Formatear respuesta para el command menu
+    const formattedResults = causas.map(causa => ({
+      id: causa.id,
+      ruc: causa.ruc,
+      nombreDelito: causa.delito?.nombre || 'Sin delito especificado',
+      denominacion: causa.denominacionCausa
+    }));
+
+    return NextResponse.json(formattedResults);
   } catch (error) {
     console.error('Error al buscar causas:', error);
     return NextResponse.json(
       { error: 'Error al buscar causas' },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

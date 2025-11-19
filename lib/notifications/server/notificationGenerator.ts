@@ -67,10 +67,15 @@ export async function generarNotificacionNuevaActividad(actividadId: number) {
       return null;
     }
 
+    // ✅ Construir mensaje apropiado según si tiene causa o no
+    const message = actividad.causa
+      ? `Se te ha asignado una nueva actividad: "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+      : `Se te ha asignado una nueva actividad de apoyo: "${actividad.tipoActividad.nombre}"`;
+
     const notification: ActividadNotificationData = {
       id: `actividad-nueva-${actividadId}-${Date.now()}`,
       title: 'Nueva Actividad Asignada',
-      message: `Se te ha asignado una nueva actividad: "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+      message,
       type: 'actividad_nueva',
       timestamp: new Date(),
       read: false,
@@ -78,9 +83,9 @@ export async function generarNotificacionNuevaActividad(actividadId: number) {
       persistent: true,
       autoHide: false,
       actividadId: actividad.id,
-      causaRuc: actividad.causa.ruc ?? '',
+      causaRuc: actividad.causa?.ruc ?? '', // ✅ Optional chaining
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
+      actionUrl: `/dashboard/todo?highlight=${actividad.id}`
     };
 
     return {
@@ -140,10 +145,15 @@ export async function generarNotificacionActividadActualizada(actividadId: numbe
 
     const cambiosTexto = cambios.length > 0 ? ` (${cambios.join(', ')})` : '';
 
+    // ✅ Construir mensaje apropiado según si tiene causa o no
+    const message = actividad.causa
+      ? `La actividad "${actividad.tipoActividad.nombre}" de la causa ${actividad.causa.ruc} ha sido actualizada${cambiosTexto}`
+      : `La actividad de apoyo "${actividad.tipoActividad.nombre}" ha sido actualizada${cambiosTexto}`;
+
     const notification: ActividadNotificationData = {
       id: `actividad-actualizada-${actividadId}-${Date.now()}`,
       title: 'Actividad Actualizada',
-      message: `La actividad "${actividad.tipoActividad.nombre}" de la causa ${actividad.causa.ruc} ha sido actualizada${cambiosTexto}`,
+      message,
       type: 'actividad_actualizada',
       timestamp: new Date(),
       read: false,
@@ -151,9 +161,9 @@ export async function generarNotificacionActividadActualizada(actividadId: numbe
       persistent: true,
       autoHide: false,
       actividadId: actividad.id,
-      causaRuc: actividad.causa.ruc ?? '',
+      causaRuc: actividad.causa?.ruc ?? '', // ✅ Optional chaining
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
+      actionUrl: `/dashboard/todo?highlight=${actividad.id}`
     };
 
     return {

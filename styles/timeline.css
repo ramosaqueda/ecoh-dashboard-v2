@@ -1,0 +1,423 @@
+/* ============================================
+   CSS FIX PARA REACT-CHRONO + TAILWIND
+   ============================================
+   
+   Este CSS mantiene los controles de navegación
+   pero oculta el toolbar innecesario.
+*/
+
+/* ============================================
+   OCULTAR SOLO TOOLBAR INNECESARIO
+   ============================================ */
+
+/* Ocultar el toolbar completo (Jump to, Change layout, etc.) */
+[class*="arb8eg5"],
+[role="toolbar"],
+.rc-toolbar {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Ocultar search input específicamente */
+[class*="arb8egw"],
+input[type="search"],
+.rc-search {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* ============================================
+   MANTENER BOTONES DE NAVEGACIÓN VISIBLES
+   ============================================ */
+
+/* Contenedor de botones de navegación - VISIBLE */
+.rc-controls,
+[class*="_1g3kfsd"]:not([role="toolbar"]) {
+  display: flex !important;
+  visibility: visible !important;
+  gap: 0.5rem !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 1rem !important;
+  background: transparent !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Botones individuales de navegación - VISIBLES Y ESTILIZADOS */
+.rc-controls button,
+[class*="_1g3kfsd5"] {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  background: #2563EB !important;
+  color: #ffffff !important;
+  border-radius: 0.5rem !important;
+  border: none !important;
+  display: flex !important;
+  visibility: visible !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Iconos en botones de navegación */
+.rc-controls button svg,
+[class*="_1g3kfsd5"] svg,
+[class*="_1g3kfsda"] svg {
+  width: 20px !important;
+  background: #2563EB !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  display: block !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Hover en botones de navegación */
+.rc-controls button:hover:not(:disabled) {
+  background: #0066cc !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Botones deshabilitados */
+.rc-controls button:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  background: #9CA3AF !important;
+}
+
+.rc-controls button:disabled:hover {
+  transform: none !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ============================================
+   CÍRCULOS DEL TIMELINE
+   ============================================ */
+
+.timeline-vertical-circle,
+[class*="iy9f2s1"],
+button[data-testid="tree-leaf-click"],
+button[data-testid="tree-leaf-click"] > div {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  border-radius: 50% !important;
+  background-color: #DC2D33 !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 0 0 2px #555555 !important;
+  display: block !important;
+  position: relative !important;
+  z-index: 10 !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+}
+
+/* Sobrescribir estilos SVG en círculos */
+.timeline-vertical-circle svg,
+[class*="iy9f2s1"] svg,
+button[data-testid="tree-leaf-click"] svg {
+  display: none !important;
+}
+
+/* ============================================
+   LÍNEA VERTICAL
+   ============================================ */
+
+[class*="iy9f2s0"],
+[data-testid="tree-leaf"] {
+  min-height: 100px !important;
+  width: 40px !important;
+  max-width: 40px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  position: relative !important;
+  z-index: 1 !important;
+  margin: 0 1rem !important;
+}
+
+[class*="iy9f2s0"]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 2px !important;
+  background: #e5e7eb !important;
+  z-index: 0 !important;
+}
+
+/* ============================================
+   TARJETAS
+   ============================================ */
+
+.timeline-card-content,
+[class*="chzdno2"],
+section[data-testid="timeline-card-content"] {
+  min-width: 300px !important;
+  max-width: 400px !important;
+  width: 100% !important;
+  min-height: 120px !important;
+  background: white !important;
+
+  border: 1px solid #9b9a9a !important;
+  border-radius: 0.5rem !important;
+  padding: 1.25rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* ============================================
+   TÍTULOS Y TEXTO
+   ============================================ */
+
+.timeline-item-title,
+[class*="chzdnoc"] {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  font-weight: 500 !important;
+  color: #ffffff !important;
+  background: #a71502 !important;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 0.375rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Título de tarjeta */
+[class*="_10vuyxn2"],
+.rc-card-title {
+  font-size: 1.125rem !important;
+  line-height: 1.625rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  color: #020f20 !important;
+  
+}
+
+
+
+[class*="_10vuyxn3"],
+.card-sub-title {
+  font-size: 0.875rem !important;
+  line-height: 1.375rem !important;
+  color: #6b7280 !important;
+}
+
+
+/* ============================================
+   CONTENEDOR PRINCIPAL
+   ============================================ */
+
+.timeline-wrapper,
+[class*="_1m81tp15"] {
+  width: 100% !important;
+  min-height: 600px !important;
+  position: relative !important;
+}
+
+.timeline-main-wrapper,
+[data-testid="timeline-main-wrapper"] {
+  width: 100% !important;
+  padding: 1.25rem !important;
+}
+
+/* ============================================
+   FILAS DE ITEMS
+   ============================================ */
+
+.vertical-item-row,
+[class*="mb2y384"] {
+  min-height: 140px !important;
+  margin-bottom: 2.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* ============================================
+   ELIMINAR Z-INDEX NEGATIVOS
+   ============================================ */
+
+[style*="z-index: -1"] {
+  z-index: 1 !important;
+}
+
+/* ============================================
+   RESET ESPECÍFICO PARA TAILWIND
+   ============================================ */
+
+/* Prevenir que Tailwind agrande los SVG */
+.timeline-wrapper svg:not([class*="lucide"]) {
+  width: auto !important;
+  height: auto !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
+}
+
+/* Botones - reset de Tailwind (excepto navegación) */
+.timeline-wrapper button:not(.rc-controls button) {
+  all: unset !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+}
+
+/* Específico para círculos del timeline */
+button[data-testid="tree-leaf-click"] {
+  all: unset !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  background: #2563EB !important;
+  border: 3px solid white !important;
+  box-shadow: 0 0 0 2px #2563EB !important;
+}
+
+/* ============================================
+   HOVER EFFECTS
+   ============================================ */
+
+.timeline-vertical-circle:hover,
+button[data-testid="tree-leaf-click"]:hover {
+  transform: scale(1.15) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.timeline-card-content:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  transform: translateY(-2px) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* ============================================
+   MEJORAS ADICIONALES
+   ============================================ */
+
+/* Asegurar que el contenedor principal tenga suficiente espacio */
+[data-testid="timeline-main-wrapper"] > div {
+  width: 100% !important;
+  overflow-x: visible !important;
+}
+
+/* Mejorar espaciado entre elementos */
+[class*="mb2y384"] + [class*="mb2y384"] {
+  margin-top: 2rem !important;
+}
+
+/* Centrar contenido de las tarjetas */
+.timeline-card-content > * {
+  text-align: left !important;
+}
+
+/* Asegurar que las imágenes en las tarjetas se vean bien */
+.timeline-card-content img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 0.375rem !important;
+  margin-top: 0.75rem !important;
+}
+
+/* Mejorar la legibilidad del texto */
+.timeline-card-content p {
+  line-height: 1.6 !important;
+  margin-bottom: 0.5rem !important;
+  font-size: small;
+  text-align: justify;
+}
+
+/* Ajustar el contenedor del Chrono para evitar overflow */
+.timeline-wrapper > div {
+  width: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .timeline-card-content,
+  [class*="chzdno2"] {
+    min-width: 260px !important;
+    max-width: 100% !important;
+    padding: 1rem !important;
+  }
+
+  .rc-controls button,
+  [class*="_1g3kfsd5"] {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .rc-controls button svg,
+  [class*="_1g3kfsd5"] svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  .vertical-item-row,
+  [class*="mb2y384"] {
+    min-height: 120px !important;
+    margin-bottom: 1.5rem !important;
+  }
+}
+
+/* ============================================
+   DARK MODE (opcional)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .dark .timeline-card-content,
+  .dark [class*="chzdno2"] {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+  }
+
+  .dark .timeline-item-title,
+  .dark [class*="chzdnoc"] {
+    background: #374151 !important;
+    color: #e5e7eb !important;
+  }
+  
+  .dark [class*="iy9f2s0"]::before {
+    background: #374151 !important;
+  }
+}
+
+/* ============================================
+   LIMPIEZA FINAL
+   ============================================ */
+
+/* Asegurar que los botones de navegación sean siempre visibles */
+.rc-controls {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  pointer-events: all !important;
+}
+
+/* ============================================
+   FIN DE CSS
+   ============================================ */

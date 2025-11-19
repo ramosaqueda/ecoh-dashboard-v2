@@ -72,17 +72,24 @@ export async function GET(req: NextRequest) {
     });
 
     // Convertir actividades a notificaciones
-    const notifications = actividadesNuevas.map(actividad => ({
-      id: `actividad-nueva-${actividad.id}-${actividad.createdAt.getTime()}`,
-      title: 'Nueva Actividad Asignada',
-      message: `Se te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
-      type: 'actividad_nueva',
-      timestamp: actividad.createdAt.toISOString(),
-      actividadId: actividad.id,
-      causaRuc: actividad.causa.ruc,
-      tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: ` /dashboard/todo?highlight=${actividad.id}`
-    }));
+    const notifications = actividadesNuevas.map(actividad => {
+      // ✅ Construir mensaje apropiado según si tiene causa o no
+      const message = actividad.causa
+        ? `Se te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+        : `Se te ha asignado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
+
+      return {
+        id: `actividad-nueva-${actividad.id}-${actividad.createdAt.getTime()}`,
+        title: 'Nueva Actividad Asignada',
+        message,
+        type: 'actividad_nueva',
+        timestamp: actividad.createdAt.toISOString(),
+        actividadId: actividad.id,
+        causaRuc: actividad.causa?.ruc || null, // ✅ Usar optional chaining
+        tipoActividad: actividad.tipoActividad.nombre,
+        actionUrl: `/dashboard/todo?highlight=${actividad.id}`
+      };
+    });
 
     console.log(`📡 Polling check para usuario ${usuario.nombre}: ${notifications.length} notificaciones nuevas`);
 

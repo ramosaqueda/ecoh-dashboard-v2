@@ -1,134 +1,165 @@
-// components/forms/hito/HitoForm.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
-import { IconPicker } from '@/components/forms/IconPicker';
-import { ImageUploader } from '@/components/forms/ImageUploader';
+
+// ✅ Schema de validación con Zod
+const hitoFormSchema = z.object({
+  titulo: z.string().min(3, 'El título debe tener al menos 3 caracteres'),
+  fecha: z.string().min(1, 'La fecha y hora son requeridas'),
+  descripcion: z.string().optional(),
+  icono: z.string().optional(),
+  imagenUrl: z.string().url('Debe ser una URL válida').optional().or(z.literal('')),
+});
+
+type HitoFormData = z.infer<typeof hitoFormSchema>;
 
 interface HitoFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: HitoFormData) => void;
   isSubmitting: boolean;
-  initialData: {
-    id?: number;
-    titulo: string;
-    fecha: string;
-    descripcion?: string;
-    icono?: string;
-    imagenUrl?: string;
-  } | null;
+  initialData?: HitoFormData | null;
 }
 
-export default function HitoForm({
-  onSubmit,
-  isSubmitting,
-  initialData
-}: HitoFormProps) {
-  const [formData, setFormData] = useState({
-    titulo: '',
-    fecha: new Date().toISOString().split('T')[0],
-    descripcion: '',
-    icono: '',
-    imagenUrl: ''
+export default function HitoForm({ onSubmit, isSubmitting, initialData }: HitoFormProps) {
+  const form = useForm<HitoFormData>({
+    resolver: zodResolver(hitoFormSchema),
+    defaultValues: {
+      titulo: initialData?.titulo || '',
+      fecha: initialData?.fecha || '',
+      descripcion: initialData?.descripcion || '',
+      icono: initialData?.icono || '',
+      imagenUrl: initialData?.imagenUrl || '',
+    },
   });
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        titulo: initialData.titulo || '',
-        fecha: initialData.fecha || new Date().toISOString().split('T')[0],
-        descripcion: initialData.descripcion || '',
-        icono: initialData.icono || '',
-        imagenUrl: initialData.imagenUrl || ''
-      });
-    }
-  }, [initialData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleIconSelect = (icon: string) => {
-    setFormData(prev => ({ ...prev, icono: icon }));
-  };
-
-  const handleImageUpload = (url: string) => {
-    setFormData(prev => ({ ...prev, imagenUrl: url }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
-      <div className="grid w-full items-center gap-2">
-        <Label htmlFor="titulo">Título *</Label>
-        <Input
-          id="titulo"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Título */}
+        <FormField
+          control={form.control}
           name="titulo"
-          value={formData.titulo}
-          onChange={handleChange}
-          required
-          placeholder="Ingrese el título del hito"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Título del Hito *</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Ej: Inicio de Investigación"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid w-full items-center gap-2">
-        <Label htmlFor="fecha">Fecha *</Label>
-        <Input
-          id="fecha"
+        {/* ✅ FECHA Y HORA - CAMPO MÁS IMPORTANTE */}
+        <FormField
+          control={form.control}
           name="fecha"
-          type="date"
-          value={formData.fecha}
-          onChange={handleChange}
-          required
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Fecha y Hora *</FormLabel>
+              <FormControl>
+                <Input 
+                  type="datetime-local"   
+                  {...field}
+                  className="w-full"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid w-full items-center gap-2">
-        <Label htmlFor="descripcion">Descripción</Label>
-        <Textarea
-          id="descripcion"
+        {/* Descripción */}
+        <FormField
+          control={form.control}
           name="descripcion"
-          value={formData.descripcion}
-          onChange={handleChange}
-          placeholder="Ingrese una descripción del hito"
-          rows={3}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Describe los detalles del hito..."
+                  rows={4}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid w-full items-center gap-2">
-        <Label>Icono</Label>
-        <IconPicker 
-          selectedIcon={formData.icono} 
-          onSelectIcon={handleIconSelect} 
+        {/* Ícono (opcional) */}
+        <FormField
+          control={form.control}
+          name="icono"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ícono (opcional)</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Ej: 🔍 📝 ⚖️"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid w-full items-center gap-2">
-        <Label>Imagen</Label>
-        <ImageUploader 
-          currentImageUrl={formData.imagenUrl}
-          onImageUploaded={handleImageUpload}
+        {/* URL de Imagen (opcional) */}
+        <FormField
+          control={form.control}
+          name="imagenUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL de Imagen (opcional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="url"
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={() => onSubmit(null)}>
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {initialData?.id ? 'Actualizar' : 'Guardar'}
-        </Button>
-      </div>
-    </form>
+        {/* Botones de acción */}
+        <div className="flex justify-end gap-2 pt-4">
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="min-w-[100px]"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              initialData ? 'Actualizar' : 'Crear Hito'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
+ 

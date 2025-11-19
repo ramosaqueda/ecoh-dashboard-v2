@@ -321,19 +321,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ✅ Preparar data de creación con validación de causa
+    const createData: any = {
+      tipo_actividad_id: parseInt(data.tipoActividadId),
+      usuario_id: usuario.id,
+      usuario_asignado_id: finalUsuarioAsignadoId,
+      fechaInicio: new Date(data.fechaInicio),
+      fechaTermino: new Date(data.fechaTermino),
+      estado: data.estado as EstadoActividad,
+      observacion: data.observacion,
+      glosa_cierre: data.glosa_cierre || null,
+      esActividadApoyo: data.esActividadApoyo || false // ✅ NUEVO CAMPO
+    };
+
+    // ✅ Solo agregar causa_id si NO es actividad de apoyo
+    if (!data.esActividadApoyo && data.causaId) {
+      createData.causa_id = parseInt(data.causaId);
+    }
+
     // Crear la actividad
     const actividad = await (prisma.actividad as any).create({
-      data: {
-        causa_id: parseInt(data.causaId),
-        tipo_actividad_id: parseInt(data.tipoActividadId),
-        usuario_id: usuario.id,
-        usuario_asignado_id: finalUsuarioAsignadoId,
-        fechaInicio: new Date(data.fechaInicio),
-        fechaTermino: new Date(data.fechaTermino),
-        estado: data.estado as EstadoActividad,
-        observacion: data.observacion,
-        glosa_cierre: data.glosa_cierre || null
-      },
+      data: createData,
       include: {
         causa: {
           select: {
@@ -385,21 +393,27 @@ export async function POST(req: NextRequest) {
 
         const notificationId = `actividad-nueva-${actividad.id}-${Date.now()}`;
 
+        // ✅ Construir mensaje apropiado según si tiene causa o no
+        const message = actividad.causa 
+          ? `${usuario.nombre} te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+          : `${usuario.nombre} te ha asignado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
+
         await prisma.notification.create({
           data: {
             id: notificationId,
             type: 'actividad_nueva',
             title: 'Nueva Actividad Asignada',
-            message: `${usuario.nombre} te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+            message,
             priority: 'medio',
             userId: actividad.usuarioAsignado.id,
             userEmail: actividad.usuarioAsignado.email,
             actividadId: actividad.id,
             metadata: {
-              causaRuc: actividad.causa.ruc,
+              causaRuc: actividad.causa?.ruc || null, // ✅ Puede ser null
               tipoActividad: actividad.tipoActividad.nombre,
               actionUrl: `/dashboard/todo?highlight=${actividad.id}`,
-              asignadoPor: usuario.nombre
+              asignadoPor: usuario.nombre,
+              esActividadApoyo: actividad.esActividadApoyo // ✅ NUEVO CAMPO
             }
           }
         });
@@ -485,6 +499,20 @@ export async function PUT(req: NextRequest) {
 
     if (data.glosa_cierre !== undefined) {
       updateData.glosa_cierre = data.glosa_cierre || null;
+    }
+
+    // ✅ NUEVO: Manejar esActividadApoyo
+    if (data.esActividadApoyo !== undefined) {
+      updateData.esActividadApoyo = data.esActividadApoyo;
+      // Si cambia a actividad de apoyo, quitar la causa
+      if (data.esActividadApoyo) {
+        updateData.causa_id = null;
+      }
+    }
+
+    // ✅ NUEVO: Si cambia a actividad regular, requerir causa
+    if (data.causaId && !data.esActividadApoyo) {
+      updateData.causa_id = parseInt(data.causaId);
     }
 
     if (data.usuarioAsignadoId !== undefined) {

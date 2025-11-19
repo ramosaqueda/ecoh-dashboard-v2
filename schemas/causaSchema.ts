@@ -114,7 +114,7 @@ export const causaSchema = z.object({
   ).optional().default([]),
   
   // Estado de crimen organizado
-  esCrimenOrganizado: z.any().optional().nullable()
+  esCrimenOrganizado: z.boolean().default(false)
 });
 
 export type CausaFormData = z.infer<typeof causaSchema>;

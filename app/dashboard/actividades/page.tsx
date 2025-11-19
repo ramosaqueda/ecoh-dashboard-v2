@@ -39,7 +39,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 
 interface Actividad {
   id: number;
-  causa: {
+  causa?: { // ✅ AHORA OPCIONAL
     id: number;
     ruc: string;
     denominacion?: string;
@@ -53,6 +53,7 @@ interface Actividad {
   observacion: string;
   glosa_cierre?: string;
   estado: 'inicio' | 'en_proceso' | 'terminado';
+  esActividadApoyo?: boolean; // ✅ NUEVO CAMPO
   usuario: {
     id: number;
     nombre: string;
@@ -71,7 +72,7 @@ interface Actividad {
 
 interface ActividadFormData {
   id?: number;
-  causaId: string;
+  causaId?: string; // ✅ AHORA OPCIONAL
   tipoActividadId: string;
   fechaInicio: string;
   fechaTermino: string;
@@ -79,6 +80,7 @@ interface ActividadFormData {
   observacion?: string;
   glosa_cierre?: string;
   usuarioAsignadoId?: string;
+  esActividadApoyo?: boolean; // ✅ NUEVO CAMPO
 }
 
 interface Area {
@@ -428,14 +430,15 @@ export default function ActividadesPage() {
   const handleEdit = (actividad: Actividad): void => {
     const editData: ActividadFormData = {
       id: actividad.id,
-      causaId: actividad.causa.id.toString(),
+      causaId: actividad.causa?.id.toString(), // ✅ Manejar causa opcional
       tipoActividadId: actividad.tipoActividad.id.toString(),
       fechaInicio: actividad.fechaInicio.split('T')[0],
       fechaTermino: actividad.fechaTermino.split('T')[0],
       estado: actividad.estado,
       observacion: actividad.observacion || '',
       glosa_cierre: actividad.estado === 'terminado' ? (actividad.glosa_cierre || '') : '',
-      usuarioAsignadoId: actividad.usuarioAsignado?.id.toString() || ''
+      usuarioAsignadoId: actividad.usuarioAsignado?.id.toString() || '',
+      esActividadApoyo: actividad.esActividadApoyo || false // ✅ NUEVO CAMPO
     };
     
     setActividadEditing(editData);
@@ -505,7 +508,8 @@ export default function ActividadesPage() {
             <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
               <Eye className="h-4 w-4" />
               <span>
-                Mostrando actividad #{highlightedActivity.id} - RUC: {highlightedActivity.causa.ruc}
+                Mostrando actividad #{highlightedActivity.id}
+                {highlightedActivity.causa ? ` - RUC: ${highlightedActivity.causa.ruc}` : ' (Actividad de Apoyo)'}
               </span>
             </div>
           )}

@@ -90,22 +90,27 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // 2. Agrupar actividades por causa
-    const actividadesPorCausa: Record<number, typeof actividades> = {};
+    // 2. Agrupar actividades por causa (incluyendo actividades de apoyo)
+    const actividadesPorCausa: Record<string, typeof actividades> = {};
+    const APOYO_KEY = 'apoyo'; // Clave especial para actividades sin causa
     
     for (const actividad of actividades) {
       const causaId = actividad.causa_id;
-      if (!actividadesPorCausa[causaId]) {
-        actividadesPorCausa[causaId] = [];
+      const key = causaId !== null ? causaId.toString() : APOYO_KEY; // ✅ Manejar null
+      
+      if (!actividadesPorCausa[key]) {
+        actividadesPorCausa[key] = [];
       }
-      actividadesPorCausa[causaId].push(actividad);
+      actividadesPorCausa[key].push(actividad);
     }
     
-    // 3. Obtener todos los IDs de causas
-    const causasIds = Object.keys(actividadesPorCausa).map(id => parseInt(id));
+    // 3. Obtener todos los IDs de causas (excluyendo actividades de apoyo)
+    const causasIds = Object.keys(actividadesPorCausa)
+      .filter(id => id !== APOYO_KEY)
+      .map(id => parseInt(id));
     
-    // 4. Calcular estadísticas por causa
-    const estadosPorCausa: Record<number, { 
+    // 4. Calcular estadísticas por causa (incluyendo actividades de apoyo)
+    const estadosPorCausa: Record<string, { 
       total: number, 
       iniciadas: number, 
       enProceso: number, 
@@ -113,14 +118,13 @@ export async function GET(req: NextRequest) {
       porcentajeCompletado: number
     }> = {};
     
-    for (const [causaIdStr, actividadesDeCausa] of Object.entries(actividadesPorCausa)) {
-      const causaId = parseInt(causaIdStr);
+    for (const [causaKey, actividadesDeCausa] of Object.entries(actividadesPorCausa)) {
       const total = actividadesDeCausa.length;
       const iniciadas = actividadesDeCausa.filter(a => a.estado === 'inicio').length;
       const enProceso = actividadesDeCausa.filter(a => a.estado === 'en_proceso').length;
       const terminadas = actividadesDeCausa.filter(a => a.estado === 'terminado').length;
       
-      estadosPorCausa[causaId] = {
+      estadosPorCausa[causaKey] = {
         total,
         iniciadas,
         enProceso,
@@ -238,13 +242,16 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // 9. Detectar actividades vencidas
+    // 9. Detectar actividades vencidas y preparar resultados
     const hoy = new Date();
     
-    // Preparar resultados por causa
-    const resultados = causasIds.map(causaId => {
-      const actividadesDeCausa = actividadesPorCausa[causaId];
+    // Preparar resultados por causa (incluyendo actividades de apoyo)
+    const resultados = Object.keys(actividadesPorCausa).map(causaKey => {
+      const actividadesDeCausa = actividadesPorCausa[causaKey];
       const primerActividad = actividadesDeCausa[0];
+      
+      // ✅ Determinar si es actividad de apoyo
+      const esActividadApoyo = causaKey === APOYO_KEY;
       
       // Calcular días promedio de actividades terminadas
       const actividadesTerminadas = actividadesDeCausa.filter(act => act.estado === 'terminado');
@@ -263,11 +270,16 @@ export async function GET(req: NextRequest) {
       }
       
       return {
-        causaId,
-        ruc: primerActividad?.causa.ruc || 'N/A',
-        denominacionCausa: primerActividad?.causa.denominacionCausa || 'N/A',
-        delito: primerActividad?.causa.delito?.nombre || 'No especificado',
-        estadisticas: estadosPorCausa[causaId],
+        causaId: esActividadApoyo ? null : parseInt(causaKey), // ✅ null para apoyo
+        ruc: esActividadApoyo ? 'APOYO' : (primerActividad?.causa?.ruc || 'N/A'), // ✅ Manejar causa opcional
+        denominacionCausa: esActividadApoyo 
+          ? 'Actividades de Apoyo Externo' 
+          : (primerActividad?.causa?.denominacionCausa || 'N/A'), // ✅ Manejar causa opcional
+        delito: esActividadApoyo 
+          ? 'N/A' 
+          : (primerActividad?.causa?.delito?.nombre || 'No especificado'), // ✅ Manejar causa opcional
+        esActividadApoyo, // ✅ Nuevo campo
+        estadisticas: estadosPorCausa[causaKey],
         actividades: actividadesDeCausa.map(act => {
           // CAMBIO: Priorizar usuarioAsignado sobre usuario
           const responsable = act.usuarioAsignado || act.usuario;

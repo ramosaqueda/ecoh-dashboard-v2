@@ -195,7 +195,9 @@ export async function POST(req: NextRequest) {
     // ✅ Verificar específicamente causasCrimenOrg
     console.log('causasCrimenOrg específico:', data.causasCrimenOrg);
     
-    // ✅ Crear causa con campos mínimos con nuevos campos
+    // ✅ Crear causa con campos mínimos
+    // NOTA: causaEcoh y causaLegada ya no existen en el schema
+    // La lógica se maneja completamente con origenCausaId
     const newCausa = await prisma.causa.create({
       data: {
         denominacionCausa: data.denominacionCausa || '',
@@ -219,6 +221,14 @@ export async function POST(req: NextRequest) {
         await prisma.causa.update({
           where: { id: newCausa.id },
           data: { foliobw: data.foliobw || '' }
+        });
+      }
+      
+      // ✅ Actualizar coordenadasSs
+      if (data.coordenadasSs !== undefined) {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { coordenadasSs: data.coordenadasSs || '' }
         });
       }
       
@@ -303,20 +313,11 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      // ✅ Actualizar esCrimenOrganizado
+      // ✅ Actualizar esCrimenOrganizado - ahora es boolean directo
       if (data.esCrimenOrganizado !== undefined) {
-        let boolValue: boolean;
-        if (data.esCrimenOrganizado === true || data.esCrimenOrganizado === 1 || data.esCrimenOrganizado === '1') {
-          boolValue = true;
-        } else if (data.esCrimenOrganizado === false || data.esCrimenOrganizado === 0 || data.esCrimenOrganizado === '0') {
-          boolValue = false;
-        } else {
-          boolValue = false; // default
-        }
-        
         await prisma.causa.update({
           where: { id: newCausa.id },
-          data: { esCrimenOrganizado: boolValue }
+          data: { esCrimenOrganizado: Boolean(data.esCrimenOrganizado) }
         });
       }
       

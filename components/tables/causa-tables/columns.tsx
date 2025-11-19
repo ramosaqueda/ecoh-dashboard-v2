@@ -29,11 +29,19 @@ export type Causa = {
   observacion: string;
   foliobw: string;
   fechaHoraTomaConocimiento: string;
-  fechaDelHecho: string; // ✅ NUEVO: Campo para fecha del hecho
+  fechaDelHecho: string;
   causaEcoh: boolean;
   fiscalId: string;
   delitoId: string;
   delito: {
+    id: number;
+    nombre: string;
+  };
+  fiscal?: {
+    id: number;
+    nombre: string;
+  };
+  foco?: {
     id: number;
     nombre: string;
   };
@@ -76,6 +84,27 @@ const formatDate = (dateString: string | null) => {
   if (!dateString) return '-';
   try {
     return format(parseISO(dateString), 'dd/MM/yyyy HH:mm', { locale: es });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+};
+
+// ✅ NUEVA función para formatear fechas sin problema de timezone
+const formatDateOnly = (dateString: string | null) => {
+  if (!dateString) return '-';
+  try {
+    // Si la fecha viene en formato ISO (YYYY-MM-DD), la parseamos directamente
+    // sin convertir a Date para evitar problemas de timezone
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateMatch) {
+      const [, year, month, day] = dateMatch;
+      return `${day}/${month}/${year}`;
+    }
+    // Si no coincide con el patrón, intentamos parsear normalmente
+    // pero forzando a timezone local
+    const date = new Date(dateString + 'T00:00:00');
+    return format(date, 'dd/MM/yyyy', { locale: es });
   } catch (error) {
     console.error('Error formatting date:', error);
     return dateString;
@@ -207,7 +236,7 @@ const DeleteButton = ({ causa, onDelete }: DeleteButtonProps) => {
 const ActionsCell = ({ row, table }: ActionsCellProps) => {
   const causa = row.original;
   const { onEdit, onDelete } = table.options.meta || {};
-  const { canEdit } = useUserPermissions(); // Ahora es válido usar hooks aquí
+  const { canEdit } = useUserPermissions();
 
   const totalRelaciones = (causa._count?.causasRelacionadasMadre || 0) + 
                       (causa._count?.causasRelacionadasArista || 0);
@@ -246,7 +275,6 @@ const ActionsCell = ({ row, table }: ActionsCellProps) => {
         </Button>
       )}
       
-      {/* Reemplazamos el botón de eliminar con nuestro componente con confirmación */}
       <DeleteButton causa={causa} onDelete={onDelete} />
     </div>
   );
@@ -275,15 +303,7 @@ export const columns: ColumnDef<Causa>[] = [
       return (
         <div className="flex items-center gap-2">
           <span>{ruc}</span>
-          <a 
-            href={`${process.env.NEXT_PUBLIC_FICHACASORUC}?ruc=${ruc}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <ExternalLink className="h-4 w-4 text-blue-600" />
-            </Button>
-          </a>
+        
         </div>
       );
     }
@@ -311,6 +331,24 @@ export const columns: ColumnDef<Causa>[] = [
     header: 'Fiscal'
   },
   {
+    accessorKey: 'foco.nombre',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Foco
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const foco = row.original.foco;
+      return foco?.nombre || '-';
+    }
+  },
+  {
     accessorKey: 'foliobw',
     header: 'Folio BW'
   },
@@ -319,7 +357,7 @@ export const columns: ColumnDef<Causa>[] = [
     header: 'Causa ECOH',
     cell: ({ row }) => (row.getValue('causaEcoh') ? 'Sí' : 'No')
   },
-  // ✅ ACTUALIZADO: Cambiar fechaHoraTomaConocimiento por fechaDelHecho
+  // ✅ ACTUALIZADO: Usar la nueva función formatDateOnly para evitar problema de timezone
   {
     accessorKey: 'fechaDelHecho',
     header: ({ column }) => {
@@ -335,9 +373,7 @@ export const columns: ColumnDef<Causa>[] = [
     },
     cell: ({ row }) => {
       const fecha = row.getValue('fechaDelHecho') as string;
-      return fecha
-        ? format(new Date(fecha), 'dd/MM/yyyy', { locale: es })
-        : '-';
+      return formatDateOnly(fecha);
     }
   },
   {

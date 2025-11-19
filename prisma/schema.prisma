@@ -461,7 +461,7 @@ model CorrelativoTipoActividad {
 
 model Actividad {
   id                  Int             @id @default(autoincrement())
-  causa_id            Int
+  causa_id            Int?            // ✅ AHORA ES OPCIONAL (nullable)
   tipo_actividad_id   Int
   usuario_id          Int
   fechaInicio         DateTime
@@ -472,16 +472,18 @@ model Actividad {
   observacion         String?
   usuario_asignado_id Int?
   glosa_cierre        String?         @map(" glosa_cierre")
-  causa               Causa           @relation(fields: [causa_id], references: [id])
+  esActividadApoyo    Boolean         @default(false) // ✅ NUEVO CAMPO
+  causa               Causa?          @relation(fields: [causa_id], references: [id]) // ✅ RELACIÓN OPCIONAL
   tipoActividad       TipoActividad   @relation(fields: [tipo_actividad_id], references: [id])
   usuario             Usuario         @relation("ActividadCreador", fields: [usuario_id], references: [id])
   usuarioAsignado     Usuario?        @relation("ActividadAsignado", fields: [usuario_asignado_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_actividad_usuario_asignado")
-  notificaciones      Notification[]  // NUEVA RELACIÓN
+  notificaciones      Notification[]  
 
   @@index([causa_id])
   @@index([tipo_actividad_id])
   @@index([usuario_id])
   @@index([usuario_asignado_id], map: "idx_actividad_usuario_asignado")
+  @@index([esActividadApoyo], map: "idx_actividad_esActividadApoyo") // ✅ NUEVO ÍNDICE
 }
  
  

@@ -12,10 +12,7 @@ import { ImputadosFlow } from '@/components/charts/ImputadosFlow';
 import FormalizationChart from '@/components/charts/FormalizationChart';
 import CauseTimeline from '@/components/CauseTimeline';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CausasEcohCard from '@/components/cards/CausasEcohCard';
-import CausasSacfiCard from '@/components/cards/CausasSacfiCard';
 import CausasCard from '@/components/cards/CausasCard';
-import CausasLegadaCard from '@/components/cards/CausasLegadaCard';
 import EcohSacfiComparisonCard from '@/components/cards/EcohSacfiComparisonCard';
 import { EsclarecimientoCard } from '@/components/cards/EsclarecimientoCard';
 import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
@@ -25,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  // 🔐 VERIFICACIÓN CENTRALIZADA DE AUTENTICACIÓN
+  // 🔒 VERIFICACIÓN CENTRALIZADA DE AUTENTICACIÓN
   const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { user, isLoaded: userLoaded } = useUser();
   const [isReady, setIsReady] = useState(false);
@@ -70,17 +67,10 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <Skeleton className="h-10 w-full max-w-md" />
               
-              {/* Cards row 1 skeleton */}
-              <div className="grid gap-4 md:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={`card-${i}`} className="h-32" />
-                ))}
-              </div>
-              
-              {/* Cards row 2 skeleton */}
+              {/* Cards skeleton */}
               <div className="grid gap-4 md:grid-cols-3">
                 {[...Array(3)].map((_, i) => (
-                  <Skeleton key={`card2-${i}`} className="h-32" />
+                  <Skeleton key={`card-${i}`} className="h-32" />
                 ))}
               </div>
               
@@ -151,27 +141,16 @@ export default function DashboardPage() {
                 ======================================== */}
             <TabsContent value="overview" className="space-y-6">
               
-              {/* SECCIÓN 1: Cards de Causas */}
-              <div className="grid gap-4 md:grid-cols-4">
-                {/* Card general de todas las causas */}
-                <CausasCard />
-                
-                {/* Cards especializadas por tipo */}
-                <CausasEcohCard />
-                <CausasSacfiCard />
-                <CausasLegadaCard />
+              {/* SECCIÓN 1: Cards Principales - 3 columnas (más grandes) */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <EcohSacfiComparisonCard />
+                <CrimenOrganizadoCard />
+                <EsclarecimientoCard />
               </div>
 
-              {/* SECCIÓN 2: Cards de Análisis */}
-              <div className="grid gap-4 md:grid-cols-3">
-                {/* Comparativa ECOH vs SACFI */}
-                <EcohSacfiComparisonCard />
-                
-                {/* Crimen Organizado */}
-                <CrimenOrganizadoCard />
-                
-                {/* Tasa de Esclarecimiento */}
-                <EsclarecimientoCard />
+              {/* SECCIÓN 2: Card Total de Causas - Destacada */}
+              <div className="w-full">
+                <CausasCard />
               </div>
 
               {/* SECCIÓN 3: Línea de Tiempo de Causas */}
@@ -179,24 +158,16 @@ export default function DashboardPage() {
                 <CauseTimeline />
               </div>
 
-              {/* SECCIÓN 4: Gráficos Principales - Primera fila */}
+              {/* SECCIÓN 4: Gráficos Principales - 2 columnas */}
               <div className="grid gap-4 md:grid-cols-2">
-                {/* Evolución temporal de casos */}
                 <CaseTimelineChart />
-                
-                {/* Distribución de delitos */}
                 <DelitosDistribution />
               </div>
 
-              {/* SECCIÓN 5: Gráficos Secundarios - Segunda fila */}
+              {/* SECCIÓN 5: Gráficos Secundarios - 3 columnas */}
               <div className="grid gap-4 md:grid-cols-3">
-                {/* Flujo de imputados */}
                 <ImputadosFlow />
-                
-                {/* Distribución de abogados/analistas */}
                 <AbogadoAnalistaChart />
-                
-                {/* Distribución de nacionalidades */}
                 <NationalityDistribution />
               </div>
 

@@ -40,16 +40,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Crear la notificación que se enviará al cliente
+    // ✅ Construir mensaje apropiado según si tiene causa o no
+    const message = actividad.causa
+      ? `Se te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+      : `Se te ha asignado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
+
     const notification = {
       id: `actividad-nueva-${actividadId}-${Date.now()}`,
       title: 'Nueva Actividad Asignada',
-      message: `Se te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+      message,
       type: 'actividad_nueva',
       timestamp: new Date().toISOString(),
       actividadId: parseInt(actividadId),
-      causaRuc: actividad.causa.ruc,
+      causaRuc: actividad.causa?.ruc || null, // ✅ Usar optional chaining
       tipoActividad: actividad.tipoActividad.nombre,
-      actionUrl: ` /dashboard/todo?highlight=${actividadId}`
+      actionUrl: `/dashboard/todo?highlight=${actividadId}`
     };
 
     console.log(`📬 Preparando notificación para usuario: ${actividad.usuarioAsignado?.nombre ?? ''}`);

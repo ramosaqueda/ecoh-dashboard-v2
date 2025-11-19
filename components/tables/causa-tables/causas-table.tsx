@@ -54,12 +54,40 @@ interface Delito {
   nombre: string;
 }
 
+interface Fiscal {
+  id: number;
+  nombre: string;
+}
+
+interface Foco {
+  id: number;
+  nombre: string;
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onEdit: (record: TData) => void;
   onDelete: (id: string) => void;
 }
+
+// ✅ NUEVA función para formatear fechas sin problema de timezone
+const formatDateOnly = (dateString: string | null | undefined) => {
+  if (!dateString) return '';
+  try {
+    // Si la fecha viene en formato ISO (YYYY-MM-DD), la parseamos directamente
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateMatch) {
+      const [, year, month, day] = dateMatch;
+      return `${day}/${month}/${year}`;
+    }
+    // Fallback
+    return dateString;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+};
 
 export function CausasDataTable<TData, TValue>({
   columns,
@@ -74,11 +102,15 @@ export function CausasDataTable<TData, TValue>({
   const [analistas, setAnalistas] = useState<Professional[]>([]);
   const [atvts, setAtvts] = useState<Professional[]>([]);
   const [delitos, setDelitos] = useState<Delito[]>([]);
+  const [fiscales, setFiscales] = useState<Fiscal[]>([]);
+  const [focos, setFocos] = useState<Foco[]>([]); // ✅ NUEVO: Estado para focos
   const [selectedAbogado, setSelectedAbogado] = useState<string>('all');
   const [selectedAnalista, setSelectedAnalista] = useState<string>('all');
   const [selectedATVT, setSelectedATVT] = useState<string>('all');
-  const [selectedDelito, setSelectedDelito] = useState<string>('all'); // ✅ NUEVO: Estado para delito
-  const [selectedYear, setSelectedYear] = useState<string>('all'); // ✅ NUEVO: Estado para año
+  const [selectedDelito, setSelectedDelito] = useState<string>('all');
+  const [selectedFiscal, setSelectedFiscal] = useState<string>('all');
+  const [selectedFoco, setSelectedFoco] = useState<string>('all'); // ✅ NUEVO: Estado para foco
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     rit: false,
     observacion: false,
@@ -89,22 +121,28 @@ export function CausasDataTable<TData, TValue>({
   useEffect(() => {
     const fetchProfessionals = async () => {
       try {
-        const [abogadosRes, analistasRes, atvtsRes, delitosRes] = await Promise.all([
+        const [abogadosRes, analistasRes, atvtsRes, delitosRes, fiscalesRes, focosRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/abogado`),
           fetch(`${API_BASE_URL}/api/analista`),
           fetch(`${API_BASE_URL}/api/atvt`),
-          fetch(`${API_BASE_URL}/api/delito`) // ✅ NUEVO: Fetch de delitos
+          fetch(`${API_BASE_URL}/api/delito`),
+          fetch(`${API_BASE_URL}/api/fiscal`),
+          fetch(`${API_BASE_URL}/api/foco`) // ✅ NUEVO: Fetch de focos
         ]);
 
-        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok && delitosRes.ok) {
+        if (abogadosRes.ok && analistasRes.ok && atvtsRes.ok && delitosRes.ok && fiscalesRes.ok && focosRes.ok) {
           const abogadosData = await abogadosRes.json();
           const analistasData = await analistasRes.json();
           const atvtsData = await atvtsRes.json();
-          const delitosData = await delitosRes.json(); // ✅ NUEVO
+          const delitosData = await delitosRes.json();
+          const fiscalesData = await fiscalesRes.json();
+          const focosData = await focosRes.json(); // ✅ NUEVO
           setAbogados(abogadosData);
           setAnalistas(analistasData);
           setAtvts(atvtsData);
-          setDelitos(delitosData); // ✅ NUEVO
+          setDelitos(delitosData);
+          setFiscales(Array.isArray(fiscalesData) ? fiscalesData : [fiscalesData]);
+          setFocos(Array.isArray(focosData) ? focosData : [focosData]); // ✅ NUEVO
         }
       } catch (error) {
         console.error('Error fetching professionals:', error);
@@ -114,7 +152,7 @@ export function CausasDataTable<TData, TValue>({
     fetchProfessionals();
   }, []);
 
-  // ✅ NUEVO: Generar lista de años únicos basada en fechaDelHecho
+  // Generar lista de años únicos basada en fechaDelHecho
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     (data as any[]).forEach((item) => {
@@ -125,10 +163,10 @@ export function CausasDataTable<TData, TValue>({
         }
       }
     });
-    return Array.from(years).sort((a, b) => b - a); // Ordenar descendente
+    return Array.from(years).sort((a, b) => b - a);
   }, [data]);
 
-  // ✅ ACTUALIZADO: Filter the data based on selected filters (incluyendo año y delito)
+  // ✅ ACTUALIZADO: Filter the data based on selected filters (incluyendo fiscal y foco)
   const filteredData = useMemo(() => {
     return (data as any[]).filter((item) => {
       const abogadoMatch =
@@ -141,21 +179,28 @@ export function CausasDataTable<TData, TValue>({
         selectedATVT === 'all' ||
         item.atvt?.id.toString() === selectedATVT;
       
-      // ✅ NUEVO: Filtro por delito
       const delitoMatch =
         selectedDelito === 'all' ||
         item.delito?.id.toString() === selectedDelito;
       
-      // ✅ NUEVO: Filtro por año
+      const fiscalMatch =
+        selectedFiscal === 'all' ||
+        item.fiscal?.id.toString() === selectedFiscal;
+      
+      // ✅ NUEVO: Filtro por foco
+      const focoMatch =
+        selectedFoco === 'all' ||
+        item.foco?.id.toString() === selectedFoco;
+      
       const yearMatch = selectedYear === 'all' || (() => {
         if (!item.fechaDelHecho) return false;
         const itemYear = new Date(item.fechaDelHecho).getFullYear();
         return itemYear.toString() === selectedYear;
       })();
       
-      return abogadoMatch && analistaMatch && atvtMatch && delitoMatch && yearMatch;
+      return abogadoMatch && analistaMatch && atvtMatch && delitoMatch && fiscalMatch && focoMatch && yearMatch;
     });
-  }, [data, selectedAbogado, selectedAnalista, selectedATVT, selectedDelito, selectedYear]);
+  }, [data, selectedAbogado, selectedAnalista, selectedATVT, selectedDelito, selectedFiscal, selectedFoco, selectedYear]);
 
   const table = useReactTable({
     data: filteredData,
@@ -194,16 +239,9 @@ export function CausasDataTable<TData, TValue>({
               value = value?.[key];
             }
 
-            // ✅ ACTUALIZADO: Formatear fechaDelHecho en lugar de fechaHoraTomaConocimiento
+            // ✅ ACTUALIZADO: Formatear fechaDelHecho con la nueva función
             if (column.accessorKey === 'fechaDelHecho' && value) {
-              try {
-                value = format(new Date(value), 'dd/MM/yyyy', {
-                  locale: es
-                });
-              } catch (error) {
-                console.error('Error formatting date:', error);
-                value = value || '';
-              }
+              value = formatDateOnly(value);
             }
 
             // Formatear booleanos
@@ -247,60 +285,53 @@ export function CausasDataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
+        {/* Primera fila: Búsqueda y Filtros de Caso */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Input
-            placeholder="Buscar en todas las columnas..."
-            value={globalFilter ?? ''}
-            onChange={(event) => setGlobalFilter(String(event.target.value))}
-            className="max-w-sm"
-          />
+          <div className="flex-1 min-w-[250px]">
+            <Input
+              placeholder="Buscar en todas las columnas..."
+              value={globalFilter ?? ''}
+              onChange={(event) => setGlobalFilter(String(event.target.value))}
+              className="w-full"
+            />
+          </div>
           
-          <Select value={selectedAbogado} onValueChange={setSelectedAbogado}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por abogado" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium">Filtros de Caso:</span>
+          </div>
+
+          <Select value={selectedFiscal} onValueChange={setSelectedFiscal}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Fiscal" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los abogados</SelectItem>
-              {abogados.map((abogado) => (
-                <SelectItem key={abogado.id} value={abogado.id.toString()}>
-                  {abogado.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedAnalista} onValueChange={setSelectedAnalista}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por analista" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los analistas</SelectItem>
-              {analistas.map((analista) => (
-                <SelectItem key={analista.id} value={analista.id.toString()}>
-                  {analista.nombre}
+              <SelectItem value="all">Todos los fiscales</SelectItem>
+              {fiscales.map((fiscal) => (
+                <SelectItem key={fiscal.id} value={fiscal.id.toString()}>
+                  {fiscal.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <Select value={selectedATVT} onValueChange={setSelectedATVT}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por ATVT" />
+          {/* ✅ NUEVO: Filtro por Foco */}
+          <Select value={selectedFoco} onValueChange={setSelectedFoco}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Foco" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los ATVT</SelectItem>
-              {atvts.map((atvt) => (
-                <SelectItem key={atvt.id} value={atvt.id.toString()}>
-                  {atvt.nombre}
+              <SelectItem value="all">Todos los focos</SelectItem>
+              {focos.map((foco) => (
+                <SelectItem key={foco.id} value={foco.id.toString()}>
+                  {foco.nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {/* ✅ NUEVO: Filtro por delito */}
           <Select value={selectedDelito} onValueChange={setSelectedDelito}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por delito" />
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Delito" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los delitos</SelectItem>
@@ -312,13 +343,12 @@ export function CausasDataTable<TData, TValue>({
             </SelectContent>
           </Select>
 
-          {/* ✅ NUEVO: Filtro por año */}
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrar por año" />
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Año" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los años</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               {availableYears.map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
@@ -326,12 +356,63 @@ export function CausasDataTable<TData, TValue>({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Segunda fila: Filtros de Asignación y Acciones */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium">Asignaciones:</span>
+          </div>
+
+          <Select value={selectedAbogado} onValueChange={setSelectedAbogado}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Abogado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {abogados.map((abogado) => (
+                <SelectItem key={abogado.id} value={abogado.id.toString()}>
+                  {abogado.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedAnalista} onValueChange={setSelectedAnalista}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Analista" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {analistas.map((analista) => (
+                <SelectItem key={analista.id} value={analista.id.toString()}>
+                  {analista.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedATVT} onValueChange={setSelectedATVT}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="ATVT" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {atvts.map((atvt) => (
+                <SelectItem key={atvt.id} value={atvt.id.toString()}>
+                  {atvt.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex-1"></div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="ml-auto">
+              <Button variant="outline" size="sm">
                 <Settings2 className="mr-2 h-4 w-4" />
-                Ver columnas
+                Columnas
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -365,7 +446,7 @@ export function CausasDataTable<TData, TValue>({
 
           <Button variant="outline" size="sm" onClick={exportToExcel}>
             <Download className="mr-2 h-4 w-4" />
-            Exportar a Excel
+            Exportar
           </Button>
         </div>
       </div>

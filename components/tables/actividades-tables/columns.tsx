@@ -9,7 +9,7 @@ import { es } from 'date-fns/locale';
 
 export type Actividad = {
   id: number;
-  causa: {
+  causa?: { // ✅ AHORA OPCIONAL
     id: number;
     ruc: string;
   };
@@ -21,6 +21,7 @@ export type Actividad = {
   fechaTermino: string;
   observacion: string;
   estado: 'inicio' | 'en_proceso' | 'terminado';
+  esActividadApoyo?: boolean; // ✅ NUEVO CAMPO
   usuario: {
     id: number;
     nombre: string;
@@ -58,16 +59,28 @@ const estadoTexto = {
 
 export const columns: ColumnDef<Actividad>[] = [
   {
+    id: 'ruc',
     accessorKey: 'causa.ruc',
     header: ({ column }) => (
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
       >
-        RUC
+        RUC / Tipo
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
-    )
+    ),
+    cell: ({ row }) => {
+      const actividad = row.original;
+      if (actividad.causa) {
+        return <span className="font-medium">{actividad.causa.ruc}</span>;
+      }
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+          💼 Actividad de Apoyo
+        </Badge>
+      );
+    }
   },
   {
     accessorKey: 'tipoActividad.nombre',

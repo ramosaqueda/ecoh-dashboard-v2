@@ -54,7 +54,7 @@ export default function RootLayout({
                 </SignedOut>
 
                 <SignedIn>
-                  <div className="flex h-screen pt-16">{children}</div>
+                  <div className="flex h-screen pt-16 justify-center items-baseline">{children}</div>
                 </SignedIn>
 
                 <Toaster />

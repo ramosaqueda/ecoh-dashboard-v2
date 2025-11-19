@@ -79,28 +79,38 @@ export async function GET(req: NextRequest) {
 
     // Notificaciones de nuevas actividades asignadas
     actividadesNuevas.forEach(actividad => {
+      // ✅ Construir mensaje apropiado según si tiene causa o no
+      const message = actividad.causa
+        ? `${actividad.usuario.nombre} te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+        : `${actividad.usuario.nombre} te ha asignado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
+
       notifications.push({
         id: `actividad-nueva-${actividad.id}-${actividad.createdAt.getTime()}`,
         title: 'Nueva Actividad Asignada',
-        message: `${actividad.usuario.nombre} te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+        message,
         type: 'actividad_nueva',
         actividadId: actividad.id,
-        causaRuc: actividad.causa.ruc,
+        causaRuc: actividad.causa?.ruc || null, // ✅ Usar optional chaining
         tipoActividad: actividad.tipoActividad.nombre,
-        actionUrl: ` /dashboard/todo?highlight=${actividad.id}`,
+        actionUrl: `/dashboard/todo?highlight=${actividad.id}`,
         timestamp: actividad.createdAt.toISOString()
       });
     });
 
     // 🔔 Notificaciones de cambios de estado
     actividadesActualizadas.forEach(actividad => {
+      // ✅ Construir mensaje apropiado según si tiene causa o no
+      const message = actividad.causa
+        ? `${actividad.usuarioAsignado?.nombre || 'El usuario asignado'} ha actualizado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+        : `${actividad.usuarioAsignado?.nombre || 'El usuario asignado'} ha actualizado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
+
       notifications.push({
         id: `actividad-actualizada-${actividad.id}-${actividad.updatedAt.getTime()}`,
         title: 'Actividad Actualizada',
-        message: `${actividad.usuarioAsignado?.nombre || 'El usuario asignado'} ha actualizado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`,
+        message,
         type: 'actividad_actualizada', 
         actividadId: actividad.id,
-        causaRuc: actividad.causa.ruc,
+        causaRuc: actividad.causa?.ruc || null, // ✅ Usar optional chaining
         tipoActividad: actividad.tipoActividad.nombre,
         actionUrl: ` /dashboard/todo?highlight=${actividad.id}`,
         timestamp: actividad.updatedAt.toISOString()

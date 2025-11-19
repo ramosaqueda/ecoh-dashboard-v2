@@ -8,9 +8,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from "@/components/ui/label";
-import { TriangleAlert } from 'lucide-react';
 
 import FormField from './FormField';
 import SwitchField from './SwitchField';
@@ -68,6 +65,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
       // Valores por defecto para campos booleanos
       constituyeSs: false,
       homicidioConsumado: false,
+      esCrimenOrganizado: false,
       causasCrimenOrg: [],
       // Nuevos campos para origen y estado
       origenCausaId: undefined,
@@ -81,6 +79,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
     console.log('🔍 Formulario antes de enviar:', data);
     console.log('🔍 origenCausaId:', data.origenCausaId);
     console.log('🔍 estadoCausaId:', data.estadoCausaId);
+    console.log('🔍 esCrimenOrganizado:', data.esCrimenOrganizado, 'Tipo:', typeof data.esCrimenOrganizado);
     console.log('🔍 causasCrimenOrg específico:', data.causasCrimenOrg);
   
     // Asegurar que causasCrimenOrg sea un array de números
@@ -114,9 +113,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
 
   React.useEffect(() => {
     if (initialValues && Object.keys(initialValues).length > 0) {
-      console.log('🔍 Initial values received:', initialValues);
-      console.log('🔍 origenCausaId inicial:', initialValues.origenCausaId);
-      console.log('🔍 estadoCausaId inicial:', initialValues.estadoCausaId);
+
 
       const formattedValues = {
         ...initialValues,
@@ -229,7 +226,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
                   <OrigenCausaSelector
                     value={formatSelectValue(currentOrigenCausaId)}
                     onChange={(value) => {
-                      console.log('🔍 OrigenCausaSelector onChange:', value);
+                      
                       form.setValue('origenCausaId', value ? parseSelectValue(value) : undefined, {
                         shouldValidate: true,
                         shouldDirty: true
@@ -245,7 +242,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
                   <EstadoCausaSelector
                     value={formatSelectValue(currentEstadoCausaId)}
                     onChange={(value) => {
-                      console.log('🔍 EstadoCausaSelector onChange:', value);
+                      
                       form.setValue('estadoCausaId', value ? parseSelectValue(value) : undefined, {
                         shouldValidate: true,
                         shouldDirty: true
@@ -375,7 +372,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
                   <AtvtSelect
                     value={formatSelectValue(form.watch('atvt'))}
                     onValueChange={(value) => {
-                      console.log('ATVT seleccionado:', value);
+                 
                       form.setValue('atvt', parseSelectValue(value), {
                         shouldValidate: true,
                         shouldDirty: true
@@ -402,7 +399,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
             {/* Sección de Fechas Adicionales */}
             <div className="space-y-4">
               <h3 className="font-medium">Fechas y Números de Registro</h3>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField form={form} name="fechaIta" label="Fecha ITA">
                   <Input type="date" />
                 </FormField>
@@ -410,51 +407,25 @@ const CausaForm: React.FC<CausaFormProps> = ({
                 <FormField form={form} name="numeroIta" label="N° ITA">
                   <Input placeholder="Ingrese N° ITA" />
                 </FormField>
-
-                <FormField form={form} name="fechaPpp" label="Fecha PPP">
-                  <Input type="date" />
-                </FormField>
-
-                <FormField form={form} name="numeroPpp" label="N° PPP">
-                  <Input placeholder="Ingrese N° PPP" />
-                </FormField>
               </div>
             </div>
 
             {/* Sección de Parámetros de Crimen Organizado */}
             <div className="space-y-4">
               <h3 className="font-medium">Parámetros Crimen Organizado</h3>
-              <FormField
-                form={form}
-                name="causasCrimenOrg"
-                label="Parámetros de Crimen Organizado"
-              >
-                <CrimenOrgParamsSelect causaId={initialValues.causaId} />
-              </FormField>
-              <div className="items-top flex space-x-2">
-                <RadioGroup
-                  value={form.watch('esCrimenOrganizado') === true ? '0' : form.watch('esCrimenOrganizado') === false ? '1' : '2'}
-                  onValueChange={(value) => {
-                    const booleanValue = value === '0' ? true : false;
-                    form.setValue('esCrimenOrganizado', booleanValue, {
-                      shouldValidate: true,
-                      shouldDirty: true
-                    });
-                  }}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  form={form}
+                  name="causasCrimenOrg"
+                  label="Parámetros de Crimen Organizado"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="0" id="esCO" />
-                    <Label htmlFor="esCO">Es Crimen Organizado</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="1" id="noCO" />
-                    <Label htmlFor="noCO">No es Crimen Organizado</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="2" id="desconoce" />
-                    <Label htmlFor="desconoce">Se desconoce</Label>
-                  </div>
-                </RadioGroup>
+                  <CrimenOrgParamsSelect causaId={initialValues.causaId} />
+                </FormField>
+                <SwitchField
+                  form={form}
+                  name="esCrimenOrganizado"
+                  label="Es Crimen Organizado"
+                />
               </div>
             </div>
 

@@ -22,8 +22,9 @@ import {
   SelectValue,
   SelectSeparator
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch'; // ✅ NUEVO IMPORT
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Users, FileText } from 'lucide-react';
+import { Loader2, Users, FileText, Briefcase } from 'lucide-react'; // ✅ Agregado Briefcase
 import CausaSelector from '@/components/select/CausaSelector';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -31,29 +32,39 @@ import dynamic from 'next/dynamic';
 
 const ActividadSchema = z
   .object({
-    causaId: z.string().min(1, 'Debe seleccionar una causa'),
+    causaId: z.string().optional(), // ✅ Ahora es opcional por defecto
     tipoActividadId: z.string().min(1, 'Debe seleccionar un tipo de actividad'),
     fechaInicio: z.string().min(1, 'Debe seleccionar una fecha de inicio'),
     fechaTermino: z.string().min(1, 'Debe seleccionar una fecha de término'),
     observacion: z.string().optional(),
     estado: z.enum(['inicio', 'en_proceso', 'terminado']),
     usuarioAsignadoId: z.string().optional(),
-    // ✅ CAMBIO: Hacer glosa_cierre opcional por defecto
-    glosa_cierre: z.string().optional()
+    glosa_cierre: z.string().optional(),
+    esActividadApoyo: z.boolean().default(false) // ✅ NUEVO CAMPO
   })
   .refine((data) => data.fechaTermino >= data.fechaInicio, {
     message: 'La fecha de término debe ser posterior a la fecha de inicio',
     path: ['fechaTermino']
   })
   .refine((data) => {
-    // ✅ CAMBIO: Solo requerir glosa_cierre si el estado es terminado
+    // ✅ Solo requerir glosa_cierre si el estado es terminado
     if (data.estado === 'terminado') {
       return data.glosa_cierre && data.glosa_cierre.trim().length > 0;
     }
-    return true; // No requerir para otros estados
+    return true;
   }, {
     message: 'La glosa de cierre es requerida cuando la actividad está terminada',
     path: ['glosa_cierre']
+  })
+  .refine((data) => {
+    // ✅ NUEVA VALIDACIÓN: causaId es obligatoria cuando NO es actividad de apoyo
+    if (!data.esActividadApoyo) {
+      return data.causaId && data.causaId.trim().length > 0;
+    }
+    return true;
+  }, {
+    message: 'Debe seleccionar una causa para actividades regulares',
+    path: ['causaId']
   });
 
 // Interfaces actualizadas para incluir área
@@ -92,7 +103,7 @@ interface ActividadFormProps {
   isSubmitting: boolean;
   initialData?: {
     id?: number;
-    causaId: string;
+    causaId?: string; // ✅ Ahora opcional
     tipoActividadId: string;
     fechaInicio: string;
     fechaTermino: string;
@@ -100,6 +111,7 @@ interface ActividadFormProps {
     observacion?: string;
     usuarioAsignadoId?: string;
     glosa_cierre?: string;
+    esActividadApoyo?: boolean; // ✅ NUEVO CAMPO
   };
 }
 
@@ -263,11 +275,13 @@ export default function ActividadForm({
       estado: 'inicio',
       observacion: '',
       usuarioAsignadoId: '',
-      glosa_cierre: '' // ✅ Siempre string vacío por defecto
+      glosa_cierre: '',
+      esActividadApoyo: false // ✅ NUEVO CAMPO
     }
   });
 
   const estadoActual = form.watch('estado');
+  const esActividadApoyo = form.watch('esActividadApoyo'); // ✅ NUEVO WATCH
   const isEditing = !!initialData?.id;
 
   // ✅ CAMBIO PRINCIPAL: useEffect mejorado con normalización
@@ -286,8 +300,10 @@ export default function ActividadForm({
         const normalizedData = {
           ...initialData,
           observacion: initialData.observacion || '',
-          glosa_cierre: initialData.glosa_cierre || '', // ✅ Asegurar string vacío
-          usuarioAsignadoId: initialData.usuarioAsignadoId || ''
+          glosa_cierre: initialData.glosa_cierre || '',
+          usuarioAsignadoId: initialData.usuarioAsignadoId || '',
+          causaId: initialData.causaId || '', // ✅ causaId puede ser vacío
+          esActividadApoyo: initialData.esActividadApoyo || false // ✅ NUEVO CAMPO
         };
         
         console.log('📝 Ejecutando form.reset con datos normalizados:', normalizedData);
@@ -412,7 +428,9 @@ export default function ActividadForm({
         ...data,
         observacion: data.observacion || '',
         glosa_cierre: data.glosa_cierre || '',
-        usuarioAsignadoId: data.usuarioAsignadoId || ''
+        usuarioAsignadoId: data.usuarioAsignadoId || '',
+        causaId: data.esActividadApoyo ? undefined : (data.causaId || ''), // ✅ Solo enviar causaId si NO es actividad de apoyo
+        esActividadApoyo: data.esActividadApoyo || false // ✅ NUEVO CAMPO
       };
 
       console.log('📝 Datos normalizados para validación:', normalizedData);
@@ -465,21 +483,51 @@ export default function ActividadForm({
               </div>
             )}
 
+            {/* ✅ NUEVO: Switch para Actividad de Apoyo */}
             <FormField
               control={form.control}
-              name="causaId"
+              name="esActividadApoyo"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Causa</FormLabel>
-                  <CausaSelector
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={form.formState.errors.causaId?.message}
-                  />
-                  <FormMessage />
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/30">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Actividad de Apoyo Externo
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Marque esta opción para actividades genéricas no relacionadas a una causa específica
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />
+
+            {/* ✅ CAMPO CAUSA: Solo mostrar si NO es actividad de apoyo */}
+            {!esActividadApoyo && (
+              <FormField
+                control={form.control}
+                name="causaId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Causa <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <CausaSelector
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      error={form.formState.errors.causaId?.message}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Selector agrupado por áreas */}
             <FormField

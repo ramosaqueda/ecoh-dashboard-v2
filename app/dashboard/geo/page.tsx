@@ -21,7 +21,7 @@ import { Search, Maximize2 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
-
+import { NoStrictMode } from '@/components/NoStrictMode';
 interface Causa {
   id: number;
   ruc: string;
@@ -228,6 +228,7 @@ export default function MapPage() {
   }
 
   return (
+    <NoStrictMode>
     <PageContainer scrollable={true}>
       <div className="flex h-full flex-col">
         <div className="border-b bg-background px-6 py-4">
@@ -350,5 +351,6 @@ export default function MapPage() {
         </div>
       </div>
     </PageContainer>
+   </NoStrictMode>
   );
 }

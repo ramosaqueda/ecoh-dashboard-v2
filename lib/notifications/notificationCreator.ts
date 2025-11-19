@@ -61,8 +61,8 @@ export class NotificationCreator {
         }
       });
 
-      if (!actividad || !actividad.usuarioAsignado || !actividad.causa) {
-        console.warn(`No se pudo crear notificación: actividad ${activityId} no encontrada, sin usuario asignado o sin causa`);
+      if (!actividad || !actividad.usuarioAsignado) {
+        console.warn(`No se pudo crear notificación: actividad ${activityId} no encontrada o sin usuario asignado`);
         return;
       }
 
@@ -91,8 +91,8 @@ export class NotificationCreator {
         userEmail: actividad.usuarioAsignado.email,
         actividadId: activityId,
         metadata: {
-          causaRuc: actividad.causa.ruc,
-          causaDenominacion: actividad.causa.denominacionCausa || null,
+          causaRuc: actividad.causa?.ruc || null, // ✅ Optional chaining
+          causaDenominacion: actividad.causa?.denominacionCausa || null,
           tipoActividad: actividad.tipoActividad.nombre,
           fechaTermino: actividad.fechaTermino.toISOString(),
           createdBy: createdByUserId || null
@@ -150,8 +150,8 @@ export class NotificationCreator {
         }
       });
 
-      if (!actividad || !actividad.usuarioAsignado || !actividad.causa) {
-        console.warn(`No se pudo crear notificación: actividad ${activityId} no encontrada, sin usuario asignado o sin causa`);
+      if (!actividad || !actividad.usuarioAsignado) {
+        console.warn(`No se pudo crear notificación: actividad ${activityId} no encontrada o sin usuario asignado`);
         return;
       }
 
@@ -174,8 +174,8 @@ export class NotificationCreator {
         userEmail: actividad.usuarioAsignado.email,
         actividadId: activityId,
         metadata: {
-          causaRuc: actividad.causa.ruc,
-          causaDenominacion: actividad.causa.denominacionCausa || null,
+          causaRuc: actividad.causa?.ruc || null, // ✅ Optional chaining
+          causaDenominacion: actividad.causa?.denominacionCausa || null,
           tipoActividad: actividad.tipoActividad.nombre,
           changes,
           updatedBy: updatedByUserId,
@@ -299,7 +299,7 @@ export class NotificationCreator {
             isOverdue: true,
             daysPastDue,
             originalDueDate: actividad.fechaTermino.toISOString(),
-            causaRuc: actividad.causa.ruc,
+            causaRuc: actividad.causa?.ruc || null, // ✅ Optional chaining
             tipoActividad: actividad.tipoActividad.nombre
           },
           expiresAt: new Date(Date.now() + EXPIRATION_TIMES.OVERDUE)

@@ -244,13 +244,8 @@ export const causaService = {
           )
         : [],
 
-      // Estado de crimen organizado
-      esCrimenOrganizado:
-        data.esCrimenOrganizado === true
-          ? 0
-          : data.esCrimenOrganizado === false
-          ? 1
-          : 2
+      // Estado de crimen organizado - enviar boolean directo
+      esCrimenOrganizado: Boolean(data.esCrimenOrganizado)
     };
 
     console.log('🔍 DEBUG transformFormData - atvtId antes de limpiar:', transformedData.atvtId);
@@ -358,13 +353,8 @@ export const causaService = {
       // Parámetros de crimen organizado
       causasCrimenOrg: causasCrimenOrg,
 
-      // Estado de crimen organizado
-      esCrimenOrganizado:
-        data.esCrimenOrganizado === 0
-          ? true
-          : data.esCrimenOrganizado === 1
-          ? false
-          : null
+      // Estado de crimen organizado - recibir boolean directo
+      esCrimenOrganizado: Boolean(data.esCrimenOrganizado)
     };
  
     console.log('🔍 DEBUG transformInitialData - Datos transformados finales:', {
