@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { 
-  CheckCircle2, 
-  Clock, 
-  User, 
-  FileText, 
+import {
+  CheckCircle2,
+  Clock,
+  User,
+  FileText,
   Calendar,
   Loader2,
   AlertTriangle,
@@ -67,7 +67,7 @@ interface Usuario {
 
 interface Actividad {
   id: number;
-  causa: {
+  causa?: {
     id: number;
     ruc: string;
     denominacionCausa: string;
@@ -119,7 +119,7 @@ const getPriorityColor = (fechaTermino: string) => {
   const today = new Date();
   const termino = new Date(fechaTermino);
   const diffDays = Math.ceil((termino.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return 'text-red-600'; // Vencida
   if (diffDays <= 3) return 'text-orange-600'; // Próxima a vencer
   return 'text-gray-600'; // Normal
@@ -140,7 +140,7 @@ export default function TodoActividades() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  
+
   // Estados para el modal de cierre
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [actividadToClose, setActividadToClose] = useState<Actividad | null>(null);
@@ -169,7 +169,7 @@ export default function TodoActividades() {
     try {
       console.log('🔍 Obteniendo usuario actual...');
       const response = await fetch('/api/usuarios/me');
-      
+
       if (!response.ok) {
         console.error('❌ Error obteniendo usuario:', response.status, response.statusText);
         if (response.status === 401) {
@@ -179,12 +179,12 @@ export default function TodoActividades() {
         }
         throw new Error('Error al obtener usuario');
       }
-      
+
       const userData = await response.json();
       console.log('✅ Usuario obtenido:', userData.email);
-      
+
       const userWithRole = await fetch(`/api/usuarios?roles=${userData.rolId || 3}`);
-      
+
       if (userWithRole.ok) {
         const usersData = await userWithRole.json();
         const foundUser = usersData.find((u: Usuario) => u.id === userData.id);
@@ -205,12 +205,12 @@ export default function TodoActividades() {
   // Obtener usuarios (solo para managers)
   const fetchUsuarios = async () => {
     if (!isManager) return;
-    
+
     setIsLoadingUsers(true);
     try {
       const response = await fetch('/api/usuarios');
       if (!response.ok) throw new Error('Error al obtener usuarios');
-      
+
       const usersData = await response.json();
       setUsuarios(usersData);
     } catch (error) {
@@ -225,17 +225,17 @@ export default function TodoActividades() {
   const fetchActividadById = async (id: number) => {
     setIsLoadingHighlight(true);
     setHighlightError(null);
-    
+
     try {
       console.log(`🔍 Cargando actividad ID: ${id}`);
       const response = await fetch(`/api/actividades/${id}`);
-      
+
       console.log(`📡 Response status: ${response.status} ${response.statusText}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('❌ Error response:', errorData);
-        
+
         if (response.status === 404) {
           throw new Error('Actividad no encontrada');
         }
@@ -244,7 +244,7 @@ export default function TodoActividades() {
         }
         throw new Error(errorData.error || 'Error al cargar la actividad');
       }
-      
+
       const data = await response.json();
       console.log('✅ Actividad cargada:', data.id, data.tipoActividad?.nombre);
       setHighlightedActividad(data);
@@ -265,20 +265,20 @@ export default function TodoActividades() {
       const params = new URLSearchParams();
       params.append('limit', '1000');
       params.append('include_assigned', 'true');
-      
+
       const url = `/api/actividades?${params.toString()}`;
       const response = await fetch(url);
-      
+
       if (!response.ok) throw new Error('Error al cargar actividades');
-      
+
       const jsonResponse = await response.json();
       const data = jsonResponse.data || [];
-      
+
       // Filtrar actividades pendientes
-      let actividadesPendientes = data.filter((actividad: any) => 
+      let actividadesPendientes = data.filter((actividad: any) =>
         actividad.estado === 'inicio' || actividad.estado === 'en_proceso'
       );
-      
+
       // Filtrar por usuario si se especifica
       if (userId) {
         const userIdNum = parseInt(userId);
@@ -287,12 +287,12 @@ export default function TodoActividades() {
           return assignedUserId === userIdNum;
         });
       }
-      
+
       // Ordenar por fecha de término (más urgentes primero)
-      actividadesPendientes.sort((a: any, b: any) => 
+      actividadesPendientes.sort((a: any, b: any) =>
         new Date(a.fechaTermino).getTime() - new Date(b.fechaTermino).getTime()
       );
-      
+
       setActividades(actividadesPendientes);
     } catch (error) {
       console.error('Error:', error);
@@ -406,8 +406,8 @@ export default function TodoActividades() {
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold">Detalle de Actividad</h1>
               <div className="space-x-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleBackToNotifications}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -434,8 +434,8 @@ export default function TodoActividades() {
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold">Detalle de Actividad</h1>
               <div className="space-x-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleBackToNotifications}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -454,8 +454,8 @@ export default function TodoActividades() {
                     {highlightError || 'No se pudo cargar la actividad'}
                   </p>
                   <div className="space-x-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={handleBackToNotifications}
                     >
                       Volver a Notificaciones
@@ -479,8 +479,8 @@ export default function TodoActividades() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Detalle de Actividad</h1>
             <div className="space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleBackToNotifications}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -518,9 +518,9 @@ export default function TodoActividades() {
                     Información de Causa
                   </div>
                   <div className="ml-6 space-y-1">
-                    <p className="text-sm"><strong>RUC:</strong> {highlightedActividad.causa.ruc}</p>
-                    <p className="text-sm"><strong>Causa ID:</strong> {highlightedActividad.causa.id}</p>
-                    <p className="text-sm"><strong>Denominación:</strong> {highlightedActividad.causa.denominacionCausa}</p>
+                    <p className="text-sm"><strong>RUC:</strong> {highlightedActividad.causa?.ruc || 'N/A'}</p>
+                    <p className="text-sm"><strong>Causa ID:</strong> {highlightedActividad.causa?.id || 'N/A'}</p>
+                    <p className="text-sm"><strong>Denominación:</strong> {highlightedActividad.causa?.denominacionCausa || 'Sin Causa'}</p>
                   </div>
                 </div>
 
@@ -632,10 +632,10 @@ export default function TodoActividades() {
                   <div className="bg-white p-4 rounded border">
                     <h3 className="font-medium text-lg">{highlightedActividad.tipoActividad.nombre}</h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      RUC: {highlightedActividad.causa.ruc} - {highlightedActividad.causa.denominacionCausa}
+                      RUC: {highlightedActividad.causa?.ruc || 'N/A'} - {highlightedActividad.causa?.denominacionCausa || 'Sin Causa'}
                     </p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium block text-gray-700">
                       Comentarios de Cierre (Opcional)
@@ -648,7 +648,7 @@ export default function TodoActividades() {
                       className="w-full p-3 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     />
                   </div>
-                  
+
                   <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded border-l-4 border-blue-400">
                     <strong>Fecha de cierre:</strong> {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}
                   </div>
@@ -697,7 +697,7 @@ export default function TodoActividades() {
   }
 
   // Vista normal de todas las tareas (código original)
-  const actividadesVencidas = actividades.filter(act => 
+  const actividadesVencidas = actividades.filter(act =>
     new Date(act.fechaTermino) < new Date()
   ).length;
 
@@ -710,7 +710,7 @@ export default function TodoActividades() {
     <PageContainer>
       <div className="space-y-6">
         <Breadcrumbs items={breadcrumbItems} />
-        
+
         {/* Header */}
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
@@ -768,7 +768,7 @@ export default function TodoActividades() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
@@ -780,7 +780,7 @@ export default function TodoActividades() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
@@ -830,10 +830,10 @@ export default function TodoActividades() {
                       const fechaVencimiento = new Date(actividad.fechaTermino);
                       const esVencida = fechaVencimiento < new Date();
                       const diasRestantes = Math.ceil((fechaVencimiento.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                      
+
                       return (
-                        <TableRow 
-                          key={actividad.id} 
+                        <TableRow
+                          key={actividad.id}
                           className={`${esVencida ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-muted/50'}`}
                         >
                           <TableCell>
@@ -855,25 +855,25 @@ export default function TodoActividades() {
                               )}
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="text-sm font-medium">{actividad.causa.ruc}</div>
-                                                            <TooltipProvider>
+                              <div className="text-sm font-medium">{actividad.causa?.ruc || 'N/A'}</div>
+                              <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                      {actividad.causa.denominacionCausa}
+                                      {actividad.causa?.denominacionCausa || 'Sin Causa'}
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent className="max-w-[300px]">
-                                    <p>{actividad.causa.denominacionCausa}</p>
+                                    <p>{actividad.causa?.denominacionCausa || 'Sin Causa'}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className="space-y-1">
                               {getEstadoBadge(actividad.estado)}
@@ -884,13 +884,13 @@ export default function TodoActividades() {
                               )}
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className="text-sm">
                               {format(new Date(actividad.fechaInicio), 'dd/MM/yyyy', { locale: es })}
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className={`text-sm ${getPriorityColor(actividad.fechaTermino)}`}>
                               {format(fechaVencimiento, 'dd/MM/yyyy', { locale: es })}
@@ -901,7 +901,7 @@ export default function TodoActividades() {
                               )}
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             {actividad.usuario && (
                               <div className="flex items-center gap-2">
@@ -914,7 +914,7 @@ export default function TodoActividades() {
                               </div>
                             )}
                           </TableCell>
-                          
+
                           <TableCell>
                             {responsable && (
                               <div className="flex items-center gap-2">
@@ -936,7 +936,7 @@ export default function TodoActividades() {
                               </div>
                             )}
                           </TableCell>
-                          
+
                           <TableCell className="text-right">
                             <div className="flex items-center gap-2 justify-end">
                               <TooltipProvider>
@@ -955,7 +955,7 @@ export default function TodoActividades() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                              
+
                               <Button
                                 onClick={() => handleOpenCloseDialog(actividad)}
                                 size="sm"
@@ -982,7 +982,7 @@ export default function TodoActividades() {
             <DialogHeader>
               <DialogTitle>Detalles de la Actividad</DialogTitle>
             </DialogHeader>
-            
+
             {actividadDetail && (
               <div className="space-y-4">
                 <div>
@@ -991,30 +991,30 @@ export default function TodoActividades() {
                     ID: {actividadDetail.id}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">RUC</label>
-                    <p className="text-sm">{actividadDetail.causa.ruc}</p>
+                    <p className="text-sm">{actividadDetail.causa?.ruc || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Estado</label>
                     <div className="mt-1">{getEstadoBadge(actividadDetail.estado)}</div>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium">Denominación de la Causa</label>
-                  <p className="text-sm mt-1">{actividadDetail.causa.denominacionCausa}</p>
+                  <p className="text-sm mt-1">{actividadDetail.causa?.denominacionCausa || 'Sin Causa'}</p>
                 </div>
-                
+
                 {actividadDetail.observacion && (
                   <div>
                     <label className="text-sm font-medium">Descripción</label>
                     <p className="text-sm mt-1 bg-gray-50 p-3 rounded-md">{actividadDetail.observacion}</p>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Fecha de Inicio</label>
@@ -1025,15 +1025,15 @@ export default function TodoActividades() {
                     <p className="text-sm">{format(new Date(actividadDetail.fechaTermino), 'dd/MM/yyyy', { locale: es })}</p>
                   </div>
                 </div>
-                
+
                 {(actividadDetail.usuarioAsignado || actividadDetail.usuario) && (
                   <div>
                     <label className="text-sm font-medium">
                       {actividadDetail.usuarioAsignado ? 'Asignado a' : 'Creado por'}
                     </label>
                     <p className="text-sm">
-                      {(actividadDetail.usuarioAsignado || actividadDetail.usuario)?.nombre || 
-                       (actividadDetail.usuarioAsignado || actividadDetail.usuario)?.email}
+                      {(actividadDetail.usuarioAsignado || actividadDetail.usuario)?.nombre ||
+                        (actividadDetail.usuarioAsignado || actividadDetail.usuario)?.email}
                     </p>
                   </div>
                 )}
@@ -1057,22 +1057,22 @@ export default function TodoActividades() {
             🟢 Formulario mostrado: {showCloseDialog ? 'TRUE' : 'FALSE'}
           </div>
         )}
-        
+
         {/* Modal original de shadcn/ui - mantener para la tabla normal */}
         <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Completar Actividad</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <div>
                 <h3 className="font-medium">{actividadToClose?.tipoActividad.nombre}</h3>
                 <p className="text-sm text-muted-foreground">
-                  RUC: {actividadToClose?.causa.ruc} - {actividadToClose?.causa.denominacionCausa}
+                  RUC: {actividadToClose?.causa?.ruc || 'N/A'} - {actividadToClose?.causa?.denominacionCausa || 'Sin Causa'}
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <label htmlFor="glosa-cierre" className="text-sm font-medium">
                   Comentarios de Cierre (Opcional)
@@ -1085,7 +1085,7 @@ export default function TodoActividades() {
                   rows={4}
                 />
               </div>
-              
+
               <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-md border-l-4 border-blue-400">
                 <strong>Fecha de cierre:</strong> {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es })}
               </div>

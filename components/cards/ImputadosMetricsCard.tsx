@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useYearContext } from '@/components/YearSelector';
-import { 
-  Users, 
-  Gavel, 
-  FileCheck, 
+import {
+  Users,
+  Gavel,
+  FileCheck,
   Lock
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,18 +43,18 @@ export default function ImputadosMetricsCard() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Si selectedYear es "todos", no enviar parámetro year
         const url = selectedYear && selectedYear !== 'todos'
           ? `/api/dashboard/imputados-stats?year=${selectedYear}`
           : '/api/dashboard/imputados-stats';
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error('Error al cargar estadísticas de imputados');
         }
-        
+
         const data = await response.json();
         setStats(data);
       } catch (err) {
@@ -137,7 +137,7 @@ export default function ImputadosMetricsCard() {
     <Card className="col-span-full">
       <CardHeader>
         <CardTitle className="text-xl font-bold">
-          Métricas por Jurisdicción equipos ECOH
+          Métricas por  equipos ECOH
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Comparativo ECOH Elqui vs ECOH Limarí-Choapa
@@ -149,18 +149,18 @@ export default function ImputadosMetricsCard() {
               ECOH ELQUI
               ================================ */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b-2" 
-                 style={{ borderColor: stats.ecohElqui.color }}>
-              <div 
-                className="w-3 h-3 rounded-full" 
+            <div className="flex items-center gap-2 pb-2 border-b-2"
+              style={{ borderColor: stats.ecohElqui.color }}>
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: stats.ecohElqui.color }}
               />
               <h3 className="font-semibold text-lg">{stats.ecohElqui.nombre}</h3>
             </div>
-            
+
             <div className="space-y-3">
               {metrics.map((metric) => (
-                <div 
+                <div
                   key={`elqui-${metric.label}`}
                   className="flex items-center justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
                 >
@@ -180,18 +180,18 @@ export default function ImputadosMetricsCard() {
               ECOH LIMARÍ-CHOAPA
               ================================ */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b-2" 
-                 style={{ borderColor: stats.ecohLimari.color }}>
-              <div 
-                className="w-3 h-3 rounded-full" 
+            <div className="flex items-center gap-2 pb-2 border-b-2"
+              style={{ borderColor: stats.ecohLimari.color }}>
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: stats.ecohLimari.color }}
               />
               <h3 className="font-semibold text-lg">{stats.ecohLimari.nombre}</h3>
             </div>
-            
+
             <div className="space-y-3">
               {metrics.map((metric) => (
-                <div 
+                <div
                   key={`limari-${metric.label}`}
                   className="flex items-center justify-between p-3 rounded-lg border hover:shadow-sm transition-shadow"
                 >
@@ -217,7 +217,7 @@ export default function ImputadosMetricsCard() {
           </h4>
           <div className="grid grid-cols-4 gap-3">
             {metrics.map((metric) => (
-              <div 
+              <div
                 key={`total-${metric.label}`}
                 className="flex flex-col items-center gap-1 p-3 rounded-md bg-muted/50"
               >

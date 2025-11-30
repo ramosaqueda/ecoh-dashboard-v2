@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Obtener parámetros de año (opcional)
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
-    
+
     // Filtro de año para fechas
     const yearFilter = year ? {
       gte: new Date(`${year}-01-01`),
@@ -48,14 +48,14 @@ export async function GET(request: NextRequest) {
     // ======================================
     // ECOH ELQUI (origenCausaId = 2)
     // ======================================
-    
+
     const [
       elquiTotalImputados,
       elquiFormalizados,
       elquiFormalizadosVigentes,
       elquiConCautelar
     ] = await Promise.all([
-      // 1. Total de imputados únicos en causas de esta jurisdicción
+      // 1. Total de imputados únicos en causas de esta 
       prisma.imputado.count({
         where: {
           causas: {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }),
-      
+
       // 2. Imputados formalizados en el período
       prisma.causasImputados.count({
         where: {
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
           } : {})
         }
       }),
-      
+
       // 3. Imputados formalizados en causas vigentes
       // (causas que no tienen estado cerrado)
       prisma.causasImputados.count({
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           formalizado: true
         }
       }),
-      
+
       // 4. Imputados con cautelar aplicada
       prisma.causasImputados.count({
         where: {
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     // ======================================
     // ECOH LIMARÍ (origenCausaId = 3)
     // ======================================
-    
+
     const [
       limariTotalImputados,
       limariFormalizados,
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }),
-      
+
       // 2. Imputados formalizados en el período
       prisma.causasImputados.count({
         where: {
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
           } : {})
         }
       }),
-      
+
       // 3. Imputados formalizados en causas vigentes
       prisma.causasImputados.count({
         where: {
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
           formalizado: true
         }
       }),
-      
+
       // 4. Imputados con cautelar aplicada
       prisma.causasImputados.count({
         where: {

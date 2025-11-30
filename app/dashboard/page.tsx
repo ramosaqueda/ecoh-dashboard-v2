@@ -19,6 +19,7 @@ import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
 import NationalityDistribution from '@/components/charts/NationalityDistribution';
 import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
 import JurisdiccionMetricsCard from '@/components/cards/JurisdiccionMetricsCard';
+import EcohConcurrenceCard from '@/components/cards/EcohConcurrenceCard';
 import ImputadosDashboard from '@/components/imputados/ImputadosDashboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
@@ -64,18 +65,18 @@ export default function DashboardPage() {
               <Skeleton className="h-8 w-64" />
               <Skeleton className="h-10 w-32" />
             </div>
-            
+
             {/* Tabs skeleton */}
             <div className="space-y-4">
               <Skeleton className="h-10 w-full max-w-md" />
-              
+
               {/* Cards skeleton */}
               <div className="grid gap-4 md:grid-cols-3">
                 {[...Array(3)].map((_, i) => (
                   <Skeleton key={`card-${i}`} className="h-32" />
                 ))}
               </div>
-              
+
               {/* Charts skeleton */}
               <div className="grid gap-4 md:grid-cols-2">
                 <Skeleton className="h-64" />
@@ -138,12 +139,12 @@ export default function DashboardPage() {
               <TabsTrigger value="analytics">Actividades</TabsTrigger>
               <TabsTrigger value="imputados">Imputados</TabsTrigger>
             </TabsList>
-            
+
             {/* ========================================
                 TAB: OVERVIEW - Estadísticas principales
                 ======================================== */}
             <TabsContent value="overview" className="space-y-6">
-              
+
               {/* SECCIÓN 1: Cards Principales - 3 columnas (más grandes) */}
               <div className="grid gap-4 md:grid-cols-3">
                 <EcohSacfiComparisonCard />
@@ -151,8 +152,13 @@ export default function DashboardPage() {
                 <EsclarecimientoCard />
               </div>
 
-              {/* SECCIÓN 2: Métricas por Jurisdicción */}
+              {/* SECCIÓN 2: Métricas por  */}
               <JurisdiccionMetricsCard />
+
+              {/* SECCIÓN 2.5: Concurrencia ECOH */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <EcohConcurrenceCard />
+              </div>
 
               {/* SECCIÓN 3: Card Total de Causas - Destacada */}
               <div className="w-full">
@@ -187,7 +193,7 @@ export default function DashboardPage() {
                 <CasesHeatmap />
               </div>
             </TabsContent>
- 
+
             {/* ========================================
                 TAB: ANALYTICS - Actividades
                 ======================================== */}

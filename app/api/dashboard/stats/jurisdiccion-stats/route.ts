@@ -26,12 +26,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('📊 [API] Calculando estadísticas por jurisdicción...');
+    console.log('📊 [API] Calculando estadísticas por ...');
 
     // Obtener parámetros de año (opcional)
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
-    
+
     // Filtro de año si se proporciona
     const yearFilter = year ? {
       fechaDelHecho: {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // ======================================
     // ECOH ELQUI (origenCausaId = 2)
     // ======================================
-    
+
     const [
       elquiCausasVigentes,
       elquiConcurrenciasSS,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 2. Concurrencias a SS
       prisma.causa.count({
         where: {
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 3. Homicidios consumados
       prisma.causa.count({
         where: {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 4. Homicidios consumados + crimen organizado
       prisma.causa.count({
         where: {
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 5. Aristas (causas relacionadas)
       prisma.causasRelacionadas.count({
         where: {
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     // ======================================
     // ECOH LIMARÍ (origenCausaId = 3)
     // ======================================
-    
+
     const [
       limariCausasVigentes,
       limariConcurrenciasSS,
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 2. Concurrencias a SS
       prisma.causa.count({
         where: {
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 3. Homicidios consumados
       prisma.causa.count({
         where: {
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 4. Homicidios consumados + crimen organizado
       prisma.causa.count({
         where: {
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
           ...yearFilter
         }
       }),
-      
+
       // 5. Aristas (causas relacionadas)
       prisma.causasRelacionadas.count({
         where: {
