@@ -56,6 +56,15 @@ const reportesDisponibles: ReporteItem[] = [
     disponible: true,
     categoria: 'operacional'
   },
+   {
+    id: 'actividades-usuario',
+    titulo: 'Actividades por Usuario',
+    descripcion: 'Monitoreo de actividades por usuario en un período de tiempo',
+    icono: <Calendar className="h-6 w-6" />,
+    href: '/dashboard/reportes/actividades-usuario',
+    disponible: true,
+    categoria: 'operacional'
+  },
   {
     id: 'seguimiento-actividades',
     titulo: 'Seguimiento de Actividades',
@@ -126,6 +135,15 @@ const reportesDisponibles: ReporteItem[] = [
     icono: <TrendingUp className="h-6 w-6" />,
     href: '/dashboard/reportes/rendimiento',
     disponible: false,
+    categoria: 'administrativo'
+  },
+  {
+    id: 'actividades-usuario',
+    titulo: 'Reporte de Actividades por Usuario',
+    descripcion: 'Detalle de actividades asignadas por usuario y rango de fechas con exportación a Excel',
+    icono: <Users className="h-6 w-6" />,
+    href: '/dashboard/reportes/actividades-usuario',
+    disponible: true,
     categoria: 'administrativo'
   }
 ];

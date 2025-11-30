@@ -38,7 +38,7 @@ interface ActividadResumen {
   tipoActividad: {
     nombre: string;
   };
-  causa: {
+  causa?: {
     ruc: string;
     denominacionCausa: string;
   };
@@ -438,7 +438,7 @@ export default function AnalyticsDashboard() {
                           {actividad.tipoActividad.nombre}
                         </h4>
                         <p className="text-xs text-gray-600 truncate">
-                          {actividad.causa.ruc} - {actividad.causa.denominacionCausa}
+                          {actividad.causa ? `${actividad.causa.ruc} - ${actividad.causa.denominacionCausa}` : 'Sin Causa Asociada'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {getEstadoBadge(actividad.estado)}
@@ -518,7 +518,7 @@ export default function AnalyticsDashboard() {
                           {actividad.tipoActividad.nombre}
                         </h4>
                         <p className="text-xs text-gray-600 truncate">
-                          {actividad.causa.ruc} - {actividad.causa.denominacionCausa}
+                          {actividad.causa ? `${actividad.causa.ruc} - ${actividad.causa.denominacionCausa}` : 'Sin Causa Asociada'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           {getEstadoBadge(actividad.estado)}

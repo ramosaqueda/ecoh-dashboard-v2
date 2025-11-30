@@ -25,6 +25,11 @@ export const navItems: NavItem[] = [
         title: 'Tablero de actividades',
         href: '/dashboard/kanban',
         icon: 'kanban'
+      },
+      {
+        title: 'Matriz de diligencias',
+        href: '/dashboard/diligencias',
+        icon: 'table2'
       }
     ]
   },

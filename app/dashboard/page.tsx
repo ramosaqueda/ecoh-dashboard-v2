@@ -18,6 +18,8 @@ import { EsclarecimientoCard } from '@/components/cards/EsclarecimientoCard';
 import { CrimenOrganizadoCard } from '@/components/cards/CrimenOrganizadoCard';
 import NationalityDistribution from '@/components/charts/NationalityDistribution';
 import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
+import JurisdiccionMetricsCard from '@/components/cards/JurisdiccionMetricsCard';
+import ImputadosDashboard from '@/components/imputados/ImputadosDashboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
@@ -134,6 +136,7 @@ export default function DashboardPage() {
             <TabsList>
               <TabsTrigger value="overview">Estadísticas</TabsTrigger>
               <TabsTrigger value="analytics">Actividades</TabsTrigger>
+              <TabsTrigger value="imputados">Imputados</TabsTrigger>
             </TabsList>
             
             {/* ========================================
@@ -148,42 +151,55 @@ export default function DashboardPage() {
                 <EsclarecimientoCard />
               </div>
 
-              {/* SECCIÓN 2: Card Total de Causas - Destacada */}
+              {/* SECCIÓN 2: Métricas por Jurisdicción */}
+              <JurisdiccionMetricsCard />
+
+              {/* SECCIÓN 3: Card Total de Causas - Destacada */}
               <div className="w-full">
                 <CausasCard />
               </div>
 
-              {/* SECCIÓN 3: Línea de Tiempo de Causas */}
+              {/* SECCIÓN 4: Línea de Tiempo de Causas */}
               <div className="w-full">
                 <CauseTimeline />
               </div>
 
-              {/* SECCIÓN 4: Gráficos Principales - 2 columnas */}
+              {/* SECCIÓN 5: Gráficos Principales - 2 columnas */}
               <div className="grid gap-4 md:grid-cols-2">
                 <CaseTimelineChart />
                 <DelitosDistribution />
               </div>
 
-              {/* SECCIÓN 5: Gráficos Secundarios - 3 columnas */}
+              {/* SECCIÓN 6: Gráficos Secundarios - 3 columnas */}
               <div className="grid gap-4 md:grid-cols-3">
                 <ImputadosFlow />
                 <AbogadoAnalistaChart />
                 <NationalityDistribution />
               </div>
 
-              {/* SECCIÓN 6: Gráfico de Formalización */}
+              {/* SECCIÓN 7: Gráfico de Formalización */}
               <div className="grid gap-6">
                 <FormalizationChart />
               </div>
 
-              {/* SECCIÓN 7: Mapa de Calor - Ancho completo */}
+              {/* SECCIÓN 8: Mapa de Calor - Ancho completo */}
               <div className="w-full">
                 <CasesHeatmap />
               </div>
             </TabsContent>
  
+            {/* ========================================
+                TAB: ANALYTICS - Actividades
+                ======================================== */}
             <TabsContent value="analytics" className="space-y-4">
               <AnalyticsDashboard />
+            </TabsContent>
+
+            {/* ========================================
+                TAB: IMPUTADOS - Métricas de Imputados 🆕
+                ======================================== */}
+            <TabsContent value="imputados" className="space-y-4">
+              <ImputadosDashboard />
             </TabsContent>
           </Tabs>
         </div>

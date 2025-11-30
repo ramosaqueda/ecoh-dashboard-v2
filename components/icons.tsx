@@ -1,10 +1,10 @@
 import {
   AlertTriangle,
   ArrowRight,
-  Check,
+  Table2Icon,   
   ChevronLeft,
   ChevronRight,
-  CircuitBoardIcon,
+ 
   Command,
   CreditCard,
   File,
@@ -39,8 +39,8 @@ import {
   UserRound,
   FolderCheckIcon,
   SquareDashedKanbanIcon,
-  ListCheckIcon,
-  LucideListCheck,
+
+
   Link2Icon,
   ListChecksIcon,
   WaypointsIcon,
@@ -104,7 +104,7 @@ export const Icons = {
   report:FileStackIcon,
   link2:Link2Icon,
   tool:WrenchIcon,
-
+  table2:Table2Icon,
 
 
   gitHub: ({ ...props }: LucideProps) => (

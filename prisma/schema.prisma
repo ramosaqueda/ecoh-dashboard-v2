@@ -87,6 +87,7 @@ model Causa {
   
   hitos                     TimelineHito[]
   telefonos                 TelefonoCausa[]
+  diligencias               CausaDiligencia[]
 
   @@index([atvtId], map: "fki_fk_causa_atvt")
 }
@@ -199,7 +200,7 @@ model Fiscal {
   id              Int               @id @default(autoincrement())
   nombre          String
   causas          Causa[]
-
+  diligencias     FiscalDiligencia[]
 }
 
 model Foco {
@@ -546,4 +547,47 @@ enum NotificationPriority {
   medio
   alta
   critica
+}
+
+model DiligenciaMinima {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  causas      CausaDiligencia[]
+  fiscals     FiscalDiligencia[]
+}
+
+model CausaDiligencia {
+  id                 Int              @id @default(autoincrement())
+  causaId            Int
+  diligenciaId       Int
+  realizada          Boolean          @default(false)
+  noNecesaria        Boolean          @default(false)
+  fechaRealizacion   DateTime?
+  fechaReiteracion   DateTime?
+  observacion        String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  causa              Causa            @relation(fields: [causaId], references: [id], onDelete: Cascade)
+  diligencia         DiligenciaMinima @relation(fields: [diligenciaId], references: [id], onDelete: Cascade)
+
+  @@unique([causaId, diligenciaId])
+  @@index([causaId])
+}
+
+model FiscalDiligencia {
+  id           Int              @id @default(autoincrement())
+  fiscalId     Int
+  diligenciaId Int
+  createdAt    DateTime         @default(now())
+  
+  fiscal       Fiscal           @relation(fields: [fiscalId], references: [id], onDelete: Cascade)
+  diligencia   DiligenciaMinima @relation(fields: [diligenciaId], references: [id], onDelete: Cascade)
+
+  @@unique([fiscalId, diligenciaId])
+  @@index([fiscalId])
 }
