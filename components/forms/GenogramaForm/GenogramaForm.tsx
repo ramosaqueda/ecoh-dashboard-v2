@@ -33,6 +33,7 @@ const personaSchema = z.object({
   ramaFamiliar: z.enum(['ninguna', 'principal', 'paterna', 'materna', 'politica', 'personalizada']).default('ninguna'),
   colorRama: z.string().optional(),
   nombreRama: z.string().optional(),
+  fotoUrl: z.string().url({ message: "Debe ser una URL válida" }).optional().or(z.literal('')),
 }).refine(data => {
   if (data.ramaFamiliar === 'personalizada') {
     return !!data.nombreRama && !!data.colorRama;
@@ -98,6 +99,7 @@ export const GenogramaForm: React.FC<GenogramaFormProps> = ({
       ramaFamiliar: 'ninguna',
       colorRama: '#ffffff',
       nombreRama: '',
+      fotoUrl: '',
     },
   });
 
@@ -127,6 +129,7 @@ export const GenogramaForm: React.FC<GenogramaFormProps> = ({
       segundoNombre: '',
       apellido: data.nombreCompleto.split(' ').slice(1).join(' ') || '',
       segundoApellido: '',
+      fotoUrl: data.fotoUrl || undefined,
     };
 
     onAddPersona(personaData);
@@ -229,6 +232,18 @@ export const GenogramaForm: React.FC<GenogramaFormProps> = ({
                 />
                 {errorsPersona.nombreCompleto && (
                   <span className="text-sm text-red-500">{errorsPersona.nombreCompleto.message}</span>
+                )}
+              </div>
+              
+              <div>
+                <Label htmlFor="fotoUrl">URL de Fotografía (Opcional)</Label>
+                <Input
+                  id="fotoUrl"
+                  placeholder="https://ejemplo.com/foto.jpg"
+                  {...registerPersona('fotoUrl')}
+                />
+                {errorsPersona.fotoUrl && (
+                  <span className="text-sm text-red-500">{errorsPersona.fotoUrl.message}</span>
                 )}
               </div>
 

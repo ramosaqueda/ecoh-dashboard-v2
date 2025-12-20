@@ -167,6 +167,39 @@ export async function GET(req: NextRequest) {
               nombre: causa.delito.nombre
             }
           : null,
+        abogado: causa.abogado
+          ? {
+              id: causa.abogado.id,
+              nombre: causa.abogado.nombre
+            }
+          : null,
+        analista: causa.analista
+          ? {
+              id: causa.analista.id,
+              nombre: causa.analista.nombre
+            }
+          : null,
+        atvt: causa.atvt
+          ? {
+              id: causa.atvt.id,
+              nombre: causa.atvt.nombre
+            }
+          : null,
+        origenCausa: causa.origenCausa
+          ? {
+              id: causa.origenCausa.id,
+              nombre: causa.origenCausa.nombre,
+              color: causa.origenCausa.color
+            }
+          : null,
+        estadoCausa: causa.estadoCausa
+          ? {
+              id: causa.estadoCausa.id,
+              nombre: causa.estadoCausa.nombre,
+              codigo: causa.estadoCausa.codigo,
+              color: causa.estadoCausa.color
+            }
+          : null,
         _count: {
           imputados: causa._count?.imputados || 0,
           causasRelacionadasMadre: causa._count?.causasRelacionadasMadre || 0,

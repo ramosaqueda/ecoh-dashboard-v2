@@ -92,8 +92,9 @@ interface MetricasGenerales {
   actividadesVencidas: number;
   porcentajeGlobalCompletado: number;
   distribucionPorUsuario: DistribucionUsuario[];
-  tiempoPromedioPorTipo?: TotalPorTipo[]; // Compatible con el componente
-  totalPorTipo?: TotalPorTipo[]; // Nueva propiedad opcional
+  tiempoPromedioPorTipo?: TotalPorTipo[];
+  totalPorTipo?: TotalPorTipo[];
+  distribucionPorEstamento?: { estamento: string; cantidad: number }[];  // ✅ AGREGAR ESTA LÍNEA
 }
 
 interface TipoActividad {
@@ -129,7 +130,8 @@ export default function SeguimientoActividadesPage() {
     actividadesVencidas: 0,
     porcentajeGlobalCompletado: 0,
     distribucionPorUsuario: [],
-    tiempoPromedioPorTipo: [] // ✅ Asegurar compatibilidad
+    tiempoPromedioPorTipo: [],
+    distribucionPorEstamento: []  // ✅ AGREGAR ESTA LÍNEA
   });
   const [tiposActividad, setTiposActividad] = useState<TipoActividad[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -208,7 +210,9 @@ export default function SeguimientoActividadesPage() {
           : [],
         
         // ✅ Si el backend envía totalPorTipo, usarlo directamente
-        totalPorTipo: metricasData.totalPorTipo || undefined
+        totalPorTipo: metricasData.totalPorTipo || undefined,
+        distribucionPorEstamento: metricasData.distribucionPorEstamento || []
+
       };
       
       setDatosCausas(data || []);

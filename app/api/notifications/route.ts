@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verificar que el usuario existe
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { clerk_id: userId }
     });
 
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
     const validatedData = CreateNotificationSchema.parse(body);
 
     // Verificar usuario
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { clerk_id: userId }
     });
 
@@ -225,7 +225,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { clerk_id: userId }
     });
 

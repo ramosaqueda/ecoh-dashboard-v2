@@ -2,7 +2,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Edit, Trash2, FileText, Eye } from 'lucide-react';
+import { ArrowUpDown, Edit, Trash2, FileText, Eye, Camera, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { type Imputado } from '@/types/causaimputado';
@@ -13,9 +13,37 @@ interface ImputadoTableMeta {
   onEdit?: (imputado: Imputado) => void;
   onDelete?: (id: number) => void;
   onView?: (imputado: Imputado) => void;
+  onViewPhoto?: (imputado: Imputado) => void;
+  onConsultaFichab?: (imputado: Imputado) => void;
 }
 
 export const columns: ColumnDef<Imputado>[] = [
+  // Foto
+  {
+    id: 'foto',
+    header: 'Foto',
+    cell: ({ row, table }) => {
+      const imputado = row.original;
+      const { onViewPhoto } = (table.options.meta as ImputadoTableMeta) || {};
+      const tieneFoto = !!imputado.fotoPrincipal;
+
+      return tieneFoto ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onViewPhoto?.(imputado)}
+          className="h-8 w-8"
+          title="Ver fotografía"
+        >
+          <Camera className="h-4 w-4 text-blue-600" />
+        </Button>
+      ) : (
+        <span className="flex h-8 w-8 items-center justify-center">
+          <Camera className="h-4 w-4 text-gray-300" />
+        </span>
+      );
+    }
+  },
   // nombreImputado
   {
     accessorKey: 'nombreSujeto',
@@ -82,6 +110,31 @@ export const columns: ColumnDef<Imputado>[] = [
         </Button>
       ) : (
         <span className="text-sm text-muted-foreground">Sin causas</span>
+      );
+    }
+  },
+  // FICHAB - Nueva columna
+  {
+    id: 'fichab',
+    header: 'FICHA CASO',
+    cell: ({ row, table }) => {
+      const imputado = row.original;
+      const { onConsultaFichab } = (table.options.meta as ImputadoTableMeta) || {};
+      const tieneDocId = !!imputado.docId;
+
+      return tieneDocId ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onConsultaFichab?.(imputado)}
+          className="flex items-center gap-2"
+          title="Consultar casos en FCD"
+        >
+          <Search className="h-4 w-4 text-green-600" />
+          <span className="text-xs">Ver...</span>
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground">Sin Doc ID</span>
       );
     }
   },

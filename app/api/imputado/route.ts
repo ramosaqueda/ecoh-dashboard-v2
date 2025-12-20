@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
+  const docId = searchParams.get('docId');
 
   try {
     if (id) {
@@ -33,10 +34,51 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
+    } else if (docId) {
+      console.log(`Buscando imputado por docId: "${docId}"`);
+      // Buscar por RUT/DocID (intento exacto primero)
+      let imputado = await prisma.imputado.findFirst({
+        where: { docId: docId },
+        include: { nacionalidad: true }
+      });
+
+      // Si no encuentra, intentar limpiar puntos (si el input tiene puntos) o agregar puntos??
+      // Para Chile, lo más común es que la BD tenga formato limpio o con puntos.
+      // Intentar sin puntos si falla
+      if (!imputado) {
+         const cleanDocId = docId.replace(/\./g, '');
+         if (cleanDocId !== docId) {
+             console.log(`Intento sin puntos: "${cleanDocId}"`);
+             imputado = await prisma.imputado.findFirst({
+                where: { docId: cleanDocId },
+                include: { nacionalidad: true }
+             });
+         }
+      }
+
+      // Si aun no encontra, intentar formato base (sin puntos, guion) si aplica?
+      // Por ahora solo logs para depurar.
+      
+      if (imputado) {
+        console.log("Imputado encontrado:", imputado.id);
+        return NextResponse.json(imputado); 
+      } else {
+         console.log("Imputado no encontrado");
+         return NextResponse.json(
+          { message: 'Imputado no encontrado con ese documento' },
+          { status: 404 }
+        );
+      }
     } else {
       // Obtener todos los imputados con sus relaciones
       const imputados = await prisma.imputado.findMany({
-        include: {
+        select: {
+          id: true,
+          nombreSujeto: true,
+          docId: true,
+          alias: true,
+          nacionalidadId: true,
+          fotoPrincipal: true,
           nacionalidad: true,
           causas: {
             include: {

@@ -1,9 +1,8 @@
 // src/components/dashboards/MetricasGeneralesActividades.tsx
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface DistribucionUsuario {
@@ -11,7 +10,7 @@ interface DistribucionUsuario {
   nombre: string;
   cargo: string;
   cantidadActividades: number;
-  actividadesPorTipo?: { [tipoNombre: string]: number }; // Nuevo campo para datos apilados
+  actividadesPorTipo?: { [tipoNombre: string]: number };
 }
 
 interface TotalPorTipo {
@@ -33,8 +32,9 @@ interface MetricasGenerales {
   actividadesVencidas: number;
   porcentajeGlobalCompletado: number;
   distribucionPorUsuario: DistribucionUsuario[];
-  tiempoPromedioPorTipo?: TotalPorTipo[]; // Cambiamos el nombre pero mantenemos compatibilidad
-  totalPorTipo?: TotalPorTipo[]; // Nueva propiedad para totales
+  tiempoPromedioPorTipo?: TotalPorTipo[];
+  totalPorTipo?: TotalPorTipo[];
+  distribucionPorEstamento?: { estamento: string; cantidad: number }[];
 }
 
 interface MetricasGeneralesActividadesProps {
@@ -47,98 +47,9 @@ export default function MetricasGeneralesActividades({
   isLoading 
 }: MetricasGeneralesActividadesProps) {
   
-  // Función para preparar datos del gráfico apilado
-  const prepareStackedData = () => {
-    if (!metricas.distribucionPorUsuario.length) return [];
-
-    // Si tenemos datos detallados por tipo, los usamos
-    if (metricas.distribucionPorUsuario[0]?.actividadesPorTipo) {
-      return metricas.distribucionPorUsuario.slice(0, 8).map(usuario => ({
-        usuario: usuario.nombre.length > 15 ? usuario.nombre.substring(0, 15) + '...' : usuario.nombre,
-        ...usuario.actividadesPorTipo
-      }));
-    }
-
-    // Si no, distribuimos usando los tipos de actividad reales del sistema
-    const tiposReales = metricas.totalPorTipo || metricas.tiempoPromedioPorTipo || [];
-    
-    if (tiposReales.length === 0) return [];
-
-    return metricas.distribucionPorUsuario.slice(0, 8).map(usuario => {
-      const total = usuario.cantidadActividades;
-      const resultado: any = {
-        usuario: usuario.nombre.length > 15 ? usuario.nombre.substring(0, 15) + '...' : usuario.nombre
-      };
-      
-      // Distribuir actividades entre los tipos reales disponibles
-      const tiposLimitados = tiposReales.slice(0, 5); // Limitamos a 5 tipos para legibilidad
-      let actividadesRestantes = total;
-      
-      tiposLimitados.forEach((tipo, index) => {
-        if (index === tiposLimitados.length - 1) {
-          // Último tipo recibe las actividades restantes
-          resultado[tipo.nombre] = actividadesRestantes;
-        } else {
-          // Distribución simulada basada en el peso relativo
-          const proporcion = Math.random() * 0.4 + 0.1; // Entre 10% y 50%
-          const cantidad = Math.floor(total * proporcion);
-          resultado[tipo.nombre] = Math.min(cantidad, actividadesRestantes);
-          actividadesRestantes -= resultado[tipo.nombre];
-        }
-      });
-      
-      return resultado;
-    });
-  };
-
-  // Función para preparar datos de totales por tipo
-  const prepareTotalPorTipoData = () => {
-    // Usamos totalPorTipo si está disponible, sino convertimos tiempoPromedioPorTipo
-    const datos = metricas.totalPorTipo || metricas.tiempoPromedioPorTipo;
-    
-    if (!datos?.length) return [];
-
-    // Si son datos de tiempo promedio, simulamos totales
-    if (metricas.tiempoPromedioPorTipo && !metricas.totalPorTipo) {
-      return metricas.tiempoPromedioPorTipo.map((tipo, index) => ({
-        ...tipo,
-        totalActividades: Math.floor(Math.random() * 50) + 10, // Simulado - debe venir del backend
-        completadas: Math.floor(Math.random() * 30) + 5,
-        enProceso: Math.floor(Math.random() * 15) + 3,
-        iniciadas: Math.floor(Math.random() * 10) + 2,
-        porcentajeCompletado: Math.random() * 100
-      }));
-    }
-
-    return datos;
-  };
-
-  // Colores para el gráfico apilado
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#d084d0', '#8dd1e1', '#ffb347'];
-
-  // Datos para gráficos
-  const stackedData = prepareStackedData();
-  const totalPorTipoData = prepareTotalPorTipoData();
-
-  // Colores para el gráfico de pie
+  // Colores para gráficos
   const pieColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-  // Personalizar tooltips
-  const CustomStackedTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border rounded shadow-md">
-          <p className="text-sm font-medium">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              <span className="font-medium">{entry.dataKey}:</span> {entry.value}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const totalPorTipoData = metricas.totalPorTipo || [];
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -154,6 +65,9 @@ export default function MetricasGeneralesActividades({
     }
     return null;
   };
+
+  console.log('=== COMPONENTE MetricasGeneralesActividades ===');
+  console.log('metricas.distribucionPorEstamento:', metricas.distribucionPorEstamento);
 
   return (
     <div className="space-y-4">
@@ -276,55 +190,119 @@ export default function MetricasGeneralesActividades({
         </Card>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Gráfico apilado por tipo de actividad */}
+      {/* Gráfico de Distribución por Estamento */}
+      {metricas.distribucionPorEstamento && metricas.distribucionPorEstamento.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Distribución por Usuario y Tipo de Actividad</CardTitle>
-            {!metricas.distribucionPorUsuario[0]?.actividadesPorTipo && stackedData.length > 0 && (
-              <div className="text-xs text-gray-500">
-                Distribución estimada - Para datos exactos implemente 'actividadesPorTipo' en el backend
-              </div>
-            )}
+            <CardTitle>Distribución por Estamento</CardTitle>
+            <CardDescription>
+              Comparativa de actividades entre departamentos (Analistas, Abogados, ATVT, etc.)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={metricas.distribucionPorEstamento}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="estamento" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 border rounded shadow-md">
+                            <p className="text-sm font-medium">{data.estamento}</p>
+                            <p className="text-sm font-bold text-purple-600">
+                              Total: {data.cantidad} actividades
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {((data.cantidad / metricas.totalActividades) * 100).toFixed(1)}% del total
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="cantidad" 
+                    fill="#8b5cf6"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Gráfico simple de distribución por usuario */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribución de Actividades por Usuario</CardTitle>
+            <CardDescription>
+              Total de actividades asignadas a cada usuario
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center items-center h-80">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
               </div>
-            ) : stackedData.length === 0 ? (
+            ) : metricas.distribucionPorUsuario.length === 0 ? (
               <div className="text-center py-10 text-gray-500">
-                No hay tipos de actividad disponibles para la distribución
+                No hay datos de distribución por usuario
               </div>
             ) : (
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={stackedData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
+                    data={metricas.distribucionPorUsuario.slice(0, 10)}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 80 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
-                      dataKey="usuario" 
+                      dataKey="nombre" 
                       tick={{ fontSize: 12 }}
                       angle={-45}
                       textAnchor="end"
-                      height={80}
+                      height={100}
                     />
                     <YAxis />
-                    <Tooltip content={<CustomStackedTooltip />} />
-                    {Object.keys(stackedData[0] || {})
-                      .filter(key => key !== 'usuario')
-                      .map((key, index) => (
-                        <Bar 
-                          key={key} 
-                          dataKey={key} 
-                          stackId="a" 
-                          fill={colors[index % colors.length]}
-                          radius={index === 0 ? [0, 0, 4, 4] : index === Object.keys(stackedData[0] || {}).filter(k => k !== 'usuario').length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
-                        />
-                      ))}
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-3 border rounded shadow-md">
+                              <p className="text-sm font-medium">{data.nombre}</p>
+                              <p className="text-sm text-gray-600">{data.cargo}</p>
+                              <p className="text-sm font-bold text-blue-600">
+                                Total: {data.cantidadActividades} actividades
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar 
+                      dataKey="cantidadActividades" 
+                      fill="#3b82f6"
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -353,7 +331,7 @@ export default function MetricasGeneralesActividades({
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={totalPorTipoData.slice(0, 5)} // Limitamos a 5 para legibilidad
+                        data={totalPorTipoData.slice(0, 5)}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
@@ -362,7 +340,7 @@ export default function MetricasGeneralesActividades({
                         dataKey="totalActividades"
                         nameKey="nombre"
                       >
-                        {totalPorTipoData.slice(0, 5).map((entry, index) => (
+                        {totalPorTipoData.slice(0, 5).map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
                         ))}
                       </Pie>
@@ -383,7 +361,7 @@ export default function MetricasGeneralesActividades({
                       </tr>
                     </thead>
                     <tbody>
-                      {totalPorTipoData.map((tipo, index) => (
+                      {totalPorTipoData.map((tipo: any, index: number) => (
                         <tr key={tipo.tipoActividadId} className="border-b hover:bg-gray-50">
                           <td className="py-2">
                             <div className="flex items-center">

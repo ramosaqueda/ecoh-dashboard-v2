@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Verificar que el usuario existe en la BD
-    const usuario = await prisma.usuario.findUnique({
+    // Verificar que el usuario existe en la BD
+    const usuario = await prisma.usuarios.findUnique({
       where: { clerk_id: userId }
     });
 

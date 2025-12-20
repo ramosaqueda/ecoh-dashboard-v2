@@ -18,7 +18,6 @@ export default function GenogramaPage() {
   
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [relaciones, setRelaciones] = useState<Relacion[]>([]);
-  const [mermaidCode, setMermaidCode] = useState<string>('');
   const [rucCausa, setRucCausa] = useState<string>(rucParam);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -52,9 +51,6 @@ export default function GenogramaPage() {
         setPersonas(data.personas);
         setRelaciones(data.relaciones);
         toast.success('Genograma cargado correctamente');
-        
-        // Generar el código Mermaid
-        handleGenerateGenograma(data.personas, data.relaciones);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -67,7 +63,6 @@ export default function GenogramaPage() {
   const handleReset = () => {
     setPersonas([]);
     setRelaciones([]);
-    setMermaidCode('');
     setRucCausa('');
     router.push('/dashboard/genograma');
     toast.info('Genograma reiniciado');
@@ -119,12 +114,6 @@ export default function GenogramaPage() {
     } else {
       toast.success(`Se importaron ${personasNuevas.length} personas correctamente`);
     }
-    
-    // Generar el genograma con las nuevas personas
-    if (mermaidCode || personasNuevas.length > 0) {
-      const updatedPersonas = [...personas, ...personasNuevas];
-      handleGenerateGenograma(updatedPersonas, relaciones);
-    }
   };
 
   const handleAddRelacion = (relacion: Relacion) => {
@@ -139,163 +128,6 @@ export default function GenogramaPage() {
     
     setRelaciones(prev => [...prev, relacion]);
     toast.success(`Relación agregada correctamente`);
-  };
-
-  const handleGenerateGenograma = (customPersonas = personas, customRelaciones = relaciones) => {
-    if (customPersonas.length === 0) {
-      toast.error('Debe agregar al menos una persona al genograma');
-      return;
-    }
-    
-    if (customRelaciones.length === 0) {
-      toast.error('Debe agregar al menos una relación al genograma');
-      return;
-    }
-    
-    // Encontrar personas que tienen al menos una relación
-    const personasConRelaciones = new Set<string>();
-    
-    customRelaciones.forEach(relacion => {
-      personasConRelaciones.add(relacion.idOrigen);
-      personasConRelaciones.add(relacion.idDestino);
-    });
-    
-    // Filtrar solo las personas que tienen relaciones
-    const personasAGraficar = customPersonas.filter(persona => 
-      personasConRelaciones.has(persona.id)
-    );
-    
-    // Si no hay personas con relaciones, mostrar un mensaje
-    if (personasAGraficar.length === 0) {
-      toast.error('No hay personas con relaciones para graficar');
-      return;
-    }
-    
-    let code = 'flowchart TD\n';
-    
-    // Definir estilos base con colores naturales
-    code += '  classDef hombre fill:#ee6c4d ,stroke:#293241,stroke-width:2px\n';
-    code += '  classDef mujer fill:#E1B16A,stroke:#8B6914,stroke-width:2px\n';
-    code += '  classDef fallecido fill:#A9A9A9,stroke:#F6FAFF,stroke-width:2px,stroke-dasharray:5 5\n';
-    code += '  classDef victima fill:#CE5A57,stroke:#8B0000,stroke-width:4px\n';
-    code += '  classDef imputado fill:#F4E76E,stroke:#8B8000,stroke-width:4px\n';
-    
-    // Definir estilos para ramas familiares
-    code += '  classDef ramaPrincipal fill:#8FB996,stroke:#1B4332,stroke-width:2px\n';
-    code += '  classDef ramaPaterna fill:#9EC1CF,stroke:#2A4D69,stroke-width:2px\n';
-    code += '  classDef ramaMaterna fill:#F9C5BD,stroke:#884A39,stroke-width:2px\n';
-    code += '  classDef ramaPolitica fill:#F9E79F,stroke:#9A7D0A,stroke-width:2px\n';
-    
-    // Agregar ramas personalizadas si existen
-    personasAGraficar.forEach(persona => {
-      if (persona.ramaFamiliar === 'personalizada' && persona.nombreRama && persona.colorRama) {
-        const nombreRama = persona.nombreRama.replace(/\s+/g, '');
-        code += `  classDef rama${nombreRama} fill:${persona.colorRama},stroke:#333,stroke-width:2px\n`;
-      }
-    });
-    
-    // Agregar nodos (personas)
-    personasAGraficar.forEach(persona => {
-      // Determinar formato del nombre
-      let nombreMostrar = persona.nombreCompleto || 
-        [persona.nombre, persona.segundoNombre, persona.apellido, persona.segundoApellido]
-          .filter(Boolean).join(' ');
-          
-      // ✅ CORREGIDO: Agregar indicador de rol especial si existe (verificación segura)
-      if (persona.rolEspecial && persona.rolEspecial !== 'ninguno') {
-        nombreMostrar += `<br>${persona.rolEspecial.toUpperCase()}`;
-      }
-      
-      // Agregar indicador de fallecido
-      if (persona.esFallecido) {
-        nombreMostrar += ' †';
-      }
-      
-      // Determinar forma del nodo (masculino o femenino)
-      const shape = persona.genero === 'masculino' ? '[' : '(';
-      const closeShape = persona.genero === 'masculino' ? ']' : ')';
-      
-      code += `  ${persona.id}${shape}${nombreMostrar}${closeShape}`;
-      
-      // Aplicar clases en orden de prioridad
-      const clases = [];
-      
-      // 1. Clase por género (base)
-      clases.push(persona.genero === 'masculino' ? 'hombre' : 'mujer');
-      
-      // 2. Clase por rama familiar (si existe)
-      if (persona.ramaFamiliar && persona.ramaFamiliar !== 'ninguna') {
-        if (persona.ramaFamiliar === 'personalizada' && persona.nombreRama) {
-          const nombreRama = persona.nombreRama.replace(/\s+/g, '');
-          clases.push(`rama${nombreRama}`);
-        } else {
-          const nombreClaseRama = `rama${persona.ramaFamiliar.charAt(0).toUpperCase() + persona.ramaFamiliar.slice(1)}`;
-          clases.push(nombreClaseRama);
-        }
-      }
-      
-      // 3. Clase por fallecimiento
-      if (persona.esFallecido) {
-        clases.push('fallecido');
-      }
-      
-      // 4. Clase por rol especial
-      if (persona.rolEspecial && persona.rolEspecial !== 'ninguno') {
-        clases.push(persona.rolEspecial);
-      }
-      
-      if (clases.length > 0) {
-        code += `:::${clases.join('&')}`;
-      }
-      
-      code += '\n';
-    });
-    
-    // Agregar relaciones
-    customRelaciones.forEach(relacion => {
-      let connectionSymbol = '';
-      let relationLabel = '';
-      
-      switch (relacion.tipo) {
-        case 'matrimonio':
-          connectionSymbol = '---|';
-          relationLabel = '"Matrimonio"';
-          break;
-        case 'padres':
-          connectionSymbol = '-->|';
-          relationLabel = '"Padres"';
-          break;
-        case 'divorcio':
-          connectionSymbol = '-.-|';
-          relationLabel = '"Divorcio"';
-          break;
-        case 'hermanos':
-          connectionSymbol = '-.->|';
-          relationLabel = '"Hermanos"';
-          break;
-        case 'primos':
-          connectionSymbol = '-.->|';
-          relationLabel = '"Primos"';
-          break;
-        default:
-          connectionSymbol = '---|';
-          relationLabel = relacion.descripcion ? `"${relacion.descripcion}"` : '';
-      }
-      
-      code += `  ${relacion.idOrigen} ${connectionSymbol}${relationLabel}| ${relacion.idDestino}\n`;
-    });
-    
-    // Agregar un mensaje informativo si hay personas sin relaciones
-    const personasSinRelaciones = customPersonas.length - personasAGraficar.length;
-    if (personasSinRelaciones > 0) {
-      code += '\n  %% Nota: ' + personasSinRelaciones + ' personas no se muestran porque no tienen relaciones\n';
-      
-      // También mostrar un mensaje visible al usuario
-      toast.info(`${personasSinRelaciones} ${personasSinRelaciones === 1 ? 'persona no se muestra' : 'personas no se muestran'} en el genograma porque no ${personasSinRelaciones === 1 ? 'tiene' : 'tienen'} relaciones`);
-    }
-    
-    setMermaidCode(code);
-    return code;
   };
   
   const handleDeletePersona = (id: string) => {
@@ -320,11 +152,6 @@ export default function GenogramaPage() {
     // Eliminar la persona
     setPersonas(prevPersonas => prevPersonas.filter(persona => persona.id !== id));
     toast.success("Persona eliminada correctamente");
-    
-    // Si hay un código mermaid generado, actualizarlo
-    if (mermaidCode) {
-      handleGenerateGenograma();
-    }
   };
   
   const handleDeleteRelacion = (index: number) => {
@@ -335,11 +162,6 @@ export default function GenogramaPage() {
     });
     
     toast.success("Relación eliminada correctamente");
-    
-    // Si hay un código mermaid generado, actualizarlo
-    if (mermaidCode) {
-      handleGenerateGenograma();
-    }
   };
   
   const handleSaveGenograma = async () => {
@@ -355,9 +177,6 @@ export default function GenogramaPage() {
     
     setIsSaving(true);
     try {
-      // Generar el código Mermaid si no existe
-      const code = mermaidCode || handleGenerateGenograma();
-      
       const response = await fetch('/api/genograma', {
         method: 'POST',
         headers: {
@@ -367,7 +186,7 @@ export default function GenogramaPage() {
           rucCausa,
           personas,
           relaciones,
-          mermaidCode: code
+          mermaidCode: '' // Ya no guardamos mermaid code, o enviamos string vacío si el backend lo requiere
         })
       });
       
@@ -438,12 +257,6 @@ export default function GenogramaPage() {
           
           <div className="flex space-x-2">
             <Button 
-              onClick={() => handleGenerateGenograma()} 
-              variant="default"
-            >
-              Generar Genograma
-            </Button>
-            <Button 
               onClick={handleReset} 
               variant="destructive"
             >
@@ -474,7 +287,6 @@ export default function GenogramaPage() {
                             </strong> 
                             {persona.esFallecido ? ' †' : ''} - 
                             {persona.genero === 'masculino' ? ' Hombre' : ' Mujer'} - 
-                            {/* ✅ CORREGIDO: Verificación segura de rolEspecial */}
                             {persona.rolEspecial && persona.rolEspecial !== 'ninguno' && 
                               <span className={`ml-1 font-semibold ${
                                 persona.rolEspecial === 'victima' ? 'text-red-600' : 
@@ -574,7 +386,7 @@ export default function GenogramaPage() {
         
         <div className="border rounded-md p-4">
           <h2 className="text-xl font-semibold mb-4">Visualización del Genograma</h2>
-          <GenogramaViewer mermaidCode={mermaidCode} />
+          <GenogramaViewer personas={personas} relaciones={relaciones} />
         </div>
       </div>
     </div>

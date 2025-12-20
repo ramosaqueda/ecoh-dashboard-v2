@@ -73,12 +73,13 @@ export type Imputado = {
   id: number;
   nombreSujeto: string;
   docId: string;
-  alias?:string;
-  caracteristicas?:string;
+  alias?: string;
   nacionalidadId: number | null;
   nacionalidad?: {
     id: number;
     nombre: string;
   };
   causas: CausaImputado[];
+  fotoPrincipal?: string | null;
+  esExtranjero?: boolean;
 };

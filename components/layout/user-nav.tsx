@@ -1,7 +1,6 @@
 'use client';
 
-import { UserButton } from '@clerk/nextjs';
-import { useClerk } from '@clerk/nextjs'; // ← Agregar esta importación
+import { UserButton, useSession, useClerk } from '@clerk/nextjs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +11,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { useSession } from '@clerk/clerk-react';
 
 export function UserNav() {
   const { isLoaded, session, isSignedIn } = useSession();

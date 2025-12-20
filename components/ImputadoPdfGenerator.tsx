@@ -10,7 +10,11 @@ import { type ImputadoDetail, type CausaImputado } from '@/types/imputado';
 
 // Configuración de fuentes para pdfMake con tipado correcto
 if (typeof window !== 'undefined' && pdfMake.vfs === undefined) {
-    (pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+    if (pdfFonts && (pdfFonts as any).pdfMake && (pdfFonts as any).pdfMake.vfs) {
+        (pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+    } else if (pdfFonts && (pdfFonts as any).vfs) {
+        (pdfMake as any).vfs = (pdfFonts as any).vfs;
+    }
 }
 
 interface ImputadoPdfProps {

@@ -27,10 +27,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('📊 [API /causas/stats] Calculando estadísticas de causas...');
+    const { searchParams } = new URL(request.url);
+    const yearParam = searchParams.get('year');
+
+    console.log(`📊 [API /causas/stats] Calculando estadísticas (Año: ${yearParam || 'Todos'})...`);
+
+    // Construir filtro de fecha
+    let dateFilter = {};
+    if (yearParam && yearParam !== 'todos') {
+      const year = parseInt(yearParam);
+      if (!isNaN(year)) {
+        dateFilter = {
+          fechaDelHecho: {
+            gte: new Date(year, 0, 1),
+            lte: new Date(year, 11, 31, 23, 59, 59, 999)
+          }
+        };
+      }
+    }
 
     // Contar total de causas
-    const total = await prisma.causa.count();
+    const total = await prisma.causa.count({
+      where: dateFilter
+    });
 
     // Obtener todos los estados para clasificar correctamente
     const estadosActivos = await prisma.estadoCausa.findMany({
@@ -54,6 +73,7 @@ export async function GET(request: NextRequest) {
     if (estadosActivos.length > 0) {
       activas = await prisma.causa.count({
         where: {
+          ...dateFilter,
           estadoCausaId: {
             in: estadosActivos.map(e => e.id)
           }
@@ -66,6 +86,7 @@ export async function GET(request: NextRequest) {
     if (estadosCerrados.length > 0) {
       cerradas = await prisma.causa.count({
         where: {
+          ...dateFilter,
           estadoCausaId: {
             in: estadosCerrados.map(e => e.id)
           }

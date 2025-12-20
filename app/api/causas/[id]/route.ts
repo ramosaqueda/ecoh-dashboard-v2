@@ -31,7 +31,16 @@ export async function GET(
           atvt: true,
           abogado: true,
           origenCausa: true,
-          estadoCausa: true
+          estadoCausa: true,
+          telefonos: {
+            include: {
+              telefono: {
+                include: {
+                  proveedorServicio: true
+                }
+              }
+            }
+          }
         }
       });
       console.log('ðŸ” DEBUG GET - Causa bÃ¡sica obtenida exitosamente');

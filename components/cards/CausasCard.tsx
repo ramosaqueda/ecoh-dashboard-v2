@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Loader2 } from 'lucide-react';
+import { useYearContext } from '@/components/YearSelector';
 
 interface CausasStats {
   total: number;
@@ -11,21 +12,21 @@ interface CausasStats {
 }
 
 export default function CausasCard() {
+  const { selectedYear } = useYearContext();
   const [data, setData] = useState<CausasStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // ✅ Ya no verificamos autenticación aquí
-    // El componente padre (dashboard/page.tsx) ya lo hizo
     fetchCausasData();
-  }, []);
+  }, [selectedYear]);
 
   const fetchCausasData = async () => {
     try {
-      console.log('📊 [CausasCard] Cargando datos de causas...');
+      setIsLoading(true);
+      console.log(`📊 [CausasCard] Cargando datos de causas (Año: ${selectedYear})...`);
       
-      const response = await fetch('/api/causas/stats');
+      const response = await fetch(`/api/causas/stats?year=${selectedYear}`);
       
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);

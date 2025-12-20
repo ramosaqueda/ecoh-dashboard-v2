@@ -4,9 +4,46 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// GET - Obtener todas las víctimas
-export async function GET() {
+// GET - Obtener todas las víctimas o buscar por ID/DocId
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    if (docId) {
+        console.log(`Buscando victima por docId: "${docId}"`);
+        let victima = await prisma.victima.findFirst({
+            where: { docId: docId },
+            include: {
+                nacionalidad: {
+                    select: {
+                        id: true,
+                        nombre: true,
+                    }
+                }
+            }
+        });
+
+        if (!victima) {
+             const cleanDocId = docId.replace(/\./g, '');
+             if (cleanDocId !== docId) {
+                 console.log(`Intento victima sin puntos: "${cleanDocId}"`);
+                 victima = await prisma.victima.findFirst({
+                    where: { docId: cleanDocId },
+                    include: {
+                        nacionalidad: { select: { id: true, nombre: true } }
+                    }
+                 });
+             }
+        }
+
+        if (victima) {
+            console.log("Victima encontrada:", victima.id);
+            return NextResponse.json(victima);
+        } else {
+            console.log("Victima no encontrada");
+            return NextResponse.json({ message: 'Víctima no encontrada' }, { status: 404 });
+        }
+    }
+
     const victimas = await prisma.victima.findMany({
       include: {
         nacionalidad: {

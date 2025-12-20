@@ -369,35 +369,7 @@ export default function AnalyticsDashboard() {
         </div>
       )}
 
-      {/* Tendencias */}
-      {tendencias.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Tendencia de Actividades (Últimos 6 Meses)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {tendencias.map((item, index) => (
-                <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-medium text-gray-600 mb-2">{item.periodo}</p>
-                  <p className="text-lg font-bold text-blue-600">{item.asignadas}</p>
-                  <p className="text-xs text-gray-500">asignadas</p>
-                  <p className="text-sm font-semibold text-green-600 mt-1">{item.completadas}</p>
-                  <p className="text-xs text-gray-500">completadas</p>
-                  <div className="mt-2">
-                    <Badge variant={item.eficiencia >= 80 ? "default" : item.eficiencia >= 60 ? "secondary" : "destructive"}>
-                      {item.eficiencia}%
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      
 
       {/* Tablas de Actividades */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

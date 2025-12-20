@@ -26,6 +26,7 @@ export interface Persona {
   ramaFamiliar?: RamaFamiliar;
   colorRama?: string; // Para ramas personalizadas
   nombreRama?: string; // Nombre descriptivo de la rama familiar
+  fotoUrl?: string; // URL de la fotografía
 }
 
 // Interfaz para relación

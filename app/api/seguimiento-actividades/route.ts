@@ -40,6 +40,17 @@ export async function GET(req: NextRequest) {
       };
     }
     
+    // Log para debugging - mostrar la consulta que se está ejecutando
+    console.log('=== CONSULTA DE ACTIVIDADES ===');
+    console.log('Filtros aplicados:', {
+      fechaInicio,
+      fechaFin,
+      usuarioId,
+      tipoActividadId,
+      ruc
+    });
+    console.log('Condiciones WHERE:', JSON.stringify(whereConditions, null, 2));
+    
     // 1. Obtener actividades según los filtros
     const actividades = await prisma.actividad.findMany({
       where: whereConditions,
@@ -68,7 +79,8 @@ export async function GET(req: NextRequest) {
           },
         },
         // CAMBIO: Incluir usuarioAsignado en lugar de usuario
-        usuarioAsignado: {
+        // CAMBIO: Incluir usuarioAsignado en lugar de usuario
+        usuarios_Actividad_usuario_asignado_idTousuarios: {
           select: {
             id: true,
             nombre: true,
@@ -76,7 +88,7 @@ export async function GET(req: NextRequest) {
             cargo: true,
           },
         },
-        usuario: {
+        usuarios_Actividad_usuario_idTousuarios: {
           select: {
             id: true,
             nombre: true,
@@ -89,6 +101,8 @@ export async function GET(req: NextRequest) {
         fechaTermino: 'asc',
       },
     });
+    
+    console.log(`Total de actividades encontradas: ${actividades.length}`);
     
     // 2. Agrupar actividades por causa (incluyendo actividades de apoyo)
     const actividadesPorCausa: Record<string, typeof actividades> = {};
@@ -133,49 +147,98 @@ export async function GET(req: NextRequest) {
       };
     }
     
-    // 5. Obtener tiempo promedio por tipo de actividad
-    const tiempoPromedio: Record<number, number> = {};
-    const tiempoPromedioConteo: Record<number, number> = {};
-    
+    // 5. Obtener estadísticas por tipo de actividad (Reemplaza a tiempo promedio)
+    const statsPorTipo: Record<number, {
+      total: number;
+      completadas: number;
+      enProceso: number;
+      iniciadas: number;
+      diasPromedioSum: number;
+      diasPromedioCount: number;
+    }> = {};
+
     for (const actividad of actividades) {
+      const tipoId = actividad.tipo_actividad_id;
+      if (!statsPorTipo[tipoId]) {
+        statsPorTipo[tipoId] = {
+          total: 0,
+          completadas: 0,
+          enProceso: 0,
+          iniciadas: 0,
+          diasPromedioSum: 0,
+          diasPromedioCount: 0
+        };
+      }
+      
+      statsPorTipo[tipoId].total++;
+      
       if (actividad.estado === 'terminado') {
-        const tipoId = actividad.tipo_actividad_id;
+        statsPorTipo[tipoId].completadas++;
+        
         const fechaInicio = new Date(actividad.fechaInicio);
         const fechaTermino = new Date(actividad.fechaTermino);
         const diffTime = Math.abs(fechaTermino.getTime() - fechaInicio.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (!tiempoPromedio[tipoId]) {
-          tiempoPromedio[tipoId] = 0;
-          tiempoPromedioConteo[tipoId] = 0;
-        }
-        
-        tiempoPromedio[tipoId] += diffDays;
-        tiempoPromedioConteo[tipoId]++;
+        statsPorTipo[tipoId].diasPromedioSum += diffDays;
+        statsPorTipo[tipoId].diasPromedioCount++;
+      } else if (actividad.estado === 'en_proceso') {
+        statsPorTipo[tipoId].enProceso++;
+      } else {
+        statsPorTipo[tipoId].iniciadas++;
       }
     }
-    
-    // Calcular promedios finales
-    const tiemposPromedioFinal: Record<number, number> = {};
-    for (const [tipoIdStr, total] of Object.entries(tiempoPromedio)) {
-      const tipoId = parseInt(tipoIdStr);
-      const conteo = tiempoPromedioConteo[tipoId];
-      tiemposPromedioFinal[tipoId] = conteo > 0 ? total / conteo : 0;
-    }
-    
-    // 6. Calcular distribución por usuario asignado
+
+    // 6. Calcular distribución por usuario asignado, estamento y tipo de actividad
     const distribucionPorUsuario: Record<number, number> = {};
+    const distribucionPorEstamento: Record<string, number> = {};
+    const actividadesPorUsuarioYTipo: Record<number, Record<string, number>> = {};
+    
+    console.log('=== CALCULANDO DISTRIBUCIÓN POR USUARIO ===');
     
     for (const actividad of actividades) {
-      // CAMBIO: Usar usuario_asignado_id, con fallback a usuario_id
       const usuarioAsignadoId = actividad.usuario_asignado_id || actividad.usuario_id;
+      const usuarioObj = actividad.usuarios_Actividad_usuario_asignado_idTousuarios || actividad.usuarios_Actividad_usuario_idTousuarios;
+      const tipoNombre = actividad.tipoActividad.nombre;
+      
       if (usuarioAsignadoId) {
+        // Contar total por usuario
         if (!distribucionPorUsuario[usuarioAsignadoId]) {
           distribucionPorUsuario[usuarioAsignadoId] = 0;
         }
         distribucionPorUsuario[usuarioAsignadoId]++;
+        
+        // Contar por tipo de actividad para cada usuario
+        if (!actividadesPorUsuarioYTipo[usuarioAsignadoId]) {
+          actividadesPorUsuarioYTipo[usuarioAsignadoId] = {};
+        }
+        if (!actividadesPorUsuarioYTipo[usuarioAsignadoId][tipoNombre]) {
+          actividadesPorUsuarioYTipo[usuarioAsignadoId][tipoNombre] = 0;
+        }
+        actividadesPorUsuarioYTipo[usuarioAsignadoId][tipoNombre]++;
+      }
+
+      // Agrupar por estamento (cargo)
+      if (usuarioObj && usuarioObj.cargo) {
+        const cargo = usuarioObj.cargo;
+        if (!distribucionPorEstamento[cargo]) {
+          distribucionPorEstamento[cargo] = 0;
+        }
+        distribucionPorEstamento[cargo]++;
+      } else {
+        const sinCargo = 'Sin Estamento';
+        if (!distribucionPorEstamento[sinCargo]) {
+          distribucionPorEstamento[sinCargo] = 0;
+        }
+        distribucionPorEstamento[sinCargo]++;
       }
     }
+    
+    console.log('Distribución calculada:', distribucionPorUsuario);
+    console.log('Total de usuarios con actividades:', Object.keys(distribucionPorUsuario).length);
+    console.log('=== DISTRIBUCIÓN POR ESTAMENTO (RAW) ===');
+    console.log('distribucionPorEstamento (objeto):', distribucionPorEstamento);
+    console.log('Cantidad de estamentos:', Object.keys(distribucionPorEstamento).length);
     
     // 7. Obtener información de usuarios asignados
     const usuariosAsignadosIds = Array.from(new Set(
@@ -184,7 +247,7 @@ export async function GET(req: NextRequest) {
         .filter(id => id !== null)
     )) as number[];
     
-    const usuarios = await prisma.usuario.findMany({
+    const usuarios = await prisma.usuarios.findMany({
       where: {
         id: {
           in: usuariosAsignadosIds,
@@ -230,7 +293,7 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    const todosUsuarios = await prisma.usuario.findMany({
+    const todosUsuarios = await prisma.usuarios.findMany({
       select: {
         id: true,
         nombre: true,
@@ -242,15 +305,39 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    // 9. Detectar actividades vencidas y preparar resultados
+    // Definir fecha actual para detectar actividades vencidas
     const hoy = new Date();
-    
-    // Preparar resultados por causa (incluyendo actividades de apoyo)
+
+    // 8. Preparar array de Tipos de Actividad con estadísticas
+    const totalPorTipo = tiposActividad.map(tipo => {
+      const stats = statsPorTipo[tipo.id] || {
+        total: 0,
+        completadas: 0,
+        enProceso: 0,
+        iniciadas: 0,
+        diasPromedioSum: 0,
+        diasPromedioCount: 0
+      };
+
+      return {
+        tipoActividadId: tipo.id,
+        nombre: tipo.nombre,
+        area: tipo.area.nombre,
+        totalActividades: stats.total,
+        completadas: stats.completadas,
+        enProceso: stats.enProceso,
+        iniciadas: stats.iniciadas,
+        porcentajeCompletado: stats.total > 0 ? (stats.completadas / stats.total) * 100 : 0,
+        diasPromedio: stats.diasPromedioCount > 0 ? parseFloat((stats.diasPromedioSum / stats.diasPromedioCount).toFixed(1)) : 0
+      };
+    }).filter(t => t.totalActividades > 0).sort((a, b) => b.totalActividades - a.totalActividades);
+
+    // 9. Preparar resultados por causa (incluyendo actividades de apoyo)
     const resultados = Object.keys(actividadesPorCausa).map(causaKey => {
       const actividadesDeCausa = actividadesPorCausa[causaKey];
       const primerActividad = actividadesDeCausa[0];
       
-      // ✅ Determinar si es actividad de apoyo
+      // Determinar si es actividad de apoyo
       const esActividadApoyo = causaKey === APOYO_KEY;
       
       // Calcular días promedio de actividades terminadas
@@ -270,19 +357,18 @@ export async function GET(req: NextRequest) {
       }
       
       return {
-        causaId: esActividadApoyo ? null : parseInt(causaKey), // ✅ null para apoyo
-        ruc: esActividadApoyo ? 'APOYO' : (primerActividad?.causa?.ruc || 'N/A'), // ✅ Manejar causa opcional
+        causaId: esActividadApoyo ? null : parseInt(causaKey),
+        ruc: esActividadApoyo ? 'APOYO' : (primerActividad?.causa?.ruc || 'N/A'),
         denominacionCausa: esActividadApoyo 
           ? 'Actividades de Apoyo Externo' 
-          : (primerActividad?.causa?.denominacionCausa || 'N/A'), // ✅ Manejar causa opcional
+          : (primerActividad?.causa?.denominacionCausa || 'N/A'),
         delito: esActividadApoyo 
           ? 'N/A' 
-          : (primerActividad?.causa?.delito?.nombre || 'No especificado'), // ✅ Manejar causa opcional
-        esActividadApoyo, // ✅ Nuevo campo
+          : (primerActividad?.causa?.delito?.nombre || 'No especificado'),
+        esActividadApoyo,
         estadisticas: estadosPorCausa[causaKey],
         actividades: actividadesDeCausa.map(act => {
-          // CAMBIO: Priorizar usuarioAsignado sobre usuario
-          const responsable = act.usuarioAsignado || act.usuario;
+          const responsable = act.usuarios_Actividad_usuario_asignado_idTousuarios || act.usuarios_Actividad_usuario_idTousuarios;
           return {
             id: act.id,
             tipoActividad: act.tipoActividad.nombre,
@@ -298,7 +384,7 @@ export async function GET(req: NextRequest) {
         diasPromedio: parseFloat(diasPromedio.toFixed(1))
       };
     });
-    
+
     // Calcular métricas globales
     const metricasGlobales = {
       totalActividades: actividades.length,
@@ -316,20 +402,19 @@ export async function GET(req: NextRequest) {
           usuarioId: usuario.id,
           nombre: usuario.nombre,
           cargo: usuario.cargo || 'No especificado',
-          cantidadActividades: distribucionPorUsuario[usuario.id] || 0
+          cantidadActividades: distribucionPorUsuario[usuario.id] || 0,
+          actividadesPorTipo: actividadesPorUsuarioYTipo[usuario.id] || {}
         };
       }).sort((a, b) => b.cantidadActividades - a.cantidadActividades),
-      tiempoPromedioPorTipo: tiposActividad.map(tipo => {
-        return {
-          tipoActividadId: tipo.id,
-          nombre: tipo.nombre,
-          area: tipo.area.nombre,
-          diasPromedio: tiemposPromedioFinal[tipo.id] 
-            ? parseFloat(tiemposPromedioFinal[tipo.id].toFixed(1)) 
-            : 0
-        };
-      }).filter(t => t.diasPromedio > 0)
+      totalPorTipo: totalPorTipo, // ✅ Usamos los datos reales calculados
+      distribucionPorEstamento: Object.entries(distribucionPorEstamento).map(([estamento, cantidad]) => ({
+        estamento,
+        cantidad
+      })).sort((a, b) => b.cantidad - a.cantidad) // ✅ Nueva métrica
     };
+    
+    console.log('=== DISTRIBUCIÓN POR ESTAMENTO ===');
+    console.log('distribucionPorEstamento:', metricasGlobales.distribucionPorEstamento);
 
     // Ordenar resultados por porcentaje completado (ascendente)
     resultados.sort((a, b) => a.estadisticas.porcentajeCompletado - b.estadisticas.porcentajeCompletado);

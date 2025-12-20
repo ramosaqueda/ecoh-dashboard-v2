@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,9 +13,10 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Camera } from 'lucide-react';
 import NacionalidadSelect from '@/components/select/NacionalidadSelect';
 import CausaImputadoContainer from '@/components/forms/CausaImputadoForm/CausaImputadoContainer';
 
@@ -32,15 +34,19 @@ import { formatRun, validateRun } from '@/utils/runValidator';
 
 const ImputadoFormSchema = z.object({
   nombreSujeto: z.string().min(1, 'El nombre es requerido'),
-  docId: z
-    .string()
-    .min(1, 'El documento de identidad es requerido')
-    .refine((val) => validateRun(val), {
-      message: 'RUN inválido'
-    }),
+  esExtranjero: z.boolean().default(false),
+  docId: z.string().min(1, 'El documento de identidad es requerido'),
   nacionalidadId: z.string().min(1, 'La nacionalidad es requerida'),
   alias: z.string().optional(),
   caracteristicas: z.string().optional()
+}).superRefine((data, ctx) => {
+  if (!data.esExtranjero && !validateRun(data.docId)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'RUN inválido',
+      path: ['docId'],
+    });
+  }
 });
 
 export type ImputadoFormValues = z.infer<typeof ImputadoFormSchema>;
@@ -63,6 +69,8 @@ const ImputadoForm = ({
   onSuccess
 }: ImputadoFormProps) => {
   const queryClient = useQueryClient();
+  const [fotoSujeto, setFotoSujeto] = useState<string | null>(null);
+  const [loadingFoto, setLoadingFoto] = useState(false);
 
   const { data: causasAsociadas = [], refetch: refetchCausas } = useQuery<
     CausaImputado[]
@@ -86,6 +94,7 @@ const ImputadoForm = ({
     resolver: zodResolver(ImputadoFormSchema),
     defaultValues: {
       nombreSujeto: '',
+      esExtranjero: false,
       docId: '',
       nacionalidadId: '',
       alias: '',
@@ -105,26 +114,135 @@ const ImputadoForm = ({
 
   const { isValid, error, formatRun, validateRun } = useRunValidation();
 
-  const handleRunChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedRun = formatRun(e.target.value);
-    form.setValue('docId', formattedRun);
-    validateRun(formattedRun);
+  const fetchFoto = async () => {
+    const rut = form.getValues('docId');
+    if (!rut) return;
+
+    setLoadingFoto(true);
+    try {
+      const ciSession = localStorage.getItem('fichab_session');
+      const serverId = localStorage.getItem('fichab_serverid');
+
+      if (!ciSession) {
+        console.warn('No ci_session found in localStorage');
+        setLoadingFoto(false);
+        return;
+      }
+
+      const responseFoto = await fetch('/api/fichab/foto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rut,
+          ciSession,
+          serverId
+        }),
+      });
+
+      if (responseFoto.ok) {
+        const resultFoto = await responseFoto.json();
+        if (resultFoto.success && resultFoto.data) {
+          setFotoSujeto(resultFoto.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching photo:', error);
+    } finally {
+      setLoadingFoto(false);
+    }
+  };
+
+  const fetchPersonalData = async (rut: string) => {
+    console.log('fetchPersonalData called with:', rut);
+    try {
+      const ciSession = localStorage.getItem('fichab_session');
+      const serverId = localStorage.getItem('fichab_serverid');
+      
+      console.log('Auth data:', { ciSession, serverId });
+
+      if (!ciSession) {
+        console.warn('No ci_session found in localStorage');
+        return;
+      }
+
+      const response = await fetch('/api/fichab/sujeto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rut,
+          ciSession,
+          serverId
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('API Result:', result);
+        if (result.success && result.data) {
+          form.setValue('nombreSujeto', result.data.nombreSujeto);
+          // Note: Nacionalidad mapping is pending proper ID lookup
+        }
+      } else {
+        console.error('API Error:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching personal data:', error);
+    }
+  };
+
+  const handleRunChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const isExtranjero = form.getValues('esExtranjero');
+    
+    console.log('handleRunChange:', { val, isExtranjero });
+
+    if (!isExtranjero) {
+      const formattedRun = formatRun(val);
+      form.setValue('docId', formattedRun);
+      const isValidRun = validateRun(formattedRun);
+      
+      console.log('Validation result:', { formattedRun, isValidRun });
+      
+      if (isValidRun) {
+        console.log('Triggering fetchPersonalData...');
+        await fetchPersonalData(formattedRun);
+      }
+    } else {
+      form.setValue('docId', val);
+    }
   };
 
   return (
     <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          
           <FormField
             control={form.control}
-            name="nombreSujeto"
+            name="esExtranjero"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nombre</FormLabel>
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
-                  <Input {...field} placeholder="Ingrese el nombre completo" />
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      form.trigger('docId');
+                      if (!checked) {
+                        validateRun(form.getValues('docId'));
+                      }
+                    }}
+                  />
                 </FormControl>
-                <FormMessage />
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    Es extranjero
+                  </FormLabel>
+                </div>
               </FormItem>
             )}
           />
@@ -142,9 +260,44 @@ const ImputadoForm = ({
                     placeholder="12.345.678-9"
                   />
                 </FormControl>
-                {error && (
+                {error && !form.watch('esExtranjero') && (
                   <span className="text-sm text-destructive">{error}</span>
                 )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {fotoSujeto && (
+            <div className="flex justify-center mb-4">
+               {/* eslint-disable-next-line @next/next/no-img-element */}
+               <img src={fotoSujeto} alt="Foto Sujeto" className="h-32 w-32 object-cover rounded-md border" />
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchFoto}
+              disabled={loadingFoto || !form.getValues('docId')}
+              className="gap-2"
+            >
+              {loadingFoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              Cargar Foto FICHAB
+            </Button>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="nombreSujeto"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ingrese el nombre completo" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

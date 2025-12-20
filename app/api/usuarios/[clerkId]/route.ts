@@ -18,7 +18,7 @@ export async function GET(
     const { clerkId } = await params;
 
     // Obtener usuario de la base de datos
-    const usuario = await prisma.usuario.findUnique({
+    const usuario = await prisma.usuarios.findUnique({
       where: { clerk_id: clerkId }, // ✅ Cambio 5: Verificar nombre del campo en tu schema
        
     });
@@ -54,7 +54,7 @@ export async function PUT(
     const { clerkId } = await params;
     const data = await request.json();
 
-    const usuario = await prisma.usuario.update({
+    const usuario = await prisma.usuarios.update({
       where: { clerk_id: clerkId },
       data: {
         // Campos que quieras actualizar
@@ -87,7 +87,7 @@ export async function DELETE(
 
     const { clerkId } = await params;
 
-    await prisma.usuario.delete({
+    await prisma.usuarios.delete({
       where: { clerk_id: clerkId }
     });
 

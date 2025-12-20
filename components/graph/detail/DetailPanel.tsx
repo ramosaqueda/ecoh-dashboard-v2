@@ -45,7 +45,7 @@ interface Imputado {
   docId?: string;
   fotoPrincipal?: string;
   alias?: string;
-  caracterisiticas?: string;
+  caracteristicas?: string;
   nacionalidad?: Nacionalidad;
 }
 
@@ -363,10 +363,10 @@ const ImputadoDetails: React.FC<ImputadoDetailsProps> = ({ imputado, role }) => 
             )}
           </div>
           
-          {imputado.caracterisiticas && (
+          {imputado.caracteristicas && (
             <>
               <Separator className="my-2" />
-              <p className="text-sm">{imputado.caracterisiticas}</p>
+              <p className="text-sm">{imputado.caracteristicas}</p>
             </>
           )}
         </CardContent>

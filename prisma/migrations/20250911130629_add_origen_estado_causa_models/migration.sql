@@ -27,7 +27,7 @@ ADD COLUMN     "origenCausaId" INTEGER;
 
 -- AlterTable
 ALTER TABLE "Imputado" ADD COLUMN     "alias" TEXT,
-ADD COLUMN     "caracterisiticas" TEXT;
+ADD COLUMN     "caracteristicas" TEXT;
 
 -- AlterTable
 ALTER TABLE "TipoActividad" ADD COLUMN     "reqinforme" BOOLEAN DEFAULT false,

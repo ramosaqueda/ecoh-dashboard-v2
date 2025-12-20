@@ -22,22 +22,26 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import PageContainer from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
 import { NoStrictMode } from '@/components/NoStrictMode';
+
 interface Causa {
   id: number;
   ruc: string;
   denominacionCausa?: string;
   fechaDelHecho: string;
   delitoId?: number;
-  causaEcoh: boolean;  
-  esCrimenOrganizado?: boolean | number;
+  esCrimenOrganizado?: boolean | number | null;
   coordenadasSs?: string | null;
   delito?: {
     id: number;
     nombre: string;
   };
+  origenCausa?: {
+    id: number;
+    nombre: string;
+    color?: string;
+  };
 }
 
-// ✅ AGREGADO: Interfaz para delitos
 interface Delito {
   id: number;
   nombre: string;
@@ -61,7 +65,7 @@ export default function MapPage() {
   const [showEcohOnly, setShowEcohOnly] = useState<boolean>(false);
   const [showCrimenOrganizadoOnly, setShowCrimenOrganizadoOnly] = useState<boolean>(false);
 
-  // ✅ CORREGIDO: Fetch de causas con tipado correcto
+  // Fetch de causas
   const { data: causas = [], isLoading: isLoadingCausas } = useQuery<Causa[]>({
     queryKey: ['causas'],
     queryFn: async (): Promise<Causa[]> => {
@@ -70,7 +74,7 @@ export default function MapPage() {
     }
   });
 
-  // ✅ CORREGIDO: Fetch de delitos con tipado correcto
+  // Fetch de delitos
   const { data: delitos = [], isLoading: isLoadingDelitos } = useQuery<Delito[]>({
     queryKey: ['delitos'],
     queryFn: async (): Promise<Delito[]> => {
@@ -79,17 +83,17 @@ export default function MapPage() {
     }
   });
 
-  // ✅ Obtener años únicos de las causas (ahora con tipos correctos)
+  // Obtener años únicos de las causas
   const yearsAvailable: number[] = Array.from(
     new Set(
-      causas.map((causa: Causa) => { // ✅ Tipo explícito para mayor claridad
+      causas.map((causa: Causa) => {
         const date = new Date(causa.fechaDelHecho);
         return date.getFullYear();
       })
     )
   ).sort((a, b) => b - a);
 
-  // ✅ Filtrado de causas (ahora con tipos correctos)
+  // Filtrado de causas
   const causasFiltradas: Causa[] = causas
     .filter((causa: Causa) =>
       selectedDelito === 'todos'
@@ -111,64 +115,55 @@ export default function MapPage() {
     })
     .filter((causa: Causa) => {
       if (!showEcohOnly) return true;
-      return causa.causaEcoh === true;
+      // Check if origenCausa exists and its name contains "ECOH" (case insensitive)
+      return causa.origenCausa?.nombre?.toUpperCase().includes('ECOH') || false;
     })
     .filter((causa: Causa) => {
       if (!showCrimenOrganizadoOnly) return true;
       
-      // Manejar caso donde esCrimenOrganizado puede ser booleano o número
-      if (typeof causa.esCrimenOrganizado === 'boolean') {
-        return causa.esCrimenOrganizado === true;
-      } else if (typeof causa.esCrimenOrganizado === 'number') {
-        return causa.esCrimenOrganizado === 1;
+      // Manejar caso donde esCrimenOrganizado puede ser booleano, número o null
+      if (causa.esCrimenOrganizado === true || causa.esCrimenOrganizado === 1) {
+        return true;
       }
       
       return false;
     });
 
-  // ✅ Transformar causas para que coincidan con lo que espera LeafletMap
+  // Transformar causas para que coincidan con lo que espera LeafletMap
   const causasParaMapa = causasFiltradas.map((causa: Causa) => ({
     id: causa.id,
     ruc: causa.ruc,
-    denominacionCausa: causa.denominacionCausa || 'Sin denominación', // ✅ Proporcionar valor por defecto
-    coordenadasSs: causa.coordenadasSs ?? null, // ✅ Convertir undefined a null
+    denominacionCausa: causa.denominacionCausa || 'Sin denominación',
+    coordenadasSs: causa.coordenadasSs ?? null,
     delito: causa.delito
   }));
 
   // Para debugging
   useEffect(() => {
     if (showEcohOnly) {
-      console.log('Causas ECOH encontradas:', causas.filter(c => c.causaEcoh).length);
+      console.log('Causas ECOH encontradas:', causasFiltradas.length);
     }
     if (showCrimenOrganizadoOnly) {
-      const causasCrimen = causas.filter(c => {
-        if (typeof c.esCrimenOrganizado === 'boolean') return c.esCrimenOrganizado === true;
-        if (typeof c.esCrimenOrganizado === 'number') return c.esCrimenOrganizado === 1;
-        return false;
-      });
-      console.log('Causas Crimen Organizado encontradas:', causasCrimen.length);
+      console.log('Causas Crimen Organizado encontradas:', causasFiltradas.length);
     }
-  }, [showEcohOnly, showCrimenOrganizadoOnly, causas]);
+  }, [showEcohOnly, showCrimenOrganizadoOnly, causasFiltradas]);
 
-  // ✅ Función mejorada para abrir el mapa en una nueva ventana
+  // Función para abrir el mapa en una nueva ventana
   const openMapInNewWindow = (): void => {
     try {
-      // Usar las causas ya transformadas para mayor consistencia
       const filteredCausas = causasParaMapa.map((causa) => ({
         id: causa.id,
         ruc: causa.ruc,
-        denominacionCausa: causa.denominacionCausa, // Ya está garantizado que no es undefined
+        denominacionCausa: causa.denominacionCausa,
         coordenadasSs: causa.coordenadasSs,
         esCrimenOrganizado: causasFiltradas.find(c => c.id === causa.id)?.esCrimenOrganizado,
         delito: causa.delito
       }));
 
-      // Solo enviar los delitos que se están utilizando
       const filteredDelitos = delitos.filter((delito: Delito) => 
         selectedDelito === 'todos' || delito.id.toString() === selectedDelito
       );
       
-      // Crear un objeto con los filtros actuales y los datos necesarios
       const mapData = {
         causas: filteredCausas,
         showCrimenOrganizado: showCrimenOrganizadoOnly,
@@ -182,30 +177,21 @@ export default function MapPage() {
         }
       };
       
-      // Verificar tamaño antes de serializar
-      console.log(`Enviando ${filteredCausas.length} causas al mapa`);
-      
-      // Advertencia si hay demasiadas causas
       if (filteredCausas.length > 1000) {
         if (!confirm(`Está intentando cargar ${filteredCausas.length} causas en el mapa. Esto puede hacer que el navegador funcione lento. ¿Desea continuar?`)) {
           return;
         }
       }
       
-      // Serializar los datos y codificarlos para pasarlos como parámetro de URL
       const serializedData = encodeURIComponent(JSON.stringify(mapData));
-      console.log(`Tamaño de datos para URL: ${serializedData.length} caracteres`);
       
-      // Verificar si el tamaño es demasiado grande para un hash de URL
       if (serializedData.length > 1500000) {
         alert('Los datos son demasiado grandes para ser mostrados. Por favor, aplique más filtros para reducir la cantidad de causas.');
         return;
       }
       
-      // Abrir una nueva ventana con parámetros de URL que contienen los datos
       const newWindow = window.open(`/geo#data=${serializedData}`, '_blank');
       
-      // Asegurarnos de que se enfoque la nueva ventana
       if (newWindow) {
         newWindow.focus();
       } else {
@@ -237,7 +223,6 @@ export default function MapPage() {
         </div>
 
         <div className="flex-1 px-6 py-4">
-          {/* Panel reducido de estadísticas */}
           <div className="mb-4">
             <StatsPanel
               causas={causasParaMapa}
@@ -245,9 +230,7 @@ export default function MapPage() {
             />
           </div>
 
-          {/* Barra de filtros en línea */}
           <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 shadow-sm">
-            {/* Filtros en línea */}
             <div className="flex items-center gap-2">
               <Label htmlFor="ecoh-mode" className="whitespace-nowrap font-medium">
                 Solo ECOH:
@@ -338,7 +321,6 @@ export default function MapPage() {
             </div>
           </div>
 
-          {/* Mapa con mayor altura */}
           <div 
             key="leaflet-map-container" 
             className="h-[calc(100vh-300px)] min-h-[600px] w-full rounded-lg border"
@@ -351,6 +333,6 @@ export default function MapPage() {
         </div>
       </div>
     </PageContainer>
-   </NoStrictMode>
+    </NoStrictMode>
   );
 }

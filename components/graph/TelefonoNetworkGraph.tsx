@@ -23,7 +23,11 @@ interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
   target: string | GraphNode;
 }
 
-const TelefonoNetworkGraph: React.FC = () => {
+interface TelefonoNetworkGraphProps {
+  onNodeClick?: (node: GraphNode) => void;
+}
+
+const TelefonoNetworkGraph: React.FC<TelefonoNetworkGraphProps> = ({ onNodeClick }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,9 +40,9 @@ const TelefonoNetworkGraph: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [visualConfig, setVisualConfig] = useState({
-    linkDistance: 100,
+    linkDistance: 50,
     nodeSize: 10,
-    charge: -200
+    charge: -100
   });
 
   // Initialize Graph
@@ -70,7 +74,7 @@ const TelefonoNetworkGraph: React.FC = () => {
         .distance(visualConfig.linkDistance))
       .force('charge', d3.forceManyBody()
         .strength(visualConfig.charge))
-      .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
+      .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2).strength(1))
       .force('collision', d3.forceCollide().radius(visualConfig.nodeSize * 1.5));
 
     simulationRef.current = simulation;
@@ -90,10 +94,16 @@ const TelefonoNetworkGraph: React.FC = () => {
       .data(data.nodes)
       .join('g')
       .attr('class', 'node')
+      .style('cursor', 'pointer')
       .call((d3.drag() as any)
         .on('start', dragStarted)
         .on('drag', dragged)
-        .on('end', dragEnded));
+        .on('end', dragEnded))
+      .on('click', (event, d) => {
+        if (onNodeClick) {
+          onNodeClick(d as GraphNode);
+        }
+      });
 
     // Node Shapes
     node.each(function(d) {
@@ -213,7 +223,8 @@ const TelefonoNetworkGraph: React.FC = () => {
         if (!response.ok) throw new Error('Failed to fetch data');
         const result = await response.json();
         setOriginalData(result);
-        initializeGraph(result);
+        // Initialize immediately after fetching
+        setTimeout(() => initializeGraph(result), 0);
       } catch (err) {
         console.error(err);
         setError('Error al cargar los datos del grafo.');

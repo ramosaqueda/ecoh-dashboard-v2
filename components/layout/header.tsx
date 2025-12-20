@@ -11,6 +11,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import { CommandMenu } from '@/components/ui/command-menu';
 import { Button } from '@/components/ui/button';
 import { Search, Command } from 'lucide-react';
+import { FichabConfig } from '@/components/fichab/FichabSessionConfig';
 
 export default function Header() {
   const [openCommandMenu, setOpenCommandMenu] = useState(false);
@@ -111,6 +112,9 @@ export default function Header() {
               </SignedOut>
               
               <SignedIn>
+                {/* Configuración FICHAB */}
+                <FichabConfig />
+
                 {/* Centro de notificaciones */}
                 <div className="rounded-lg p-1 backdrop-blur-sm bg-white/40 dark:bg-gray-800/40 border border-white/20 dark:border-gray-700/30">
                   <NotificationBell />

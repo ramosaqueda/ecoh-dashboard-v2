@@ -39,7 +39,10 @@ interface Causa {
   ruc: string;
   rit?: string;
   fechaDelHecho: string;
-  causaEcoh: boolean;
+  origenCausa?: {
+    id: number;
+    nombre: string;
+  };
   delito?: Delito;
   fiscal?: Fiscal;
 }
@@ -97,7 +100,10 @@ const CauseTimeline: React.FC = () => {
     });
     
     if (showOnlyEcoh) {
-      filtered = filtered.filter(cause => cause.causaEcoh);
+      // Filtrar por origen ECOH (IDs 2 y 3)
+      filtered = filtered.filter(cause => 
+        cause.origenCausa?.id === 2 || cause.origenCausa?.id === 3
+      );
     }
     
     // Actualizada la condición para considerar 'all' como "todos los delitos"
@@ -136,7 +142,10 @@ const CauseTimeline: React.FC = () => {
 
   const getTotals = (): Totals => {
     const total = filteredCauses.length;
-    const ecohTotal = filteredCauses.filter(cause => cause.causaEcoh).length;
+    // Filtrar por origen ECOH (IDs 2 y 3)
+    const ecohTotal = filteredCauses.filter(cause => 
+      cause.origenCausa?.id === 2 || cause.origenCausa?.id === 3
+    ).length;
     // Actualizado para considerar 'all' como "todos los delitos"
     const delitoTotal = selectedDelito && selectedDelito !== 'all'
       ? filteredCauses.filter(cause => cause.delito?.id.toString() === selectedDelito).length 
