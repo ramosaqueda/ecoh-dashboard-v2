@@ -83,6 +83,13 @@ const colorClasses = {
     active: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
     border: 'border-l-4 border-indigo-500'
   },
+  violet: {
+    icon: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-950/30',
+    hover: 'hover:bg-violet-50 dark:hover:bg-violet-950/30',
+    active: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300',
+    border: 'border-l-4 border-violet-500'
+  },
   gray: {
     icon: 'text-gray-600 dark:text-gray-400',
     bg: 'bg-gray-50 dark:bg-gray-950/30',

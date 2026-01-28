@@ -8,7 +8,7 @@ export async function GET() {
     keys,
     hasUsuario: 'usuario' in prisma,
     hasUsuarios: 'usuarios' in prisma,
-    hasU: !!prisma['usuario'],
-    hasUs: !!prisma['usuarios']
+    hasU: !!(prisma as any)['usuario'],
+    hasUs: !!(prisma as any)['usuarios']
   });
 }

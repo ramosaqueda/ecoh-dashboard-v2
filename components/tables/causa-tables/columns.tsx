@@ -1,7 +1,7 @@
 'use client';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Edit, Trash2, Users, Eye, ExternalLink, Link2, AlertTriangle } from 'lucide-react';
+import { ArrowUpDown, Edit, Trash2, Users, Eye, ExternalLink, Link2, AlertTriangle, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -9,6 +9,16 @@ import { useState } from 'react';
 import ImputadosDrawer from '@/components/drawer/imputados-drawer';
 import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
+import { useFichabSession } from '@/components/fichab/FichabSessionConfig';
+import { FichabRucButton } from '@/components/fichab/FichabRucButton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -301,10 +311,13 @@ export const columns: ColumnDef<Causa>[] = [
     cell: ({ row }) => {
       const ruc = row.getValue('ruc') as string;
       return (
-        <div className="flex items-center gap-2">
-          <span>{ruc}</span>
-        
-        </div>
+         <div className="flex items-center gap-2 group whitespace-nowrap">
+            <span className="font-mono font-medium">{ruc}</span>
+            <FichabRucButton 
+                ruc={ruc} 
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-blue-600"
+            />
+         </div>
       );
     }
   },

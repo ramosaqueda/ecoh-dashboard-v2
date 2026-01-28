@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import ImputadoPhotos from '@/components/forms/ImputadoForm/ImputadoPhotos';
 import ImputadoPdfGenerator from '@/components/ImputadoPdfGenerator';
 import { use, Suspense } from 'react'; // ✅ Importar use de React
+import { FichabFotoButton } from '@/components/fichab/FichabFotoButton';
 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -42,7 +43,7 @@ function ImputadoDetailContent({ params }: { params: Promise<{ id: string }> }) 
         throw new Error(error.message || 'Error al cargar datos del imputado');
       }
       return response.json();
-    }
+    },
   });
 
   const handlePrint = () => {
@@ -86,6 +87,13 @@ function ImputadoDetailContent({ params }: { params: Promise<{ id: string }> }) 
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {imputado.docId && (
+            <FichabFotoButton 
+              rut={imputado.docId} 
+              variant="outline"
+              className="print:hidden"
+            />
+          )}
           <ImputadoPdfGenerator imputadoData={imputado} />
         </div>
       </div>
@@ -148,6 +156,17 @@ function ImputadoDetailContent({ params }: { params: Promise<{ id: string }> }) 
         {/* Fotografías */}
         <div className="lg:col-span-2 print:hidden">
           <div className="rounded-lg border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Fotografías</h2>
+              {imputado.docId && (
+                <FichabFotoButton 
+                  rut={imputado.docId} 
+                  variant="outline"
+                  size="sm"
+                />
+              )}
+            </div>
+            {/* <Separator className="my-4" /> REMOVED because ImputadoPhotos has its own header/layout usually, but here I injected the button in a custom header div */}
             <ImputadoPhotos imputadoId={id} />
           </div>
         </div>

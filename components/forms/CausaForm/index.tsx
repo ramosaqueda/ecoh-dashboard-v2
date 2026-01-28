@@ -220,9 +220,9 @@ const CausaForm: React.FC<CausaFormProps> = ({
 
             {/* Sección de Origen y Estado */}
             <div className="space-y-4">
-              <h3 className="font-medium">Origen y Estado de la Causa</h3>
+              <h3 className="font-medium">Radicación y Estado de la Causa</h3>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <FormField form={form} name="origenCausaId" label="Origen de la Causa">
+                <FormField form={form} name="origenCausaId" label="Radicación de la Causa">
                   <OrigenCausaSelector
                     value={formatSelectValue(currentOrigenCausaId)}
                     onChange={(value) => {
@@ -234,7 +234,7 @@ const CausaForm: React.FC<CausaFormProps> = ({
                     }}
                     error={form.formState.errors.origenCausaId?.message}
                     includeEmpty={true}
-                    emptyLabel="Sin origen específico"
+                    emptyLabel="Sin radicación específica"
                   />
                 </FormField>
 

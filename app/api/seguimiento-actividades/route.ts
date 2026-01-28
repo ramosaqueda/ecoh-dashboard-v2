@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
         },
         // CAMBIO: Incluir usuarioAsignado en lugar de usuario
         // CAMBIO: Incluir usuarioAsignado en lugar de usuario
-        usuarios_Actividad_usuario_asignado_idTousuarios: {
+        usuarioAsignado: {
           select: {
             id: true,
             nombre: true,
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
             cargo: true,
           },
         },
-        usuarios_Actividad_usuario_idTousuarios: {
+        usuario: {
           select: {
             id: true,
             nombre: true,
@@ -198,7 +198,7 @@ export async function GET(req: NextRequest) {
     
     for (const actividad of actividades) {
       const usuarioAsignadoId = actividad.usuario_asignado_id || actividad.usuario_id;
-      const usuarioObj = actividad.usuarios_Actividad_usuario_asignado_idTousuarios || actividad.usuarios_Actividad_usuario_idTousuarios;
+      const usuarioObj = actividad.usuarioAsignado || actividad.usuario;
       const tipoNombre = actividad.tipoActividad.nombre;
       
       if (usuarioAsignadoId) {
@@ -247,7 +247,7 @@ export async function GET(req: NextRequest) {
         .filter(id => id !== null)
     )) as number[];
     
-    const usuarios = await prisma.usuarios.findMany({
+    const usuarios = await prisma.usuario.findMany({
       where: {
         id: {
           in: usuariosAsignadosIds,
@@ -293,7 +293,7 @@ export async function GET(req: NextRequest) {
       },
     });
     
-    const todosUsuarios = await prisma.usuarios.findMany({
+    const todosUsuarios = await prisma.usuario.findMany({
       select: {
         id: true,
         nombre: true,
@@ -368,7 +368,7 @@ export async function GET(req: NextRequest) {
         esActividadApoyo,
         estadisticas: estadosPorCausa[causaKey],
         actividades: actividadesDeCausa.map(act => {
-          const responsable = act.usuarios_Actividad_usuario_asignado_idTousuarios || act.usuarios_Actividad_usuario_idTousuarios;
+          const responsable = act.usuarioAsignado || act.usuario;
           return {
             id: act.id,
             tipoActividad: act.tipoActividad.nombre,

@@ -1,0 +1,14 @@
+{
+  "name": "fichab-proxy",
+  "version": "1.0.0",
+  "description": "Proxy para FICHAB - permite que Docker acceda a servicios internos",
+  "main": "fichab-proxy.js",
+  "scripts": {
+    "start": "node fichab-proxy.js",
+    "install-service": "node install-service.js",
+    "uninstall-service": "node uninstall-service.js"
+  },
+  "dependencies": {
+    "node-windows": "^1.0.0-beta.8"
+  }
+}

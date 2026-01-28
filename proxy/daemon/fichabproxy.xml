@@ -1,0 +1,31 @@
+<service>
+	<id>fichabproxy.exe</id>
+	<name>FICHAB Proxy</name>
+	<description>Proxy para permitir que Docker acceda a FICHAB (balanceador-qa.minpublico.cl)</description>
+	<executable>C:\Program Files\nodejs\node.exe</executable>
+	<argument>E:\desa\ecoh\ecoh-dashboard\proxy\node_modules\node-windows\lib\wrapper.js</argument>
+	<argument>--file</argument>
+	<argument>E:\desa\ecoh\ecoh-dashboard\proxy\fichab-proxy.js</argument>
+	<argument>--scriptoptions=</argument>
+	<argument>--log</argument>
+	<argument>FICHAB Proxy wrapper</argument>
+	<argument>--grow</argument>
+	<argument>0.25</argument>
+	<argument>--wait</argument>
+	<argument>1</argument>
+	<argument>--maxrestarts</argument>
+	<argument>3</argument>
+	<argument>--abortonerror</argument>
+	<argument>n</argument>
+	<argument>--stopparentfirst</argument>
+	<argument>undefined</argument>
+	<logmode>rotate</logmode>
+	<stoptimeout>30sec</stoptimeout>
+	<serviceaccount>
+		<domain>DESKTOP-3L8FM82</domain>
+		<user>LocalSystem</user>
+		<password></password>
+		<allowservicelogon>true</allowservicelogon>
+	</serviceaccount>
+	<workingdirectory>E:\desa\ecoh\ecoh-dashboard\proxy</workingdirectory>
+</service>

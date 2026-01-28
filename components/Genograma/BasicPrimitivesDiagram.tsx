@@ -46,7 +46,7 @@ const BasicPrimitivesDiagram: React.FC<BasicPrimitivesDiagramProps> = ({
             return null; // Skip hierarchy lines from manual annotations
         }
 
-        const annotation: ConnectorAnnotationConfig = {
+        const annotation = {
             annotationType: AnnotationType.Connector,
             fromItem: r.idOrigen,
             toItem: r.idDestino,
@@ -59,7 +59,7 @@ const BasicPrimitivesDiagram: React.FC<BasicPrimitivesDiagramProps> = ({
             selectItems: false,
         };
         return annotation;
-    }).filter((a): a is ConnectorAnnotationConfig => a !== null);
+    }).filter((a) => a !== null);
 
     return {
       items,

@@ -39,7 +39,7 @@ import {
   UserRound,
   FolderCheckIcon,
   SquareDashedKanbanIcon,
-
+  Bot,
 
   Link2Icon,
   ListChecksIcon,
@@ -105,6 +105,7 @@ export const Icons = {
   link2:Link2Icon,
   tool:WrenchIcon,
   table2:Table2Icon,
+  bot:Bot,
 
 
   gitHub: ({ ...props }: LucideProps) => (

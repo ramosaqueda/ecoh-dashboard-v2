@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const docId = searchParams.get('docId');
     if (docId) {
         console.log(`Buscando victima por docId: "${docId}"`);
         let victima = await prisma.victima.findFirst({

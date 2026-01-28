@@ -19,6 +19,7 @@ import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import { Clock } from 'lucide-react';
+import { FichabRucButton } from '@/components/fichab/FichabRucButton';
 
 interface MedidaCautelar {
   id: string;
@@ -217,15 +218,10 @@ export default function CausaViewPage({
           <div>
             <h1 className="text-2xl font-bold">Detalles de la Causa</h1>
             <p className="text-muted-foreground">RUC: {causa.ruc}</p>
-            <a 
-              href={`${process.env.NEXT_PUBLIC_FICHACASORUC}?ruc=${causa.ruc}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <ExternalLink className="h-4 w-4 text-blue-600" />
-              </Button>
-            </a>
+            <FichabRucButton 
+              ruc={causa.ruc}
+              className="h-6 w-6 text-blue-600"
+            />
           </div>
           <div className="hidden items-center space-x-2 md:flex ml-10">
             <GeneratePdf pdfData={datosCausa} /> {/* ✅ LÍNEA 230: Error resuelto */}

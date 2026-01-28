@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener usuarios con sus roles
-    const usuarios = await prisma.usuarios.findMany({
+    const usuarios = await prisma.usuario.findMany({
       where: whereClause,
       include: {
-        roles: {
+        rol: {
           select: {
             id: true,
             nombre: true
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       email: usuario.email,
       nombre: usuario.nombre,
       cargo: usuario.cargo,
-      rol: usuario.roles
+      rol: usuario.rol
     }));
 
     return NextResponse.json(usuariosFormatted);

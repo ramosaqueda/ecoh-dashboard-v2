@@ -53,6 +53,8 @@ export interface ImputadoDetail {
   id: number;
   nombreSujeto: string;
   docId: string;
+  alias?: string | null;
+  caracteristicas?: string | null;
   nacionalidadId?: number | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;

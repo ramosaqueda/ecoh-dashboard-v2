@@ -132,6 +132,7 @@ export const navItems: NavItem[] = [
     color: 'indigo' // Índigo para reportes
   },
 
+
   {
     title: 'Utiles',    
     icon: 'tool',

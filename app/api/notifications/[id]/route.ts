@@ -30,7 +30,7 @@ export async function GET(
       );
     }
 
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: { clerk_id: userId }
     });
 
@@ -94,7 +94,7 @@ export async function PATCH(
       );
     }
 
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: { clerk_id: userId }
     });
 
@@ -179,7 +179,7 @@ export async function DELETE(
       );
     }
 
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: { clerk_id: userId }
     });
 

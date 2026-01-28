@@ -8,7 +8,7 @@ export type NavItem = {
   disabled?: boolean;
   subItems?: NavItem[];
   isExpanded?: boolean;
-  color?: 'blue' | 'green' | 'orange' | 'purple' | 'emerald' | 'teal' | 'red' | 'cyan' | 'indigo' | 'gray';
+  color?: 'blue' | 'green' | 'orange' | 'purple' | 'emerald' | 'teal' | 'red' | 'cyan' | 'indigo' | 'violet' | 'gray';
 };
 
 export interface NavItemWithChildren extends NavItem {

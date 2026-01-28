@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verificar que el usuario existe en la BD
-    const usuario = await prisma.usuarios.findUnique({
+    const usuario = await prisma.usuario.findUnique({
       where: { clerk_id: userId }
     });
 
@@ -45,20 +45,20 @@ export async function GET(req: NextRequest) {
         }
       },
       include: {
-        Causa: {
+        causa: {
           select: {
             id: true,
             ruc: true,
             denominacionCausa: true
           }
         },
-        TipoActividad: {
+        tipoActividad: {
           select: {
             id: true,
             nombre: true
           }
         },
-        usuarios_Actividad_usuario_idTousuarios: {
+        usuario: {
           select: {
             id: true,
             nombre: true,
@@ -74,9 +74,9 @@ export async function GET(req: NextRequest) {
     // Convertir actividades a notificaciones
     const notifications = actividadesNuevas.map(actividad => {
       // ✅ Construir mensaje apropiado según si tiene causa o no
-      const message = actividad.Causa
-        ? `Se te ha asignado la actividad "${actividad.TipoActividad.nombre}" para la causa ${actividad.Causa.ruc}`
-        : `Se te ha asignado la actividad de apoyo "${actividad.TipoActividad.nombre}"`;
+      const message = actividad.causa
+        ? `Se te ha asignado la actividad "${actividad.tipoActividad.nombre}" para la causa ${actividad.causa.ruc}`
+        : `Se te ha asignado la actividad de apoyo "${actividad.tipoActividad.nombre}"`;
 
       return {
         id: `actividad-nueva-${actividad.id}-${actividad.createdAt.getTime()}`,
@@ -85,8 +85,8 @@ export async function GET(req: NextRequest) {
         type: 'actividad_nueva',
         timestamp: actividad.createdAt.toISOString(),
         actividadId: actividad.id,
-        causaRuc: actividad.Causa?.ruc || null, // ✅ Usar optional chaining
-        tipoActividad: actividad.TipoActividad.nombre,
+        causaRuc: actividad.causa?.ruc || null, // ✅ Usar optional chaining
+        tipoActividad: actividad.tipoActividad.nombre,
         actionUrl: `/dashboard/todo?highlight=${actividad.id}`
       };
     });

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         id: true,
         ruc: true,
         denominacionCausa: true,
-        Delito: {
+        delito: {
           select: {
             id: true,
             nombre: true
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const formattedResults = causas.map(causa => ({
       id: causa.id,
       ruc: causa.ruc,
-      nombreDelito: (causa as any).Delito?.nombre || 'Sin delito especificado',
+      nombreDelito: causa.delito?.nombre || 'Sin delito especificado',
       denominacion: causa.denominacionCausa
     }));
 

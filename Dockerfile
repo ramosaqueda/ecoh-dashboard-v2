@@ -1,5 +1,5 @@
-# Dockerfile - Versión que FUNCIONA (aunque genera imagen más grande)
-# Usar este si hay problemas de red con la versión optimizada
+# Dockerfile - ECOH Dashboard
+# Con todas las variables NEXT_PUBLIC_* para build time
 FROM node:18-alpine AS base
 
 # Instalar dependencias del sistema
@@ -36,9 +36,40 @@ COPY . .
 # Generar cliente de Prisma
 RUN npx prisma generate
 
-# Build de la aplicación
+# ====================================
+# Variables de entorno para BUILD TIME
+# Todas las NEXT_PUBLIC_* se "hornean" en el código JS
+# ====================================
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Clerk Authentication
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
+
+ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
+
+ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+
+ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+
+# URLs de la aplicación
+ARG NEXT_PUBLIC_BASE_URL
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+ARG NEXT_PUBLIC_ECOHLINK
+ENV NEXT_PUBLIC_ECOHLINK=$NEXT_PUBLIC_ECOHLINK
+
+# Build de la aplicación
 RUN npm run build
 
 # ====================================

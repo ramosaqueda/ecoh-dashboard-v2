@@ -153,7 +153,7 @@ export default function DashboardPage() {
               </div>
 
               {/* SECCIÓN 2: Métricas por  */}
-              <JurisdiccionMetricsCard />
+              
 
               {/* SECCIÓN 2.5: Concurrencia ECOH */}
               <div className="grid gap-4 md:grid-cols-2">
@@ -161,9 +161,7 @@ export default function DashboardPage() {
               </div>
 
               {/* SECCIÓN 3: Card Total de Causas - Destacada */}
-              <div className="w-full">
-                <CausasCard />
-              </div>
+              
 
               {/* SECCIÓN 4: Línea de Tiempo de Causas */}
               <div className="w-full">

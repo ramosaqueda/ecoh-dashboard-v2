@@ -74,6 +74,7 @@ export type Imputado = {
   nombreSujeto: string;
   docId: string;
   alias?: string;
+  caracteristicas?: string | null; // ✅ Field added
   nacionalidadId: number | null;
   nacionalidad?: {
     id: number;

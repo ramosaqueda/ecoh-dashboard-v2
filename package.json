@@ -7,7 +7,7 @@
     "url": "https://github.com/ramosaqueda/ecoh-dashboard"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001 -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -75,6 +75,7 @@
     "clerk": "^0.8.3",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
+    "copy-to-clipboard": "~3.3.3",
     "d3": "7.9.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.7",
@@ -127,6 +128,7 @@
     "three": "0.171.0",
     "ts-tokenizr": "1.1.1",
     "typescript": "5.2.2",
+    "undici": "~7.19.1",
     "uploadthing": "^5.7.4",
     "use-debounce": "10.0.4",
     "uuid": "^9.0.1",

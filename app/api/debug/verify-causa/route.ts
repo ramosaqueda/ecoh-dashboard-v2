@@ -7,18 +7,18 @@ export async function GET() {
     const causes = await prisma.causa.findMany({
       take: 1,
       include: {
-        Fiscal: { select: { id: true, nombre: true } },
-        Delito: { select: { id: true, nombre: true } },
-        Abogado: { select: { id: true, nombre: true } },
-        Analista: { select: { id: true, nombre: true } },
-        Atvt: { select: { id: true, nombre: true } },
-        origenes_causa: { select: { id: true, nombre: true, color: true } },
-        estados_causa: { select: { id: true, nombre: true, codigo: true, color: true } },
+        fiscal: { select: { id: true, nombre: true } },
+        delito: { select: { id: true, nombre: true } },
+        abogado: { select: { id: true, nombre: true } },
+        analista: { select: { id: true, nombre: true } },
+        atvt: { select: { id: true, nombre: true } },
+        origenCausa: { select: { id: true, nombre: true, color: true } },
+        estadoCausa: { select: { id: true, nombre: true, codigo: true, color: true } },
         _count: {
           select: {
-            CausasImputados: true,
-            CausasRelacionadas_CausasRelacionadas_causaMadreIdToCausa: true,
-            CausasRelacionadas_CausasRelacionadas_causaAristaIdToCausa: true
+            imputados: true,
+            causasRelacionadasMadre: true,
+            causasRelacionadasArista: true
           }
         }
       }

@@ -63,6 +63,7 @@ model Causa {
   tribunalId                Int?
   nacionalidadVictimaId     Int?
   esCrimenOrganizado        Boolean?
+  causaEcoh                 Boolean? // Added back as per user request
   atvtId                    Int?
   origenCausaId             Int?
   estadoCausaId             Int?
@@ -158,7 +159,7 @@ model Imputado {
   updatedAt        DateTime?              @updatedAt
   fotoPrincipal    String?
   alias            String?
-  caracterisiticas String?
+  caracteristicas String?
   causas           CausasImputados[]
   fotografias      Fotografia[]
   nacionalidad     Nacionalidad?          @relation(fields: [nacionalidadId], references: [id])
