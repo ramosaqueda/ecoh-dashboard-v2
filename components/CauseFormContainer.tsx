@@ -113,6 +113,10 @@ const CauseFormContainer: React.FC<CauseFormContainerProps> = ({
           throw new Error('ID de causa inválido');
         }
         
+        console.log('🔍 DEBUG CauseFormContainer - Data sending to update:', data);
+        console.log('🔍 DEBUG CauseFormContainer - unidadPolicialId:', data.unidadPolicialId);
+        console.log('🔍 DEBUG CauseFormContainer - oficialACargo:', data.oficialACargo);
+
         await causaService.update(causaId, data);
         toast.success('Causa actualizada exitosamente');
       } else {

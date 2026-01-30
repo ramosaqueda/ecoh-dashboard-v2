@@ -250,10 +250,10 @@ export async function POST(req: NextRequest) {
         });
       }
       
-      if (data.foliobw !== undefined) {
+      if (data.folioBw !== undefined || data.foliobw !== undefined) {
         await prisma.causa.update({
           where: { id: newCausa.id },
-          data: { foliobw: data.foliobw || '' }
+          data: { foliobw: data.folioBw || data.foliobw || '' }
         });
       }
       
@@ -292,6 +292,21 @@ export async function POST(req: NextRequest) {
         await prisma.causa.update({
           where: { id: newCausa.id },
           data: { estadoCausaId: Number(data.estadoCausaId) }
+        });
+      }
+
+      // ✅ Actualizar campos de Unidad Policial y Oficial a Cargo
+      if (data.unidadPolicialId !== undefined && data.unidadPolicialId !== null && data.unidadPolicialId !== '') {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { unidadPolicialId: Number(data.unidadPolicialId) }
+        });
+      }
+
+      if (data.oficialACargo !== undefined) {
+        await prisma.causa.update({
+          where: { id: newCausa.id },
+          data: { oficialACargo: data.oficialACargo || null }
         });
       }
       
@@ -461,7 +476,8 @@ export async function POST(req: NextRequest) {
         analista: true,
         atvt: true,
         origenCausa: true,
-        estadoCausa: true
+        estadoCausa: true,
+        unidadPolicial: true
       }
     });
     

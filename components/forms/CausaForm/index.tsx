@@ -20,6 +20,7 @@ import FiscalSelect from '@/components/select/FiscalSelect';
 import FocoSelect from '@/components/select/FocoSelect';
 import OrigenCausaSelector from '@/components/select/OrigenCausaSelector';
 import EstadoCausaSelector from '@/components/select/EstadoCausaSelector';
+import UnidadPolicialSelect from '@/components/select/UnidadPolicialSelect';
 
 import {
   FormControl,
@@ -128,6 +129,8 @@ const CausaForm: React.FC<CausaFormProps> = ({
         // ✅ Nuevos campos - conversión segura
         origenCausaId: initialValues.origenCausaId ? parseSelectValue(initialValues.origenCausaId.toString()) : undefined,
         estadoCausaId: initialValues.estadoCausaId ? parseSelectValue(initialValues.estadoCausaId.toString()) : undefined,
+        unidadPolicialId: initialValues.unidadPolicialId ? parseSelectValue(initialValues.unidadPolicialId.toString()) : undefined,
+        oficialACargo: initialValues.oficialACargo || '',
         esCrimenOrganizado: initialValues.esCrimenOrganizado,
         // Asegurarse de que las fechas estén en el formato correcto
         fechaHoraTomaConocimiento: initialValues.fechaHoraTomaConocimiento
@@ -426,6 +429,36 @@ const CausaForm: React.FC<CausaFormProps> = ({
                   name="esCrimenOrganizado"
                   label="Es Crimen Organizado"
                 />
+              </div>
+            </div>
+
+            {/* Sección de Unidad Policial */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Unidad Policial e Investigador</h3>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  form={form}
+                  name="unidadPolicialId"
+                  label="Unidad Policial"
+                >
+                  <UnidadPolicialSelect
+                    value={formatSelectValue(form.watch('unidadPolicialId'))}
+                    onValueChange={(value) =>
+                      form.setValue('unidadPolicialId', parseSelectValue(value), {
+                        shouldValidate: true,
+                        shouldDirty: true
+                      })
+                    }
+                  />
+                </FormField>
+
+                <FormField
+                  form={form}
+                  name="oficialACargo"
+                  label="Oficial a Cargo"
+                >
+                  <Input placeholder="Ingrese nombre del oficial a cargo" />
+                </FormField>
               </div>
             </div>
 

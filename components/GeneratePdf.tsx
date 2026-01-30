@@ -72,9 +72,14 @@ interface DatosCausa {
     folio_bw: string | null;
     fecha_toma_conocimiento: string | null;
     fecha_del_hecho: string | null;
-    estado_ecoh: boolean;
+    // Radicación de la causa (reemplaza estado_ecoh)
+    radicacion_causa: string | null;
     nombre_imputado: string[] | null;
     rut_imputado: string[] | null;
+    // Campos de Unidad Policial
+    unidad_policial: string | null;
+    institucion_policial: string | null;
+    oficial_a_cargo: string | null;
 }
 
 interface PdfProps {
@@ -110,7 +115,7 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
     const fetchImputadosData = async (): Promise<CausaImputado[]> => {
         try {
             console.log('Fetching imputados for causa ID:', pdfData.id);
-            const response = await fetch(`/api/causas-imputados/${pdfData.id}`);
+            const response = await fetch(`/api/causas-imputados?causaId=${pdfData.id}`);
             if (!response.ok) throw new Error('Error fetching imputados');
             const data: CausaImputado[] = await response.json();
             console.log('Imputados data:', data);
@@ -135,6 +140,15 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
         }
     };
 
+    // Formatear información de unidad policial
+    const getUnidadPolicialInfo = (): string => {
+        if (!pdfData.unidad_policial) return '-';
+        if (pdfData.institucion_policial) {
+            return `${pdfData.unidad_policial} (${pdfData.institucion_policial})`;
+        }
+        return pdfData.unidad_policial;
+    };
+
     const generatePdf = async (): Promise<void> => {
         if (!pdfData.id) {
             toast.error('ID de causa no válido');
@@ -155,7 +169,7 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
                 pageSize: 'A4',
                 pageMargins: [40, 60, 40, 60],
                 header: {
-                    text: 'SACFI-ECOH',
+                    text: 'SAC-ECOH',
                     alignment: 'right',
                     margin: [0, 20, 40, 0],
                     color: '#6b7280',
@@ -165,20 +179,26 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
                     header: {
                         fontSize: 18,
                         bold: true,
-                        color: '#2563eb',
+                        color: '#004388',
                         margin: [0, 0, 0, 10]
                     },
                     subheader: {
                         fontSize: 14,
                         bold: true,
-                        color: '#1e40af',
+                        color: '#004388',
                         margin: [0, 10, 0, 5]
+                    },
+                    sectionTitle: {
+                        fontSize: 12,
+                        bold: true,
+                        color: '#374151',
+                        margin: [0, 15, 0, 5]
                     },
                     tableHeader: {
                         bold: true,
                         fontSize: 10,
                         color: '#ffffff',
-                        fillColor: '#2563eb'
+                        fillColor: '#004388'
                     },
                     footer: {
                         fontSize: 8,
@@ -220,7 +240,7 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
                         text: 'INFORMACIÓN CONFIDENCIAL Y RESERVADA\nEste documento contiene información sensible y debe ser tratado con estricta confidencialidad.',
                         style: {
                             fontSize: 8,
-                            color: '#ef4444',
+                            color: '#A22138',
                             alignment: 'center',
                             italics: true
                         },
@@ -244,7 +264,24 @@ const GeneratePdf: React.FC<PdfProps> = ({ pdfData }) => {
                                 ['Folio BW:', pdfData.folio_bw || '-'],
                                 ['Fecha del hecho:', formatDate(pdfData.fecha_del_hecho)],
                                 ['Fecha toma de conocimiento:', formatDate(pdfData.fecha_toma_conocimiento)],
-                                ['Causa ECOH:', pdfData.estado_ecoh ? 'Sí' : 'No']
+                                ['Radicación Causa:', pdfData.radicacion_causa || '-']
+                            ]
+                        },
+                        layout: 'noBorders',
+                        margin: [0, 0, 0, 10]
+                    },
+
+                    // Unidad Policial a Cargo
+                    {
+                        text: 'Unidad Policial a Cargo',
+                        style: 'sectionTitle'
+                    },
+                    {
+                        table: {
+                            widths: ['30%', '70%'],
+                            body: [
+                                ['Unidad Policial:', getUnidadPolicialInfo()],
+                                ['Oficial a Cargo:', pdfData.oficial_a_cargo || '-']
                             ]
                         },
                         layout: 'noBorders',

@@ -42,9 +42,7 @@ export async function GET(request: NextRequest) {
         include: { nacionalidad: true }
       });
 
-      // Si no encuentra, intentar limpiar puntos (si el input tiene puntos) o agregar puntos??
-      // Para Chile, lo más común es que la BD tenga formato limpio o con puntos.
-      // Intentar sin puntos si falla
+      // Si no encuentra, intentar limpiar puntos (si el input tiene puntos) o agregar puntos
       if (!imputado) {
          const cleanDocId = docId.replace(/\./g, '');
          if (cleanDocId !== docId) {
@@ -55,9 +53,6 @@ export async function GET(request: NextRequest) {
              });
          }
       }
-
-      // Si aun no encontra, intentar formato base (sin puntos, guion) si aplica?
-      // Por ahora solo logs para depurar.
       
       if (imputado) {
         console.log("Imputado encontrado:", imputado.id);
@@ -77,6 +72,7 @@ export async function GET(request: NextRequest) {
           nombreSujeto: true,
           docId: true,
           alias: true,
+          caracteristicas: true,
           nacionalidadId: true,
           fotoPrincipal: true,
           nacionalidad: true,
@@ -102,7 +98,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombreSujeto, docId, nacionalidadId, causaIds } = body;
+    const { nombreSujeto, docId, nacionalidadId, alias, caracteristicas, fotoPrincipal, causaIds } = body;
+
+    console.log('POST imputado - Datos recibidos:', {
+      nombreSujeto,
+      docId,
+      nacionalidadId,
+      alias,
+      caracteristicas,
+      fotoPrincipal,
+      causaIds
+    });
 
     // Crear el imputado
     const imputado = await prisma.imputado.create({
@@ -110,6 +116,9 @@ export async function POST(request: NextRequest) {
         nombreSujeto,
         docId,
         nacionalidadId: nacionalidadId ? Number(nacionalidadId) : null,
+        alias: alias || null,
+        caracteristicas: caracteristicas || null,
+        fotoPrincipal: fotoPrincipal || null,
         // Si se proporcionan causaIds, crear las relaciones
         causas: causaIds
           ? {
@@ -130,6 +139,8 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    console.log('POST imputado - Imputado creado:', imputado.id);
 
     return NextResponse.json(imputado, { status: 201 });
   } catch (error) {
@@ -154,7 +165,18 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { nombreSujeto, docId, nacionalidadId, causaIds } = body;
+    const { nombreSujeto, docId, nacionalidadId, alias, caracteristicas, fotoPrincipal, causaIds } = body;
+
+    console.log('PUT imputado - Datos recibidos:', {
+      id,
+      nombreSujeto,
+      docId,
+      nacionalidadId,
+      alias,
+      caracteristicas,
+      fotoPrincipal,
+      causaIds
+    });
 
     // Primero, eliminar todas las relaciones existentes si se proporcionan nuevas
     if (causaIds) {
@@ -170,6 +192,9 @@ export async function PUT(request: NextRequest) {
         nombreSujeto,
         docId,
         nacionalidadId: nacionalidadId ? Number(nacionalidadId) : null,
+        alias: alias || null,
+        caracteristicas: caracteristicas || null,
+        fotoPrincipal: fotoPrincipal || null,
         // Si se proporcionan causaIds, crear las nuevas relaciones
         causas: causaIds
           ? {
@@ -190,6 +215,8 @@ export async function PUT(request: NextRequest) {
         }
       }
     });
+
+    console.log('PUT imputado - Imputado actualizado:', imputado.id);
 
     return NextResponse.json(imputado);
   } catch (error) {

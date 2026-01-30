@@ -76,10 +76,18 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { nombreSujeto, docId, nacionalidadId,alias,caracteristicas, causaIds } = body;
+    const { nombreSujeto, docId, nacionalidadId, alias, caracteristicas, fotoPrincipal, causaIds } = body;
 
-    console.log('Received data:', body);
-    console.log('Updating imputado with ID:', id);
+    console.log('PUT imputado/[id] - Datos recibidos:', {
+      id,
+      nombreSujeto,
+      docId,
+      nacionalidadId,
+      alias,
+      caracteristicas,
+      fotoPrincipal,
+      causaIds
+    });
 
     // Validar existencia del imputado
     const existingImputado = await prisma.imputado.findUnique({
@@ -106,7 +114,9 @@ export async function PUT(
       data: {
         nombreSujeto,
         docId,
-        alias,
+        alias: alias || null,
+        caracteristicas: caracteristicas || null,
+        fotoPrincipal: fotoPrincipal || null,
         nacionalidadId: nacionalidadId ? Number(nacionalidadId) : null,
         causas: causaIds
           ? {
@@ -149,6 +159,8 @@ export async function PUT(
       }
     });
 
+    console.log('PUT imputado/[id] - Imputado actualizado:', updatedImputado.id);
+
     return NextResponse.json(updatedImputado);
   } catch (error) {
     console.error('Error updating imputado:', error);
@@ -164,7 +176,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-      const id = parseInt((await params).id);
+    const id = parseInt((await params).id);
 
     if (isNaN(id)) {
       return NextResponse.json({ message: 'ID inválido' }, { status: 400 });

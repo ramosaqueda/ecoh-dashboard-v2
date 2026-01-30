@@ -119,6 +119,8 @@ export const causaService = {
       console.log('🔍 DEBUG causaService.update - atvtId transformado:', transformedData.atvtId);
       console.log('🔍 DEBUG causaService.update - origenCausaId transformado:', transformedData.origenCausaId);
       console.log('🔍 DEBUG causaService.update - estadoCausaId transformado:', transformedData.estadoCausaId);
+      console.log('🔍 DEBUG causaService.update - unidadPolicialId transformado:', transformedData.unidadPolicialId);
+      console.log('🔍 DEBUG causaService.update - oficialACargo transformado:', transformedData.oficialACargo);
 
       const response = await fetch(`/api/causas/${id}`, {
         method: 'PUT',
@@ -172,6 +174,9 @@ export const causaService = {
    * Transforma los datos del formulario para enviar al servidor
    */
   transformFormData(data: CausaFormData): Record<string, any> {
+    console.log('🔍 DEBUG transformFormData - INCOMING DATA:', data);
+    console.log('🔍 DEBUG transformFormData - INCOMING unidadPolicialId:', data.unidadPolicialId);
+    
     const transformedData: Record<string, any> = {
       // Campos booleanos    
       constituyeSs: data.constituyeSs,
@@ -237,6 +242,16 @@ export const causaService = {
         return isNaN(parsed) || parsed === 0 ? null : parsed;
       })(),
 
+      // ✅ NUEVOS CAMPOS II: Unidad Policial y Oficial
+      unidadPolicialId: (() => {
+        if (data.unidadPolicialId === undefined || data.unidadPolicialId === null || data.unidadPolicialId === 0) {
+          return null;
+        }
+        const parsed = parseInt(data.unidadPolicialId.toString());
+        return isNaN(parsed) || parsed === 0 ? null : parsed;
+      })(),
+      oficialACargo: data.oficialACargo || null,
+
       // Parámetros de crimen organizado - Asegurarse de que sea un array
       causasCrimenOrg: Array.isArray(data.causasCrimenOrg)
         ? data.causasCrimenOrg.map((id) =>
@@ -260,8 +275,9 @@ export const causaService = {
       'fiscalId', 
       'tribunalId', 
       'focoId',
-      'origenCausaId',  // ✅ AGREGADO
-      'estadoCausaId'   // ✅ AGREGADO
+      'origenCausaId',
+      'estadoCausaId',
+      'unidadPolicialId'
     ];
 
     // ✅ FIX: Eliminar solo campos undefined, pero mantener null para relaciones importantes
@@ -349,6 +365,8 @@ export const causaService = {
       // ✅ NUEVOS CAMPOS: origenCausaId y estadoCausaId
       origenCausaId: data.origenCausaId || null,
       estadoCausaId: data.estadoCausaId || null,
+      unidadPolicialId: data.unidadPolicialId || null,
+      oficialACargo: data.oficialACargo || '',
 
       // Parámetros de crimen organizado
       causasCrimenOrg: causasCrimenOrg,

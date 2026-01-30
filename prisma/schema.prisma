@@ -90,7 +90,18 @@ model Causa {
   telefonos                 TelefonoCausa[]
   diligencias               CausaDiligencia[]
 
+  unidadPolicialId          Int?
+  unidadPolicial            UnidadPolicial?      @relation(fields: [unidadPolicialId], references: [id])
+  oficialACargo             String?
+
   @@index([atvtId], map: "fki_fk_causa_atvt")
+}
+
+model UnidadPolicial {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  institucion String?
+  causas      Causa[]
 }
 
 model CausaOrganizacion {

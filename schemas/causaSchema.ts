@@ -39,7 +39,7 @@ export const causaSchema = z.object({
 
   // Campos opcionales de texto
   ruc: z.string().optional(),
-  foliobw: z.string().optional(),
+  folioBw: z.string().optional(),
   coordenadasSs: z.string().optional(),
   rit: z.string().optional(),
   numeroIta: z.string().optional(),
@@ -114,7 +114,18 @@ export const causaSchema = z.object({
   ).optional().default([]),
   
   // Estado de crimen organizado
-  esCrimenOrganizado: z.boolean().default(false)
+  esCrimenOrganizado: z.boolean().default(false),
+
+  // Nuevos campos
+  oficialACargo: z.string().optional(),
+  unidadPolicialId: z
+    .union([
+      z.number(),
+      z.string().transform((val) => parseInt(val, 10)),
+      z.null()
+    ])
+    .optional()
+    .nullable()
 });
 
 export type CausaFormData = z.infer<typeof causaSchema>;

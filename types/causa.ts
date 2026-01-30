@@ -57,6 +57,8 @@ export interface CausaFormData {
   rut: string;
   nacionalidadVictima: number;
   observacion: string;
+  oficialACargo?: string;
+  unidadPolicialId?: number;
 }
 
 // Definición de la interfaz Causa para representar el modelo de respuesta del servidor
@@ -88,6 +90,8 @@ export interface Causa {
   atvtId?: number;
   origenCausaId?: number;
   estadoCausaId?: number;
+  unidadPolicialId?: number;
+  oficialACargo?: string;
   
   // Relaciones
   delito?: {
@@ -129,6 +133,11 @@ export interface Causa {
     nombre: string;
     codigo: string;
     color?: string | null;
+  };
+  unidadPolicial?: {
+    id: number;
+    nombre: string;
+    institucion?: string | null;
   };
   
   // Relaciones muchos a muchos
